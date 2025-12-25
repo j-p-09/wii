@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII SHOP BLAGAJNA FINAL v2</title>
+    <style>
+        :root {
+            --bg-color: #e0e0e0;
+            --main-border: 2px solid #000;
+            --double-border: 4px double #000;
+            --highlight-yellow: #fffacd; 
+            --promo-red: #d00000;
+            --font-main: Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: #888;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            border: var(--main-border);
+        }
+
+        /* --- LEVA STRAN: RAČUN --- */
+        #left-panel {
+            width: 33.33%;
+            border-right: var(--main-border);
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        #receipt-header {
+            padding: 5px;
+            text-align: center;
+            border-bottom: var(--double-border);
+            font-weight: bold;
+            background: #ccc;
+            font-size: 14px;
+        }
+
+        #receipt-body {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            cursor: pointer;
+            border-bottom: 1px dotted #ccc;
+        }
+
+        .receipt-item.selected { background-color: var(--highlight-yellow); }
+        .receipt-item.promo { color: var(--promo-red); font-weight: bold; }
+        .receipt-item.voided { text-decoration: line-through; color: #888; }
+
+        #receipt-footer {
+            border-top: var(--double-border);
+            padding: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            background: #eee;
+        }
+
+        /* --- DESNA STRAN --- */
+        #right-panel {
+            width: 66.66%;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-color);
+        }
+
+        #status-bar-container {
+            padding: 10px 20px;
+            border-bottom: var(--main-border);
+        }
+
+        .status-label {
+            font-size: 12px;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #444;
+        }
+
+        .status-table {
+            width: 100%;
+            border: 3px solid #000;
+            display: flex;
+            height: 35px;
+            background: #fff;
+        }
+
+        .st-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            border-right: 2px solid #000;
+        }
+
+        .st-id { width: 15%; }
+        .st-name { width: 70%; text-transform: uppercase;}
+        .st-timer { width: 15%; border-right: none; }
+
+        .logged-out .st-id, .logged-out .st-name {
+            background-color: #ddd;
+            color: transparent;
+        }
+
+        /* GUMBI */
+        #main-display {
+            flex-grow: 1;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px;
+            overflow-y: auto;
+        }
+
+        .btn {
+            background: #f0f0f0;
+            border: 1px solid #999;
+            box-shadow: 3px 3px 0px #000;
+            font-family: var(--font-main);
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2px;
+            transition: all 0.1s;
+        }
+
+        .btn:active {
+            box-shadow: 1px 1px 0px #000;
+            transform: translate(2px, 2px);
+        }
+
+        .btn-grey { background: #ccc; color: #666; }
+        .btn-red { background: #ffcccc; }
+        .btn-nav { background: #333; color: white; border-color: #000; box-shadow: none; border-right: 1px solid #555; }
+
+        /* NAVIGACIJA */
+        #nav-bar {
+            height: 60px;
+            border-top: var(--main-border);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            background: #333;
+        }
+
+        /* --- MODALNA OKNA --- */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: #e0e0e0;
+            border: var(--double-border);
+            padding: 4px;
+            width: 500px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 15px 15px 0 #000;
+        }
+
+        .modal-header {
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            padding: 15px;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        /* DISPLAY ZA VNOS */
+        .input-display {
+            width: 100%;
+            height: 40px;
+            background: #fff;
+            border: 2px inset #000;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-align: right; 
+            padding: 5px;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        /* ŠTEVILČNICA */
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        
+        .keypad-btn {
+            height: 50px;
+            font-size: 20px;
+            background: #fff;
+            border: 1px solid #000;
+            box-shadow: 2px 2px 0 #000;
+            cursor: pointer;
+        }
+        .keypad-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+
+        /* TIPKOVNICA ZA BESEDILO (QWERTY) */
+        .keyboard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        .kb-btn {
+            width: 40px; height: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #fff;
+            border: 1px solid #000;
+            box-shadow: 2px 2px 0 #000;
+            cursor: pointer;
+        }
+        .kb-btn-wide { width: 85px; }
+
+        /* LISTE V MODALU */
+        .modal-list {
+            text-align: left;
+            border: 1px solid #000;
+            background: #fff;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .modal-list-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+        .modal-list-item:hover { background: #ffffd0; }
+        .list-btn-action { font-size: 10px; padding: 2px 5px; background: #eee; border: 1px solid #000; }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="left-panel">
+        <div id="receipt-header">RAČUN #<span id="receipt-num">----</span></div>
+        <div id="receipt-body"></div>
+        <div id="receipt-footer">
+            <span>SKUPAJ:</span>
+            <span id="total-amount">0.00 WII</span>
+        </div>
+    </div>
+
+    <div id="right-panel">
+        <div id="status-bar-container">
+            <div class="status-label" id="status-label-text">ODJAVLJENA BLAGAJNA</div>
+            <div class="status-table logged-out" id="status-table">
+                <div class="st-cell st-id" id="disp-id">000</div>
+                <div class="st-cell st-name" id="disp-name">ADMINISTRATOR</div>
+                <div class="st-cell st-timer" id="disp-timer">0:00</div>
+            </div>
+        </div>
+
+        <div id="main-display"></div>
+
+        <div id="nav-bar">
+            <button class="btn btn-nav" onclick="setMode('ARTICLES')">ARTIKLI</button>
+            <button class="btn btn-nav" onclick="setMode('FUNCTIONS')">FUNKCIJE</button>
+            <button class="btn btn-nav" onclick="setMode('FINISH')">ZAKLJUČEK</button>
+            <button class="btn btn-nav" onclick="setMode('MANAGER')">MANAGER</button>
+            <button class="btn btn-nav" onclick="togglePOF()">P.O.F</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <span id="modal-title">VNOS</span>
+            <span style="cursor:pointer" onclick="closeModal()">✕</span>
+        </div>
+        <div class="modal-body" id="modal-content"></div>
+    </div>
+</div>
+
+<script>
+    /* ================= PODATKOVNA BAZA ================= */
+    const defaultData = {
+        employees: [
+            { id: '000', name: 'ADMINISTRATOR', role: 'MANAGER', code: '000' }
+        ],
+        articles: [
+            { name: 'KARTA', price: 10.00, enabled: true },
+            { name: 'KAZEN', price: 40.00, enabled: true },
+            { name: 'KLAVIR (min)', price: 0.90, enabled: true },
+            { name: 'WII POT', price: 1.70, enabled: true },
+            { name: 'POPRAVILO', price: 5.00, enabled: true },
+            { name: 'VREČKA', price: 2.10, enabled: true },
+            { name: 'NALEPKA', price: 0.75, enabled: true },
+            { name: 'KUVERTA', price: 4.20, enabled: true },
+            { name: 'POŠTNINA', price: 2.50, enabled: true },
+            { name: 'ZNAMKA', price: 1.00, enabled: true },
+            { name: 'PS (min)', price: 1.10, enabled: true },
+            { name: 'OSTALO', price: 0.01, enabled: true }
+        ],
+        bankAccounts: {}, 
+        receipts: [],
+        receiptCounter: 1000,
+        cashInDrawer: 0.00,
+        shiftLog: [] 
+    };
+
+    let db = JSON.parse(localStorage.getItem('wiiShopDBv3')) || defaultData;
+    function saveDB() { localStorage.setItem('wiiShopDBv3', JSON.stringify(db)); }
+
+    /* ================= STATE ================= */
+    let currentUser = null; 
+    let currentReceipt = []; 
+    let selectedItemIndex = -1;
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let timerRunning = false;
+    let isPOF = false; 
+    let currentMode = 'ARTICLES'; 
+
+    /* ================= UTILS ================= */
+    function formatMoney(amount) {
+        return parseFloat(amount).toFixed(2) + " WII";
+    }
+
+    /* ================= TIMER ================= */
+    function startTimer() {
+        if (timerRunning) return;
+        timerRunning = true;
+        timerSeconds = 0;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            timerSeconds++;
+            updateTimerDisplay();
+        }, 1000);
+    }
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        timerSeconds = 0;
+        updateTimerDisplay();
+    }
+    function updateTimerDisplay() {
+        const min = Math.floor(timerSeconds / 60);
+        const sec = timerSeconds % 60;
+        document.getElementById('disp-timer').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    /* ================= UI RENDERING ================= */
+    function updateStatusBar() {
+        const table = document.getElementById('status-table');
+        const label = document.getElementById('status-label-text');
+        const idCell = document.getElementById('disp-id');
+        const nameCell = document.getElementById('disp-name');
+
+        if (currentUser) {
+            table.classList.remove('logged-out');
+            label.textContent = "PRIJAVLJENA BLAGAJNA";
+            idCell.textContent = currentUser.id;
+            nameCell.textContent = currentUser.name;
+        } else {
+            table.classList.add('logged-out');
+            label.textContent = "ODJAVLJENA BLAGAJNA";
+            idCell.textContent = "000";
+            nameCell.textContent = "";
+        }
+    }
+
+    function renderReceipt() {
+        const container = document.getElementById('receipt-body');
+        container.innerHTML = '';
+        let total = 0;
+
+        document.getElementById('receipt-num').textContent = currentUser ? (currentReceipt.length > 0 ? "WIP" : "----") : "----";
+
+        currentReceipt.forEach((item, index) => {
+            if (!item.isVoid) total += (item.price * item.qty);
+
+            const div = document.createElement('div');
+            div.className = `receipt-item ${index === selectedItemIndex ? 'selected' : ''} ${item.isPromo ? 'promo' : ''} ${item.isVoid ? 'voided' : ''}`;
+            div.onclick = () => {
+                if(currentUser && !item.isFinal) {
+                    selectedItemIndex = index;
+                    renderReceipt();
+                }
+            };
+
+            let prefix = item.isPromo ? "P " : "";
+            let nameDisplay = item.name;
+            if (item.qty > 1) nameDisplay += ` (${item.qty}x)`;
+
+            /* --- 2. POPRAVEK: PRIKAZ POPUSTA --- */
+            if (!item.isPromo && !item.isVoid && item.price < item.originalPrice) {
+                const discountPercent = Math.round((1 - (item.price / item.originalPrice)) * 100);
+                nameDisplay += ` [-${discountPercent}%]`;
+            }
+
+            div.innerHTML = `<span>${prefix}${nameDisplay}</span><span>${formatMoney(item.price * item.qty)}</span>`;
+            container.appendChild(div);
+        });
+
+        // Zaključeni
+        const lastItem = currentReceipt[currentReceipt.length-1];
+        if (lastItem && lastItem.isFinal) {
+             const line = document.createElement('div');
+             line.innerHTML = "---------------------------------";
+             line.style.textAlign = 'center';
+             container.appendChild(line);
+             const finalDiv = document.createElement('div');
+             finalDiv.style.textAlign = 'center';
+             finalDiv.innerHTML = `RAČUN #${lastItem.receiptId}`;
+             container.appendChild(finalDiv);
+        }
+
+        document.getElementById('total-amount').textContent = formatMoney(total);
+    }
+
+    function setMode(mode) {
+        if (mode === 'MANAGER') {
+            requestAuthCode("Vnesi MANAGER kodo:", (user) => {
+                if (user.role === 'MANAGER' || user.role === 'HOST') {
+                    if (currentUser && currentUser.id !== user.id) { /* Override allowed */ }
+                    currentMode = 'MANAGER';
+                    renderButtons(); 
+                } else {
+                    alert("Nimate pravic!");
+                }
+            });
+            return;
+        }
+
+        if (!currentUser) { alert("Najprej se mora prijaviti manager/blagajnik!"); return; }
+        currentMode = mode;
+        renderButtons();
+    }
+
+    function renderButtons() {
+        const container = document.getElementById('main-display');
+        container.innerHTML = '';
+
+        if (currentMode === 'ARTICLES') {
+            db.articles.forEach(art => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                if (!art.enabled) {
+                    btn.classList.add('btn-grey');
+                    btn.disabled = true;
+                }
+                btn.innerHTML = `<span>${art.name}</span>` + (isPOF ? `<br><span style="font-size:0.9em">${formatMoney(art.price)}</span>` : '');
+                
+                if (art.enabled) {
+                    btn.onclick = () => addItem(art);
+                }
+                container.appendChild(btn);
+            });
+        } 
+        else if (currentMode === 'FUNCTIONS') {
+            const functions = [
+                { name: 'KOLIČINA', action: fnQuantity },
+                { name: 'PROMO', action: fnPromo },
+                { name: 'VOID', action: fnVoid },
+                { name: '% POPUST', action: fnDiscount }
+            ];
+            functions.forEach(f => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.textContent = f.name;
+                btn.onclick = f.action;
+                container.appendChild(btn);
+            });
+        }
+        else if (currentMode === 'FINISH') {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.style.gridColumn = "span 4";
+            btn.style.gridRow = "span 2";
+            btn.style.fontSize = "20px";
+            btn.textContent = "KONČAJ RAČUN";
+            btn.onclick = finishReceiptSequence;
+            container.appendChild(btn);
+        }
+        else if (currentMode === 'MANAGER') {
+             const isHost = currentUser && currentUser.role === 'HOST';
+             
+             /* --- 1. POPRAVEK: MENI GUMBI ZA HOST-A --- */
+             const mgrBtns = [
+                 { name: 'LOGIN', icon: '🟢', action: mgrLogin },
+                 { name: 'LOGOUT', icon: '🔴', action: mgrLogout, hideHost: true }, // Skrito za HOST
+                 { name: 'VMESNO', action: mgrInterim },
+                 { name: 'SKYM', action: mgrSkym },
+                 { name: 'ARTIKLI', action: mgrArticles, hideHost: true }, // Skrito za HOST
+                 { name: 'ZAPOSLENI', action: mgrEmployees, hideHost: true }, // Skrito za HOST
+                 { name: 'STORNO', action: mgrStorno, hideHost: true }, // Skrito za HOST
+                 { name: 'BANKA', action: mgrBank, hideHost: true } // Skrito za HOST
+             ];
+
+             mgrBtns.forEach(b => {
+                 if (isHost && b.hideHost) return;
+                 const btn = document.createElement('button');
+                 btn.className = 'btn';
+                 btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
+                 btn.onclick = b.action;
+                 container.appendChild(btn);
+             });
+        }
+    }
+
+    function togglePOF() {
+        isPOF = !isPOF;
+        if (currentMode === 'ARTICLES') renderButtons();
+    }
+
+    /* ================= LOGIKA BLAGAJNE ================= */
+    function addItem(article) {
+        if (!timerRunning) startTimer();
+        currentReceipt.push({
+            name: article.name,
+            price: article.price,
+            originalPrice: article.price,
+            qty: 1,
+            isPromo: false,
+            isVoid: false,
+            isFinal: false
+        });
+        selectedItemIndex = currentReceipt.length - 1;
+        renderReceipt();
+    }
+
+    function getSelectedItem() {
+        if (selectedItemIndex < 0 || selectedItemIndex >= currentReceipt.length) {
+            alert("Izberi artikel!");
+            return null;
+        }
+        if (currentReceipt[selectedItemIndex].isVoid) {
+            alert("Artikel je storniran!");
+            return null;
+        }
+        return currentReceipt[selectedItemIndex];
+    }
+
+    function fnQuantity() {
+        const item = getSelectedItem();
+        if (!item) return;
+        showKeypad("Vnesi količino:", false, (val) => {
+            const qty = parseInt(val);
+            if (qty > 0) { item.qty = qty; renderReceipt(); }
+            closeModal();
+        });
+    }
+
+    function fnPromo() {
+        const item = getSelectedItem();
+        if (!item) return;
+        requestAuthCode("Vnesi MGR/HOST kodo:", (user) => {
+            item.isPromo = true;
+            item.price = 0.00;
+            renderReceipt();
+            closeModal();
+        });
+    }
+
+    function fnVoid() {
+        const item = getSelectedItem();
+        if (!item) return;
+        if (currentUser.sessionVoids >= 2) {
+             requestAuthCode("Limit! Vnesi MGR/HOST kodo:", (user) => {
+                 performVoid(item);
+                 closeModal();
+             });
+        } else {
+            performVoid(item);
+            currentUser.sessionVoids++;
+        }
+    }
+
+    function performVoid(item) {
+        item.isVoid = true;
+        item.price = 0;
+        renderReceipt();
+    }
+
+    function fnDiscount() {
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h3>Izberi popust</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button class="btn" onclick="applyDiscount('USER')">👤 ZAPOSLENI (-40%)</button>
+                <button class="btn" onclick="applyDiscount('COIN')">🪙 WII CEKIN (-70%)</button>
+                <button class="btn" onclick="applyDiscount('CUSTOM')">✏️ ROČNI VNOS</button>
+            </div>
+            <br>
+            <label><input type="checkbox" id="disc-all"> Na celoten račun?</label>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.applyDiscount = function(type) {
+        const applyToAll = document.getElementById('disc-all').checked;
+        if (type === 'USER') doDiscount(40, applyToAll);
+        else if (type === 'COIN') doDiscount(70, applyToAll);
+        else {
+             showKeypad("Vnesi odstotek popusta:", false, (val) => {
+                 doDiscount(parseInt(val), applyToAll);
+                 closeModal();
+             });
+        }
+    }
+
+    function doDiscount(percent, applyToAll) {
+        if (percent <= 0 || percent > 100) return;
+        const factor = (100 - percent) / 100;
+        if (applyToAll) {
+            currentReceipt.forEach(i => { if (!i.isVoid && !i.isPromo) i.price = i.originalPrice * factor; });
+        } else {
+            const item = getSelectedItem();
+            if (item && !item.isPromo) item.price = item.originalPrice * factor;
+        }
+        renderReceipt();
+        closeModal();
+    }
+
+    function finishReceiptSequence() {
+        if (currentReceipt.length === 0) return;
+        
+        const rId = db.receiptCounter++;
+        saveDB(); 
+        currentReceipt.forEach(i => i.isFinal = true);
+        currentReceipt[currentReceipt.length-1].receiptId = rId;
+        renderReceipt();
+        stopTimer();
+
+        const total = currentReceipt.reduce((acc, i) => acc + (i.price * i.qty), 0);
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h3>ZNESEK: ${formatMoney(total)}</h3>
+            <button class="btn" style="height:60px" onclick="paymentCash(${total})">GOTOVINA</button>
+            <br><br>
+            <button class="btn" style="height:60px" onclick="paymentCard(${total})">KARTICA</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.paymentCash = function(total) {
+        showKeypad("Vnesi prejeto gotovino:", false, (val) => {
+            const received = parseFloat(val);
+            const change = received - total;
+            if (change < 0) { alert("Premalo denarja!"); return; }
+            alert(`VRAČILO: ${formatMoney(change)}`);
+            finalizeTransaction(total, 'CASH');
+        });
+    }
+
+    window.paymentCard = function(total) {
+        showKeypad("Vnesi ID banke stranke:", false, (clientId) => {
+            if (db.bankAccounts[clientId] === undefined) { alert("Stranka ne obstaja!"); return; }
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <h3>Stranka: ${clientId}</h3>
+                <p>Stanje: ${formatMoney(db.bankAccounts[clientId])}</p>
+                <p>Za plačilo: ${formatMoney(total)}</p>
+                <button class="btn" style="height:50px; background:#8f8;" onclick="processBankPayment('${clientId}', ${total})">POTRDI PLAČILO</button>
+            `;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        });
+    }
+
+    window.processBankPayment = function(id, amount) {
+        if (db.bankAccounts[id] < amount) { alert("Ni kritja!"); return; }
+        db.bankAccounts[id] -= amount;
+        finalizeTransaction(amount, 'CARD');
+    }
+
+    function finalizeTransaction(amount, type) {
+        closeModal();
+        if (type === 'CASH') db.cashInDrawer += amount;
+        db.receipts.push({
+            id: currentReceipt[currentReceipt.length-1].receiptId,
+            items: [...currentReceipt],
+            total: amount,
+            type: type,
+            cashier: currentUser.name,
+            time: new Date().toISOString()
+        });
+        saveDB();
+        currentReceipt = [];
+        selectedItemIndex = -1;
+        renderReceipt();
+    }
+
+    /* ================= MANAGER LOGIC ================= */
+    
+    function mgrLogin() {
+        showKeypad("Vnesi ID zaposlenega:", false, (id) => {
+            const worker = db.employees.find(e => e.id === id);
+            if (!worker) { alert("Neznan delavec!"); return; }
+            showKeypad(`Zaposleni: ${worker.name}\nZačetni depozit:`, false, (cash) => {
+                currentUser = {
+                    ...worker,
+                    loginTime: new Date(),
+                    startCash: parseFloat(cash),
+                    sessionVoids: 0
+                };
+                db.cashInDrawer = parseFloat(cash);
+                db.shiftLog.push({ type: 'LOGIN', user: worker.name, amount: parseFloat(cash), time: new Date() });
+                saveDB();
+                updateStatusBar();
+                closeModal();
+                setMode('ARTICLES');
+            });
+        });
+    }
+
+    function mgrLogout() {
+        if (!currentUser) return;
+        const expected = db.cashInDrawer;
+        const soldCount = db.receipts.filter(r => new Date(r.time) > new Date(currentUser.loginTime)).length;
+
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <div style="text-align:left; font-size:14px;">
+                Blagajnik: ${currentUser.name}<br>
+                Pričakovano: ${formatMoney(expected)}<br>
+                Računov: ${soldCount}
+            </div>
+            <br>
+            <button class="btn" onclick="finalizeLogout(${expected})">VNESI DEJAN. STANJE</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.finalizeLogout = function(expected) {
+        showKeypad("Dejansko stanje:", false, (val) => {
+            const actual = parseFloat(val);
+            db.shiftLog.push({ type: 'LOGOUT', user: currentUser.name, expected: expected, actual: actual, diff: actual-expected, time: new Date() });
+            saveDB();
+            currentUser = null;
+            currentReceipt = [];
+            stopTimer();
+            updateStatusBar();
+            closeModal();
+            document.getElementById('main-display').innerHTML = '';
+        });
+    }
+
+    function mgrInterim() { alert(`TRENUTNO STANJE: ${formatMoney(db.cashInDrawer)}`); }
+    function mgrSkym() {
+        showKeypad("Znesek dviga (SKIM):", false, (val) => {
+            const amount = parseFloat(val);
+            if (amount > db.cashInDrawer) { alert("Ni dovolj denarja!"); return; }
+            db.cashInDrawer -= amount;
+            db.shiftLog.push({ type: 'SKYM', user: currentUser.name, amount: amount, time: new Date() });
+            saveDB();
+            alert("Odvzem zabeležen.");
+            closeModal();
+        });
+    }
+    
+    function mgrStorno() {
+        const content = document.getElementById('modal-content');
+        let html = '<div class="modal-list">';
+        db.receipts.slice(-10).reverse().forEach((r, idx) => {
+             html += `<div class="modal-list-item" onclick="processStorno(${r.id})"><span>#${r.id} (${formatMoney(r.total)})</span> <button class="list-btn-action">STORNO</button></div>`;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    window.processStorno = function(id) {
+        if(confirm(`Storniraj račun #${id}?`)) {
+            const rIndex = db.receipts.findIndex(r => r.id === id);
+            if (rIndex > -1) {
+                const r = db.receipts[rIndex];
+                if (r.type === 'CASH') db.cashInDrawer -= r.total;
+                db.receipts.splice(rIndex, 1);
+                saveDB();
+                alert("Stornirano!");
+                closeModal();
+            }
+        }
+    }
+
+    /* --- MANAGER ZAPOSLENI (FULL) --- */
+    function mgrEmployees() {
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h3>UREJANJE ZAPOSLENIH</h3>
+            <button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewEmployeeStep1()">+ DODAJ NOVEGA</button>
+            <div class="modal-list" id="emp-list"></div>
+        `;
+        
+        const list = document.getElementById('emp-list');
+        db.employees.forEach((emp, idx) => {
+            const div = document.createElement('div');
+            div.className = 'modal-list-item';
+            div.innerHTML = `<span>${emp.id} - ${emp.name} (${emp.role})</span> <span style="font-size:10px">UREDI</span>`;
+            div.onclick = () => editEmployee(idx);
+            list.appendChild(div);
+        });
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.addNewEmployeeStep1 = function() {
+        showKeypad("Vnesi ID (številka):", false, (id) => {
+            if (db.employees.find(e => e.id === id)) { alert("ID že obstaja!"); return; }
+            showKeyboard("Vnesi IME in PRIIMEK:", (name) => {
+                
+                /* --- 1. POPRAVEK: LOGIKA ZA VLOGO (MANAGER / HOST / ZAPOSLENI) --- */
+                let role = 'ZAPOSLENI';
+                if (confirm("Ali je MANAGER? (OK=DA, Cancel=NE)")) {
+                    role = 'MANAGER';
+                } else if (confirm("Ali je HOST? (OK=DA, Cancel=NE)")) {
+                    role = 'HOST';
+                }
+
+                showKeypad("Določi osebno kodo:", true, (code) => {
+                    db.employees.push({ id, name, role, code });
+                    saveDB();
+                    alert("Zaposleni dodan!");
+                    mgrEmployees(); // Nazaj na listo
+                });
+            });
+        });
+    }
+
+    window.editEmployee = function(idx) {
+        const emp = db.employees[idx];
+        if (confirm(`Želiš izbrisati zaposlenega ${emp.name}?`)) {
+            if(emp.id === '000') { alert("Administratorja ne moreš izbrisati!"); return; }
+            db.employees.splice(idx, 1);
+            saveDB();
+            mgrEmployees();
+        }
+    }
+
+    /* --- MANAGER ARTIKLI (FULL) --- */
+    function mgrArticles() {
+        const isHost = currentUser && currentUser.role === 'HOST';
+        const content = document.getElementById('modal-content');
+        
+        let html = '<h3>UREJANJE ARTIKLOV</h3>';
+        if (!isHost) html += '<button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewArticle()">+ DODAJ ARTIKEL</button>';
+        
+        html += '<div class="modal-list">';
+        db.articles.forEach((art, idx) => {
+            const style = art.enabled ? '' : 'text-decoration:line-through; color:red;';
+            html += `<div class="modal-list-item" style="${style}" onclick="editArticle(${idx}, ${isHost})">
+                        <span>${art.name}</span>
+                        <span>${formatMoney(art.price)}</span>
+                     </div>`;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.addNewArticle = function() {
+        showKeyboard("Ime artikla:", (name) => {
+            showKeypad("Cena artikla (npr. 1.50):", false, (priceVal) => {
+                const price = parseFloat(priceVal);
+                db.articles.push({ name: name.toUpperCase(), price: price, enabled: true });
+                saveDB();
+                mgrArticles();
+            });
+        });
+    }
+
+    window.editArticle = function(idx, isHost) {
+        const art = db.articles[idx];
+        // Host samo enable/disable
+        if (isHost) {
+            art.enabled = !art.enabled;
+            saveDB();
+            mgrArticles();
+            return;
+        }
+
+        // Manager meni za artikel
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h3>${art.name}</h3>
+            <button class="btn" style="width:100%; margin:5px 0" onclick="changeArtPrice(${idx})">SPREMENI CENO</button>
+            <button class="btn" style="width:100%; margin:5px 0" onclick="toggleArtStatus(${idx})">${art.enabled ? 'ONEMOGOČI' : 'OMOGOČI'}</button>
+            <button class="btn" style="width:100%; margin:5px 0; background:#ffcccc" onclick="deleteArt(${idx})">IZBRIŠI</button>
+            <button class="btn" style="width:100%; margin:20px 0" onclick="mgrArticles()">NAZAJ</button>
+        `;
+    }
+
+    window.changeArtPrice = function(idx) {
+        showKeypad("Nova cena:", false, (val) => {
+            db.articles[idx].price = parseFloat(val);
+            saveDB();
+            mgrArticles();
+        });
+    }
+    window.toggleArtStatus = function(idx) {
+        db.articles[idx].enabled = !db.articles[idx].enabled;
+        saveDB();
+        mgrArticles();
+    }
+    window.deleteArt = function(idx) {
+        if(confirm("Res izbrišem?")) {
+            db.articles.splice(idx, 1);
+            saveDB();
+            mgrArticles();
+        }
+    }
+
+
+    /* --- BANKA --- */
+    function mgrBank() {
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h3>BANKA</h3>
+            <button class="btn" onclick="bankNewClient()">NOVA STRANKA</button>
+            <br><br>
+            <button class="btn" onclick="bankEditClient()">TRANSAKCIJA</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    window.bankNewClient = function() {
+        showKeypad("ID nove stranke:", false, (id) => {
+            if (db.bankAccounts[id] !== undefined) { alert("Obstaja!"); return; }
+            showKeypad("Polog:", false, (val) => {
+                db.bankAccounts[id] = parseFloat(val);
+                saveDB();
+                alert("Odprto!");
+                closeModal();
+            });
+        });
+    }
+    window.bankEditClient = function() {
+        showKeypad("ID stranke:", false, (id) => {
+            if (db.bankAccounts[id] === undefined) { alert("Ni stranke!"); return; }
+            showKeypad(`Stanje: ${formatMoney(db.bankAccounts[id])}\nZnesek (+/-):`, false, (val) => {
+                db.bankAccounts[id] += parseFloat(val);
+                saveDB();
+                alert("Novo stanje: " + formatMoney(db.bankAccounts[id]));
+                closeModal();
+            });
+        });
+    }
+
+    /* ================= KEYPAD & KEYBOARD SYSTEM ================= */
+    let inputCallback = null;
+
+    // NUMERIČNA
+    function showKeypad(title, isSecret, callback) {
+        inputCallback = callback;
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-overlay').style.display = 'flex';
+        
+        content.innerHTML = `
+            <div id="kp-display" class="input-display"></div>
+            <div class="keypad-grid">
+                <button class="keypad-btn" onclick="kpIn('7')">7</button>
+                <button class="keypad-btn" onclick="kpIn('8')">8</button>
+                <button class="keypad-btn" onclick="kpIn('9')">9</button>
+                <button class="keypad-btn" onclick="kpIn('4')">4</button>
+                <button class="keypad-btn" onclick="kpIn('5')">5</button>
+                <button class="keypad-btn" onclick="kpIn('6')">6</button>
+                <button class="keypad-btn" onclick="kpIn('1')">1</button>
+                <button class="keypad-btn" onclick="kpIn('2')">2</button>
+                <button class="keypad-btn" onclick="kpIn('3')">3</button>
+                <button class="keypad-btn" onclick="kpIn('.')">.</button> 
+                <button class="keypad-btn" onclick="kpIn('0')">0</button>
+                <button class="keypad-btn" style="background:#faa" onclick="kpIn('C')">C</button>
+            </div>
+            <button class="btn" style="width:100%; margin-top:10px; height:40px; background:#8f8" onclick="submitInput()">POTRDI</button>
+        `;
+        content.dataset.secret = isSecret; 
+        content.dataset.value = "";
+    }
+
+    // ALFANUMERIČNA (QWERTY poenostavljena)
+    function showKeyboard(title, callback) {
+        inputCallback = callback;
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-overlay').style.display = 'flex';
+
+        const keys = "QWERTYUIOPASDFGHJKLZXCVBNM".split('');
+        let keysHtml = '';
+        keys.forEach(k => { keysHtml += `<button class="kb-btn" onclick="kpIn('${k}')">${k}</button>`; });
+        
+        content.innerHTML = `
+            <div id="kp-display" class="input-display" style="justify-content:flex-start; font-size:18px"></div>
+            <div class="keyboard-grid">
+                ${keysHtml}
+                <button class="kb-btn kb-btn-wide" onclick="kpIn('SPACE')">_</button>
+                <button class="kb-btn kb-btn-wide" style="background:#faa" onclick="kpIn('BACK')">DEL</button>
+            </div>
+            <button class="btn" style="width:100%; margin-top:10px; height:40px; background:#8f8" onclick="submitInput()">POTRDI</button>
+        `;
+        content.dataset.secret = false;
+        content.dataset.value = "";
+    }
+
+    window.kpIn = function(val) {
+        const content = document.getElementById('modal-content');
+        let current = content.dataset.value;
+        
+        if (val === 'C') current = "";
+        else if (val === 'BACK') current = current.slice(0, -1);
+        else if (val === 'SPACE') current += " ";
+        else current += val;
+
+        content.dataset.value = current;
+        
+        const display = document.getElementById('kp-display');
+        if (content.dataset.secret === 'true') display.textContent = "*".repeat(current.length);
+        else display.textContent = current;
+    }
+
+    window.submitInput = function() {
+        const val = document.getElementById('modal-content').dataset.value;
+        if (inputCallback) inputCallback(val);
+        // Ne zapremo avtomatsko, ker callback morda odpre nov modal
+    }
+
+    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+    
+    function requestAuthCode(title, cb) {
+        showKeypad(title, true, (code) => {
+            const u = db.employees.find(e => e.code === code);
+            if(u && (u.role==='MANAGER'||u.role==='HOST')) { closeModal(); cb(u); }
+            else { alert("Napačna koda!"); }
+        });
+    }
+
+    updateStatusBar();
+</script>
+</body>
+</html>
