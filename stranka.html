@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII SHOP - ZASLON ZA STRANKE</title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --text-color: #0ff; /* Retro digitalna modra */
+            --highlight: #f0f;
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            border-bottom: 3px solid var(--text-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 { margin: 0; font-size: 40px; text-transform: uppercase; letter-spacing: 5px; }
+
+        #display-container {
+            display: flex;
+            flex-grow: 1;
+            gap: 20px;
+        }
+
+        /* Seznam artiklov */
+        #items-column {
+            flex: 2;
+            border: 2px solid var(--text-color);
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 28px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        /* Desna stran z zneski */
+        #info-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .box {
+            border: 2px solid var(--text-color);
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .label { font-size: 20px; text-transform: uppercase; display: block; margin-bottom: 10px; }
+        .value { font-size: 60px; font-weight: bold; }
+
+        #change-box {
+            border-color: var(--highlight);
+            color: var(--highlight);
+            display: none; /* Skrijemo, dokler ni vračila */
+        }
+
+        /* Sporočila */
+        #overlay-message {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .success-text { font-size: 80px; color: #0f0; text-shadow: 0 0 20px #0f0; animation: blink 1s infinite; }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .closed-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            font-size: 30px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+
+<div id="closed-screen" class="closed-overlay">BLAGAJNA ZAPRTA</div>
+
+<header>
+    <h1>WII SHOP CUSTOMER DISPLAY</h1>
+</header>
+
+<div id="display-container">
+    <div id="items-column">
+        <div style="text-align: center; color: #333; margin-top: 100px;">ČAKAM NA PRVI ARTIKEL...</div>
+    </div>
+
+    <div id="info-column">
+        <div class="box">
+            <span class="label">ZA PLAČILO</span>
+            <div id="total-val" class="value">0.00 WII</div>
+        </div>
+
+        <div id="change-box" class="box">
+            <span class="label">ZA VRNITI</span>
+            <div id="change-val" class="value">0.00 WII</div>
+        </div>
+    </div>
+</div>
+
+<div id="overlay-message">
+    <div class="success-text" id="msg-text">HVALA ZA NAKUP!</div>
+</div>
+
+<script>
+    const displayChannel = new BroadcastChannel('wii_shop_display');
+    const itemsColumn = document.getElementById('items-column');
+    const totalVal = document.getElementById('total-val');
+    const changeBox = document.getElementById('change-box');
+    const changeVal = document.getElementById('change-val');
+    const overlay = document.getElementById('overlay-message');
+    const closedScreen = document.getElementById('closed-screen');
+
+    displayChannel.onmessage = (event) => {
+        const { type, payload } = event.data;
+
+        if (type === 'STATUS') {
+            closedScreen.style.display = payload.isOpen ? 'none' : 'flex';
+        }
+
+        if (type === 'CART') {
+            overlay.style.display = 'none';
+            changeBox.style.display = 'none';
+            updateCart(payload.items, payload.totalStr);
+        }
+
+        if (type === 'CHANGE') {
+            changeBox.style.display = 'block';
+            changeVal.textContent = payload.changeStr;
+        }
+
+        if (type === 'SUCCESS') {
+            showSuccess();
+        }
+    };
+
+    function updateCart(items, totalStr) {
+        if (items.length === 0) {
+            itemsColumn.innerHTML = '<div style="text-align: center; color: #333; margin-top: 100px;">NASLEDNJA STRANKA...</div>';
+            totalVal.textContent = "0.00 WII";
+            return;
+        }
+
+        itemsColumn.innerHTML = '';
+        items.forEach(item => {
+            if (item.isVoid) return; // Ne kažemo storniranih stranki, da ni zmede
+
+            const div = document.createElement('div');
+            div.className = 'item-row';
+            
+            let name = item.name;
+            if (item.qty > 1) name += ` (${item.qty}x)`;
+            
+            const price = (item.price * item.qty).toFixed(2);
+            
+            div.innerHTML = `<span>${name}</span><span>${price}</span>`;
+            itemsColumn.appendChild(div);
+        });
+
+        totalVal.textContent = totalStr;
+    }
+
+    function showSuccess() {
+        overlay.style.display = 'flex';
+        // Po 5 sekundah počisti zaslon za naslednjo stranko
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            changeBox.style.display = 'none';
+            itemsColumn.innerHTML = '<div style="text-align: center; color: #333; margin-top: 100px;">PRIPRAVLJEN NA NAKUP</div>';
+            totalVal.textContent = "0.00 WII";
+        }, 5000);
+    }
+</script>
+
+</body>
+</html>
