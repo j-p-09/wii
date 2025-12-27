@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII SHOP BLAGAJNA FINAL v3</title>
+    <title>WII SHOP BLAGAJNA FINAL v4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -372,7 +372,7 @@
     let currentMode = 'ARTICLES';
     let activeManagerMenu = null; // 'HOST' or 'MANAGER'
 
-    // Shrani sejo (uporabnik, odprt račun) v ločen localStorage ključ
+    // Shrani sejo (uporabnik, odprt račun)
     function saveSession() {
         const session = {
             user: currentUser,
@@ -390,7 +390,7 @@
             currentUser = saved.user;
             currentReceipt = saved.receipt || [];
             timerSeconds = saved.timer || 0;
-            currentMode = 'ARTICLES'; // Vedno začnemo na artiklih ob reloadu
+            currentMode = 'ARTICLES'; 
             updateStatusBar();
             renderReceipt();
             if (currentReceipt.length > 0) startTimer();
@@ -411,7 +411,7 @@
         timerInterval = setInterval(() => {
             timerSeconds++;
             updateTimerDisplay();
-            saveSession(); // Shrani čas
+            saveSession();
         }, 1000);
     }
     function stopTimer() {
@@ -493,20 +493,17 @@
         }
 
         document.getElementById('total-amount').textContent = formatMoney(total);
-        saveSession(); // Shrani stanje ob vsakem renderju
+        saveSession(); 
     }
 
     function setMode(mode) {
-        // Logika za MANAGER meni - odpre se glede na vpisano kodo
         if (mode === 'MANAGER') {
             requestAuthCode("Vnesi KODO za dostop:", (user) => {
                 if (user.role === 'HOST') {
-                    // Odpri HOST meni neodvisno od tega kdo je prijavljen
                     currentMode = 'MANAGER';
                     activeManagerMenu = 'HOST';
                     renderButtons();
                 } else if (user.role === 'MANAGER') {
-                    // Odpri MANAGER meni neodvisno od tega kdo je prijavljen
                     currentMode = 'MANAGER';
                     activeManagerMenu = 'MANAGER';
                     renderButtons();
@@ -568,9 +565,6 @@
             container.appendChild(btn);
         }
         else if (currentMode === 'MANAGER') {
-             // Dinamični prikaz glede na to, katera koda je bila vpisana (HOST ali MANAGER)
-             
-             // Gumbi, ki so vidni samo za MANAGERJA
              const managerOnlyBtns = [
                  { name: 'LOGOUT', icon: '🔴', action: mgrLogout },
                  { name: 'ARTIKLI', action: mgrArticles },
@@ -579,14 +573,12 @@
                  { name: 'BANKA', action: mgrBank }
              ];
 
-             // Gumbi, ki so vidni za OBA (HOST in MANAGER)
              const commonBtns = [
                  { name: 'LOGIN', icon: '🟢', action: mgrLogin },
                  { name: 'VMESNO', action: mgrInterim },
                  { name: 'SKYM', action: mgrSkym }
              ];
 
-             // Vedno prikaži skupne gumbe
              commonBtns.forEach(b => {
                  const btn = document.createElement('button');
                  btn.className = 'btn';
@@ -595,7 +587,6 @@
                  container.appendChild(btn);
              });
 
-             // Če je vpisal MANAGER kodo, pokaži še ostalo
              if (activeManagerMenu === 'MANAGER') {
                  managerOnlyBtns.forEach(b => {
                      const btn = document.createElement('button');
@@ -819,7 +810,6 @@
     function mgrLogout() {
         if (!currentUser) return;
         const expected = db.cashInDrawer;
-        // Filtriramo račune samo za trenutno sejo
         const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= new Date(currentUser.loginTime));
         const soldCount = sessionReceipts.length;
 
@@ -849,14 +839,14 @@
             currentUser = null;
             currentReceipt = [];
             stopTimer();
-            localStorage.removeItem('wiiShopSession'); // Po logoutu brišemo sejo
+            localStorage.removeItem('wiiShopSession'); 
             updateStatusBar();
             closeModal();
             document.getElementById('main-display').innerHTML = '';
         });
     }
 
-    /* ================= PDF GENERATOR ================= */
+    /* ================= PDF GENERATOR (BREZ ŠUMNIKOV) ================= */
     function generatePDF(user, expected, actual) {
         if (!window.jspdf) {
             alert("Napaka: Knjižnica za PDF se ni naložila. Preveri internet.");
@@ -864,24 +854,30 @@
         }
 
         const { jsPDF } = window.jspdf;
-        // 57mm širina, višina avtomatsko oz. dovolj velika (2000mm)
         const doc = new jsPDF({
             orientation: 'p',
             unit: 'mm',
             format: [57, 2000] 
         });
 
-        // Nastavitve pisave: Monospace, Bold, majhna velikost
         doc.setFont("courier", "bold");
         doc.setFontSize(9);
 
-        let y = 10; // Začetna Y pozicija
-        const lineH = 4; // Višina vrstice
-        const width = 57;
+        let y = 10;
+        const lineH = 4;
         const margin = 2;
 
+        // Funkcija za odstranjevanje šumnikov (ČŠŽ -> CSZ)
+        function clean(str) {
+            if(!str) return "";
+            return str.toString()
+                .replace(/č/g, 'c').replace(/Č/g, 'C')
+                .replace(/š/g, 's').replace(/Š/g, 'S')
+                .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
+        }
+
         function addLine(text) {
-            doc.text(text, margin, y);
+            doc.text(clean(text), margin, y); // Tukaj počistimo tekst
             y += lineH;
         }
 
@@ -889,11 +885,9 @@
             addLine("****************************");
         }
 
-        // Zbiranje podatkov
         const now = new Date();
         const dateStr = now.toLocaleDateString('sl-SI') + " " + now.toLocaleTimeString('sl-SI');
         
-        // Računi te seje
         const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= new Date(user.loginTime));
         const countTotal = sessionReceipts.length;
         const countCash = sessionReceipts.filter(r => r.type === 'CASH').length;
@@ -913,36 +907,35 @@
         addSeparator();
 
         // FINANCE
-        addLine(`Začetni depozit: ${formatMoney(user.startCash)}`);
+        addLine(`Zacetni depozit: ${formatMoney(user.startCash)}`);
         addLine(`Gotovina konec prodaje: ${formatMoney(expected)}`);
         
         addSeparator();
 
         // STATISTIKA
-        addLine(`Število računov skupaj: ${countTotal}`);
-        addLine(`Gotovinski računi: ${countCash}`);
-        addLine(`Kartični računi: ${countCard}`);
+        addLine(`Stevilo racunov skupaj: ${countTotal}`);
+        addLine(`Gotovinski racuni: ${countCash}`);
+        addLine(`Karticni racuni: ${countCard}`);
 
         addSeparator();
         
         // SEZNAM RAČUNOV
         doc.setFontSize(11);
-        addLine("IZPIS RAČUNOV:");
+        addLine("IZPIS RACUNOV:");
         doc.setFontSize(8);
 
         if (sessionReceipts.length === 0) {
-            addLine("(Ni računov v tej izmeni)");
+            addLine("(Ni racunov v tej izmeni)");
         } else {
             sessionReceipts.forEach(rec => {
                 y += 2;
-                addLine(`RAČUN #${rec.id} (${rec.time.split('T')[1].slice(0,5)})`);
-                addLine(`Način: ${rec.type}`);
+                addLine(`RACUN #${rec.id} (${rec.time.split('T')[1].slice(0,5)})`);
+                addLine(`Nacin: ${rec.type}`);
                 rec.items.forEach(item => {
                     let name = item.name;
                     if(item.isVoid) name = "[X] " + name;
                     else if(item.isPromo) name = "[P] " + name;
                     
-                    // Če je količina > 1
                     if(item.qty > 1) {
                          addLine(` ${item.qty}x ${name}`);
                          addLine(`   = ${formatMoney(item.price*item.qty)}`);
@@ -955,7 +948,6 @@
             });
         }
 
-        // Prenos datoteke
         doc.save(`zakljucek_${user.id}_${now.getTime()}.pdf`);
     }
 
@@ -1022,24 +1014,20 @@
             if (db.employees.find(e => e.id === id)) { alert("ID že obstaja!"); return; }
             showKeyboard("Vnesi IME in PRIIMEK:", (name) => {
                 
-                // --- 1. POPRAVEK: STRIKTNA LOGIKA ZA VLOGO ---
                 let role = 'ZAPOSLENI';
-                // Ali je manager?
                 if (confirm("Ali je MANAGER? (OK=DA, Cancel=NE)")) {
                     role = 'MANAGER';
                 } else {
-                    // Če ni manager, vprašaj če je host
                     if (confirm("Ali je HOST? (OK=DA, Cancel=NE)")) {
                         role = 'HOST';
                     }
-                    // Če ni nič od tega, ostane ZAPOSLENI
                 }
 
                 showKeypad("Določi osebno kodo:", true, (code) => {
                     db.employees.push({ id, name, role, code });
                     saveDB();
                     alert(`Zaposleni dodan z vlogo: ${role}`);
-                    mgrEmployees(); // Nazaj na listo
+                    mgrEmployees(); 
                 });
             });
         });
@@ -1057,8 +1045,6 @@
 
     /* --- MANAGER ARTIKLI (FULL) --- */
     function mgrArticles() {
-        // Dostop do tega menija je mogoč le, če je koda MANAGER
-        // (HOST koda ne odpre gumba ARTIKLI v renderButtons)
         const content = document.getElementById('modal-content');
         
         let html = '<h3>UREJANJE ARTIKLOV</h3>';
@@ -1237,7 +1223,6 @@
     function requestAuthCode(title, cb) {
         showKeypad(title, true, (code) => {
             const u = db.employees.find(e => e.code === code);
-            // Koda mora obstajati in biti HOST ali MANAGER
             if(u && (u.role==='MANAGER'||u.role==='HOST')) { 
                 closeModal(); 
                 cb(u); 
