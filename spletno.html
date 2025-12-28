@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>WII Delivery Terminal v2.0 (Smart AI)</title>
+    <style>
+        :root {
+            --bg-color: #d4d0c8;
+            --win-border: #808080;
+            --chat-bg: #fff;
+            --user-msg: #e6ffe6;
+            --bot-msg: #f2f2f2;
+            --term-green: #008000;
+        }
+
+        body {
+            background-color: #333;
+            font-family: "Courier New", Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        #terminal-container {
+            width: 1000px;
+            background: var(--bg-color);
+            border: 4px ridge #eee;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            position: relative;
+        }
+
+        /* HEADER */
+        .top-bar {
+            background: #000080;
+            color: white;
+            padding: 5px 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-light {
+            height: 10px; width: 10px;
+            background: red;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            box-shadow: 0 0 5px red;
+        }
+        .status-light.online { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+
+        /* MAIN CONTENT AREA */
+        #main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* CHAT BOX */
+        #chat-history {
+            flex: 1;
+            background: var(--chat-bg);
+            border: 2px inset #888;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            max-width: 70%;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+            background: var(--bot-msg);
+            border-left: 4px solid #888;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: var(--user-msg);
+            border-right: 4px solid var(--term-green);
+            text-align: right;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 2px;
+            display: block;
+        }
+
+        /* CONTROLS */
+        #controls-area {
+            display: flex;
+            gap: 10px;
+            height: 50px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            font-family: inherit;
+            border: 2px inset #888;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 5px 15px;
+            background: #c0c0c0;
+            border: 3px outset #eee;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+        }
+        button:active { border-style: inset; }
+        button.terminate { background: #ffcccc; color: #800000; }
+        button.send { background: #ccffcc; }
+
+        /* LOGIN SCREEN */
+        #login-screen, #manager-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        
+        /* MANAGER TABLE */
+        .mgr-table-container {
+            width: 95%;
+            height: 80%;
+            overflow: auto;
+            background: white;
+            border: 2px inset #888;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #999; padding: 5px; text-align: left; }
+        th { background: #ddd; }
+        tr:hover { background: #ffffcc; }
+
+        /* MODALS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: var(--bg-color);
+            padding: 20px;
+            border: 4px ridge #eee;
+            width: 400px;
+            text-align: center;
+        }
+        .modal-input {
+            width: 90%;
+            margin: 10px 0;
+            padding: 8px;
+            font-family: inherit;
+        }
+        .read-only-field {
+            background: #e0e0e0;
+            color: #555;
+            border: 1px solid #999;
+            cursor: not-allowed;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="terminal-container">
+    <div class="top-bar">
+        <span>WII DELIVERY SYSTEM v2.0 (AI ENHANCED)</span>
+        <div>
+            <span id="status-indicator" class="status-light"></span>
+            <span id="operator-name">NI POVEZAVE</span>
+        </div>
+    </div>
+
+    <div id="main-view">
+        <div id="chat-history">
+            <div style="text-align:center; color:#888; margin-top:20px;">
+                *** ČAKANJE NA DOHODNI KLIC ***
+            </div>
+        </div>
+        <div id="controls-area">
+            <button onclick="toggleManager()">MGR</button>
+            <input type="text" id="msg-input" placeholder="Vpiši sporočilo..." disabled>
+            <button class="send" id="btn-send" onclick="sendMessage()" disabled>POŠLJI</button>
+            <button class="terminate" id="btn-end" onclick="requestEndChat()" disabled>KONČAJ</button>
+        </div>
+    </div>
+
+    <div id="login-screen">
+        <h2>WII DELIVERY LOGIN</h2>
+        <p>Vnesi ID zaposlenega:</p>
+        <input type="number" id="login-id" style="width: 150px; text-align: center; padding: 5px;">
+        <br><br>
+        <button onclick="loginUser()">PRIJAVA</button>
+    </div>
+
+    <div id="manager-screen" style="display:none;">
+        <div class="top-bar" style="width:100%; box-sizing: border-box;">
+            <span>MANAGER LOGS</span>
+            <button onclick="closeManager()" style="font-size:10px; padding:2px 5px;">IZHOD</button>
+        </div>
+        <div class="mgr-table-container">
+            <table id="log-table">
+                <thead>
+                    <tr>
+                        <th>DATUM/ČAS</th>
+                        <th>ZAPOSLENI</th>
+                        <th>RAČUN #</th>
+                        <th>ZNESEK</th>
+                        <th>PLAČILO</th>
+                        <th>AKCIJA</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modal-invoice" class="modal">
+    <div class="modal-content">
+        <h3>ZAKLJUČEK NAROČILA</h3>
+        <p>Vnesi podatke za zaključek:</p>
+        
+        <label style="font-size:12px; display:block; text-align:left; margin-left:15px;">Št. Računa:</label>
+        <input type="text" id="final-invoice-num" class="modal-input" placeholder="Npr. 1004">
+        
+        <label style="font-size:12px; display:block; text-align:left; margin-left:15px;">Znesek (WII):</label>
+        <input type="number" id="final-amount" class="modal-input" placeholder="0.00">
+        
+        <label style="font-size:12px; display:block; text-align:left; margin-left:15px;">Način plačila:</label>
+        <input type="text" class="modal-input read-only-field" value="KARTICA (Banka: 001)" readonly>
+        
+        <br><br>
+        <button onclick="finalizeChat()">SHRANI IN ZAKLJUČI</button>
+        <button onclick="closeModal('modal-invoice')">PREKLIČI</button>
+    </div>
+</div>
+
+<div id="modal-log-view" class="modal">
+    <div class="modal-content" style="width: 500px; height: 400px; display:flex; flex-direction:column;">
+        <h3>ZGODOVINA POGOVORA</h3>
+        <div id="log-info-header" style="background:#eee; padding:5px; font-size:12px; border-bottom:1px solid #999;"></div>
+        <div id="log-viewer-content" style="flex:1; overflow-y:auto; border:2px inset #888; background:#fff; text-align:left; padding:10px;"></div>
+        <br>
+        <button onclick="closeModal('modal-log-view')">ZAPRI</button>
+    </div>
+</div>
+
+<script>
+    // --- PODATKI ---
+    let currentUser = null;
+    let currentChatLog = [];
+    let isChatActive = false;
+
+    // SPREMENLJIVKE ZA "PAMETNEJŠI" AI
+    let chatStage = 0; // 0: Start, 1: Shopping, 2: Deciding, 3: Paying, 4: Done
+    let availableQuestions = []; // Bazen vprašanj, ki se manjšajo
+    
+    // BAZA ODGOVOROV
+    const botDB = {
+        greetings: ["Dober dan.", "Živjo, rad bi nekaj naročil.", "Pozdravljeni WII Shop, ste odprti?"],
+        
+        // Vprašanja (Bot sprašuje) - to se bo kopiralo v availableQuestions in brisalo
+        items_wanted: [
+            "Imate mogoče WII Karto?",
+            "Rabil bi eno kuverto.",
+            "A prodajate znamke?",
+            "Zanima me cena za vrečko.",
+            "Kupil bi WII točke."
+        ],
+        
+        // Čudna vprašanja (samo včasih)
+        items_weird: [
+            "A imate mogoče Playstation 5?", 
+            "Iščem gume za traktor.", 
+            "Zanima me, če prodajate pico?", 
+            "Ali imate tiste stare kasete?",
+            "Kupil bi hladilnik."
+        ],
+
+        // Reakcije na ceno (če uporabnik napiše številko)
+        reaction_expensive: ["Uf, to je pa drago.", "Joj, nimam toliko denarja.", "A lahko dobim popust?"],
+        reaction_cheap: ["O, to je pa ugodno!", "Super cena.", "To se splača."],
+        reaction_ok: ["V redu, cena je poštena.", "Ok, sprejemljivo.", "Velja."],
+
+        // Zaključek
+        confirm_purchase: ["V redu, vzel bom.", "Dajte mi to.", "Zapakirajte prosim."],
+        payment_info: ["Plačal bom s kartico.", "Imam vašo kartico zvestobe, plačam s kartico.", "Evo, kartica."],
+        goodbye: ["Hvala, adijo.", "Nasvidenje.", "Lep dan še naprej."]
+    };
+
+    // --- LOGIKA SISTEMA ---
+
+    function loginUser() {
+        const id = document.getElementById('login-id').value;
+        if(id) {
+            currentUser = { id: id, name: "ZAPOSLENI " + id }; 
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('operator-name').textContent = currentUser.name;
+            document.getElementById('status-indicator').classList.add('online');
+            startNewSession();
+        }
+    }
+
+    function startNewSession() {
+        isChatActive = true;
+        currentChatLog = [];
+        document.getElementById('chat-history').innerHTML = '';
+        enableControls(true);
+        
+        // RESET AI STANJA
+        chatStage = 0;
+        // Zmešamo normalna in čudna vprašanja za ta session
+        availableQuestions = [...botDB.items_wanted];
+        if(Math.random() > 0.5) {
+            availableQuestions.push(botDB.items_weird[Math.floor(Math.random() * botDB.items_weird.length)]);
+        }
+
+        setTimeout(() => {
+            receiveBotMessage(getRandom(botDB.greetings));
+            chatStage = 1; // Prehod v nakupovanje
+        }, 1500);
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if(!text) return;
+
+        addMessageToChat('user', text);
+        input.value = '';
+
+        // Simuliraj razmišljanje (variabilni čas)
+        const delay = 1000 + Math.random() * 2000;
+        setTimeout(() => {
+            generateSmartResponse(text);
+        }, delay);
+    }
+
+    // --- PAMETNA AI LOGIKA ---
+    function generateSmartResponse(userText) {
+        if(!isChatActive) return;
+
+        const txt = userText.toLowerCase();
+        let reply = "...";
+        let moveStage = false;
+
+        // 1. ANALIZA VNOSA (Ali je uporabnik omenil ceno?)
+        const hasNumber = /\d/.test(txt); // Preveri če tekst vsebuje številko
+        const isYes = txt.includes('ja') || txt.includes('imamo') || txt.includes('seveda');
+        const isNo = txt.includes('ne') || txt.includes('žal') || txt.includes('ni');
+
+        // 2. STATE MACHINE (Avtomat stanja)
+        
+        // FAZA 1: NAKUPOVANJE (Stranka sprašuje za artikle)
+        if (chatStage === 1) {
+            if (hasNumber) {
+                // Če prodajalec pove ceno, stranka reagira
+                if (Math.random() > 0.7) {
+                    reply = getRandom(botDB.reaction_expensive);
+                    // Če je drago, včasih ne kupi in vpraša za kaj drugega
+                    if(Math.random() > 0.5) chatStage = 1; 
+                } else {
+                    reply = getRandom(botDB.reaction_cheap) + " " + getRandom(botDB.confirm_purchase);
+                    chatStage = 2; // Gremo na plačilo
+                }
+            } 
+            else if (isNo) {
+                // Če artikla ni
+                reply = "Škoda. Kaj pa..."; 
+                // Ostane v fazi 1, ampak bo v naslednjem koraku vzel novo vprašanje
+            }
+            else {
+                // Če prodajalec samo pozdravi nazaj ali reče "kako pomagam"
+                // Bot postavi vprašanje iz seznama
+                if (availableQuestions.length > 0) {
+                    const qIndex = Math.floor(Math.random() * availableQuestions.length);
+                    reply = availableQuestions[qIndex];
+                    // IZBRIŠI VPRAŠANJE DA SE NE PONOVI
+                    availableQuestions.splice(qIndex, 1);
+                } else {
+                    reply = "Mislim, da sem našel vse. Koliko sem dolžan?";
+                    chatStage = 2;
+                }
+            }
+        }
+        
+        // FAZA 2: ODLOČITEV / PLAČILO
+        else if (chatStage === 2) {
+            reply = getRandom(botDB.payment_info);
+            chatStage = 3;
+        }
+
+        // FAZA 3: KONEC
+        else if (chatStage === 3) {
+            if (hasNumber || txt.includes('račun') || txt.includes('hvala')) {
+                reply = getRandom(botDB.goodbye);
+                chatStage = 4; // Konec debate
+            } else {
+                reply = "Tu je kartica. Čakam na račun.";
+            }
+        }
+
+        // FAZA 4: TIŠINA (Če prodajalec še kar piše)
+        else if (chatStage === 4) {
+            // 20% možnosti da še kaj reče, drugače tiho
+            if (Math.random() > 0.8) reply = "Hvala, nasvidenje.";
+            else return; // Ne reče nič
+        }
+
+        // VAROVALKA: Če reply ostane prazen ali čuden
+        if (reply === "..." || reply === undefined) {
+            if (availableQuestions.length > 0 && chatStage === 1) {
+                const qIndex = Math.floor(Math.random() * availableQuestions.length);
+                reply = availableQuestions[qIndex];
+                availableQuestions.splice(qIndex, 1);
+            } else {
+                reply = "To bo vse.";
+                chatStage = 2;
+            }
+        }
+
+        receiveBotMessage(reply);
+    }
+
+    function getRandom(array) {
+        return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function receiveBotMessage(text) {
+        addMessageToChat('bot', text);
+    }
+
+    function addMessageToChat(sender, text) {
+        const history = document.getElementById('chat-history');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${sender}`;
+        
+        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        msgDiv.innerHTML = `<span class="msg-time">${time}</span>${text}`;
+        
+        history.appendChild(msgDiv);
+        history.scrollTop = history.scrollHeight;
+
+        currentChatLog.push({ sender: sender, text: text, time: time });
+    }
+
+    // --- ZAKLJUČEVANJE ---
+
+    function requestEndChat() {
+        document.getElementById('modal-invoice').style.display = 'flex';
+    }
+
+    function finalizeChat() {
+        const invNum = document.getElementById('final-invoice-num').value;
+        const amount = document.getElementById('final-amount').value;
+
+        if(!invNum || !amount) {
+            alert("Prosim vpiši številko računa in znesek!");
+            return;
+        }
+
+        const paymentType = "KARTICA - BANKA 001";
+
+        const sessionData = {
+            id: Date.now(),
+            date: new Date().toLocaleString(),
+            employee: currentUser.name,
+            invoice: invNum,
+            amount: amount + " WII",
+            payment: paymentType,
+            chat: currentChatLog
+        };
+
+        const allLogs = JSON.parse(localStorage.getItem('wii_delivery_logs')) || [];
+        allLogs.push(sessionData);
+        localStorage.setItem('wii_delivery_logs', JSON.stringify(allLogs));
+
+        closeModal('modal-invoice');
+        document.getElementById('final-invoice-num').value = "";
+        document.getElementById('final-amount').value = "";
+        
+        alert("TRANSAKCIJA USPEŠNA.\nSredstva prenesena na KARTICA 001.\nČakam novo stranko...");
+        startNewSession();
+    }
+
+    // --- MANAGER ---
+    function toggleManager() {
+        const code = prompt("Vpiši MANAGER kodo:"); 
+        if (code === "000") {
+            renderManagerTable();
+            document.getElementById('manager-screen').style.display = 'flex';
+        } else {
+            alert("Napačna koda!");
+        }
+    }
+
+    function closeManager() {
+        document.getElementById('manager-screen').style.display = 'none';
+    }
+
+    function renderManagerTable() {
+        const logs = JSON.parse(localStorage.getItem('wii_delivery_logs')) || [];
+        const tbody = document.querySelector('#log-table tbody');
+        tbody.innerHTML = "";
+
+        logs.reverse().forEach(log => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${log.date}</td>
+                <td>${log.employee}</td>
+                <td>${log.invoice}</td>
+                <td>${log.amount}</td>
+                <td style="color:blue; font-weight:bold;">${log.payment}</td>
+                <td><button onclick='viewLog(${log.id})'>PREBERI</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function viewLog(id) {
+        const logs = JSON.parse(localStorage.getItem('wii_delivery_logs')) || [];
+        const log = logs.find(l => l.id === id);
+        if(!log) return;
+
+        document.getElementById('log-info-header').innerHTML = 
+            `<b>RAČUN:</b> ${log.invoice} | <b>ZNESEK:</b> ${log.amount} | <b>PLAČILO:</b> ${log.payment}`;
+
+        const content = document.getElementById('log-viewer-content');
+        content.innerHTML = "";
+        
+        log.chat.forEach(msg => {
+            const div = document.createElement('div');
+            div.style.marginBottom = "5px";
+            div.style.borderBottom = "1px dashed #ccc";
+            div.innerHTML = `<b>[${msg.time}] ${msg.sender.toUpperCase()}:</b> ${msg.text}`;
+            if(msg.sender === 'bot') div.style.color = "blue";
+            if(msg.sender === 'user') div.style.color = "green";
+            content.appendChild(div);
+        });
+
+        document.getElementById('modal-log-view').style.display = 'flex';
+    }
+
+    function enableControls(enable) {
+        document.getElementById('msg-input').disabled = !enable;
+        document.getElementById('btn-send').disabled = !enable;
+        document.getElementById('btn-end').disabled = !enable;
+        if(enable) document.getElementById('msg-input').focus();
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    document.getElementById('msg-input').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+
+</script>
+
+</body>
+</html>
