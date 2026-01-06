@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII SHOP BLAGAJNA FINAL v6 (Codes + Custom UI)</title>
+    <title>WII SHOP BLAGAJNA FINAL v7 (POA/ROF/MGR)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -169,6 +169,7 @@
 
         .btn-grey { background: #ccc; color: #666; }
         .btn-red { background: #ffcccc; }
+        .btn-green { background: #ccffcc; }
         .btn-search { background: #fffacd; border: 2px solid #555; font-size: 16px; } 
         .btn-nav { background: #333; color: white; border-color: #000; box-shadow: none; border-right: 1px solid #555; }
 
@@ -283,9 +284,10 @@
             cursor: pointer;
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
         .modal-list-item:hover { background: #ffffd0; }
-        .list-btn-action { font-size: 10px; padding: 2px 5px; background: #eee; border: 1px solid #000; }
+        .list-btn-action { font-size: 10px; padding: 2px 5px; background: #eee; border: 1px solid #000; margin-left:5px; }
         
         /* CUSTOM ALERT TEXT */
         .msg-text { font-size: 18px; margin: 20px 0; line-height: 1.4; }
@@ -344,7 +346,7 @@
         displayChannel.postMessage({ type: type, payload: data });
     }
 
-    /* ================= CUSTOM DIALOGS (REPLACEMENT FOR ALERT/CONFIRM) ================= */
+    /* ================= CUSTOM DIALOGS ================= */
     let _alertCallback = null;
     let _confirmYes = null;
     let _confirmNo = null;
@@ -415,12 +417,21 @@
         receipts: [],
         receiptCounter: 1000,
         cashInDrawer: 0.00,
-        shiftLog: [] 
+        shiftLog: [],
+        mgrHistory: [], // [REQ 4] Zgodovina manager dostopov
+        settings: {
+            poa: true, // [REQ 2] Product On Article (show/hide buttons)
+            rof: false // [REQ 3] Receipt On Finish (auto PDF)
+        }
     };
 
-    let db = JSON.parse(localStorage.getItem('wiiShopDBv3')) || defaultData;
+    let db = JSON.parse(localStorage.getItem('wiiShopDBv4')) || defaultData;
     
-    // MIGRACIJA: Če artikli nimajo šifre, jim jo dodeli (index + 1)
+    // Zagotovimo nove strukture, če je stara verzija baze
+    if(!db.mgrHistory) db.mgrHistory = [];
+    if(!db.settings) db.settings = { poa: true, rof: false };
+
+    // MIGRACIJA KOD
     let migrationNeeded = false;
     db.articles.forEach((art, idx) => {
         if (art.code === undefined || art.code === null) {
@@ -430,7 +441,7 @@
     });
     if (migrationNeeded) saveDB();
 
-    function saveDB() { localStorage.setItem('wiiShopDBv3', JSON.stringify(db)); }
+    function saveDB() { localStorage.setItem('wiiShopDBv4', JSON.stringify(db)); }
 
     /* ================= STATE & PERSISTENCE ================= */
     let currentUser = null; 
@@ -439,7 +450,7 @@
     let timerInterval = null;
     let timerSeconds = 0;
     let timerRunning = false;
-    let isPOF = false; 
+    let isPOF = false; // Prikaz cen (ne smešat s P.O.A)
     let currentMode = 'ARTICLES';
     let activeManagerMenu = null; 
 
@@ -470,6 +481,27 @@
     /* ================= UTILS ================= */
     function formatMoney(amount) {
         return parseFloat(amount).toFixed(2) + " WII";
+    }
+    
+    // Čistilec šumnikov za PDF
+    function cleanStr(str) {
+        if(!str) return "";
+        return str.toString()
+            .replace(/č/g, 'c').replace(/Č/g, 'C')
+            .replace(/š/g, 's').replace(/Š/g, 'S')
+            .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
+    }
+
+    function logMgrAction(user, action) {
+        db.mgrHistory.unshift({
+            time: new Date(),
+            user: user.name,
+            role: user.role,
+            action: action
+        });
+        // Obdržimo samo zadnjih 100 zapisov
+        if(db.mgrHistory.length > 100) db.mgrHistory.pop();
+        saveDB();
     }
 
     /* ================= TIMER ================= */
@@ -579,6 +611,9 @@
     function setMode(mode) {
         if (mode === 'MANAGER') {
             requestAuthCode("Vnesi KODO za dostop:", (user) => {
+                // [REQ 4] Zabeleži dostop v MGR meni
+                logMgrAction(user, "ACCESSED MGR MENU");
+
                 if (user.role === 'HOST') {
                     currentMode = 'MANAGER';
                     activeManagerMenu = 'HOST';
@@ -614,21 +649,24 @@
             };
             container.appendChild(searchRow);
 
-            // --- ARTIKLI ---
-            db.articles.forEach(art => {
-                const btn = document.createElement('button');
-                btn.className = 'btn';
-                if (!art.enabled) {
-                    btn.classList.add('btn-grey');
-                    btn.disabled = true;
-                }
-                btn.innerHTML = `<span>${art.name}</span>` + (isPOF ? `<br><span style="font-size:0.9em">${formatMoney(art.price)}</span>` : '');
-                
-                if (art.enabled) {
-                    btn.onclick = () => addItem(art);
-                }
-                container.appendChild(btn);
-            });
+            // [REQ 2] P.O.A - Če je vklopljeno, pokaži gumbe, sicer ne.
+            if (db.settings.poa) {
+                // --- ARTIKLI ---
+                db.articles.forEach(art => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn';
+                    if (!art.enabled) {
+                        btn.classList.add('btn-grey');
+                        btn.disabled = true;
+                    }
+                    btn.innerHTML = `<span>${art.name}</span>` + (isPOF ? `<br><span style="font-size:0.9em">${formatMoney(art.price)}</span>` : '');
+                    
+                    if (art.enabled) {
+                        btn.onclick = () => addItem(art);
+                    }
+                    container.appendChild(btn);
+                });
+            }
         } 
         else if (currentMode === 'FUNCTIONS') {
             const functions = [
@@ -661,7 +699,11 @@
                  { name: 'ARTIKLI', action: mgrArticles },
                  { name: 'ZAPOSLENI', action: mgrEmployees },
                  { name: 'STORNO', action: mgrStorno },
-                 { name: 'BANKA', action: mgrBank }
+                 { name: 'BANKA', action: mgrBank },
+                 // [REQ 2 & 3 & 4] Novi gumbi
+                 { name: `P.O.A. ${db.settings.poa ? 'ON' : 'OFF'}`, action: togglePOA, customClass: db.settings.poa ? 'btn-green' : 'btn-red' },
+                 { name: `R.O.F. ${db.settings.rof ? 'ON' : 'OFF'}`, action: toggleROF, customClass: db.settings.rof ? 'btn-green' : 'btn-red' },
+                 { name: 'MGR ZGOD.', action: mgrShowHistory }
              ];
 
              const commonBtns = [
@@ -681,7 +723,7 @@
              if (activeManagerMenu === 'MANAGER') {
                  managerOnlyBtns.forEach(b => {
                      const btn = document.createElement('button');
-                     btn.className = 'btn';
+                     btn.className = `btn ${b.customClass || ''}`;
                      btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
                      btn.onclick = b.action;
                      container.appendChild(btn);
@@ -694,10 +736,23 @@
         isPOF = !isPOF;
         if (currentMode === 'ARTICLES') renderButtons();
     }
+    
+    // [REQ 2] Toggle POA
+    function togglePOA() {
+        db.settings.poa = !db.settings.poa;
+        saveDB();
+        renderButtons(); // Re-render to update label
+    }
+
+    // [REQ 3] Toggle ROF
+    function toggleROF() {
+        db.settings.rof = !db.settings.rof;
+        saveDB();
+        renderButtons(); // Re-render to update label
+    }
 
     /* ================= LOGIKA BLAGAJNE ================= */
     
-    // Nov handler za iskanje po kodi
     function processArticleCode(code) {
         const art = db.articles.find(a => a.code === code);
         closeModal();
@@ -713,8 +768,16 @@
     }
 
     function addItem(article) {
+        // [REQ 1] Limit: Max 2 artikla iste kode
+        const existingCount = currentReceipt.filter(i => i.code === article.code).length;
+        if (existingCount >= 2) {
+            customAlert("Limit dosežen: Ta artikel je že 2x na računu!");
+            return;
+        }
+
         if (!timerRunning) startTimer();
         currentReceipt.push({
+            code: article.code, // Shranimo kodo za preverjanje
             name: article.name,
             price: article.price,
             originalPrice: article.price,
@@ -850,7 +913,6 @@
             const change = received - total;
             if (change < 0) { customAlert("Premalo denarja!"); return; }
             
-            // --- POŠLJI VRAČILO NA DISPLAY ---
             broadcastUpdate('CHANGE', { 
                 change: change, 
                 changeStr: formatMoney(change) 
@@ -886,17 +948,26 @@
     function finalizeTransaction(amount, type) {
         closeModal();
         if (type === 'CASH') db.cashInDrawer += amount;
-        db.receipts.push({
-            id: currentReceipt[currentReceipt.length-1].receiptId,
+        
+        const rId = currentReceipt[currentReceipt.length-1].receiptId;
+        const receiptData = {
+            id: rId,
             items: [...currentReceipt],
             total: amount,
             type: type,
             cashier: currentUser.name,
             time: new Date().toISOString()
-        });
+        };
+
+        db.receipts.push(receiptData);
         saveDB();
         
         broadcastUpdate('SUCCESS', { total: amount });
+
+        // [REQ 3] R.O.F - Generate PDF if enabled
+        if (db.settings.rof) {
+            generateSingleReceiptPDF(receiptData);
+        }
 
         currentReceipt = [];
         selectedItemIndex = -1;
@@ -919,6 +990,10 @@
                 };
                 db.cashInDrawer = parseFloat(cash);
                 db.shiftLog.push({ type: 'LOGIN', user: worker.name, amount: parseFloat(cash), time: new Date() });
+                
+                // [REQ 4] Log login
+                logMgrAction(worker, "LOGGED IN TO REGISTER");
+
                 saveDB();
                 saveSession();
                 updateStatusBar();
@@ -953,7 +1028,7 @@
             const actual = parseFloat(val);
             db.shiftLog.push({ type: 'LOGOUT', user: currentUser.name, expected: expected, actual: actual, diff: actual-expected, time: new Date() });
             
-            generatePDF(currentUser, expected, actual);
+            generateShiftPDF(currentUser, expected, actual);
 
             saveDB();
             currentUser = null;
@@ -966,43 +1041,20 @@
         });
     }
 
-    /* ================= PDF GENERATOR ================= */
-    function generatePDF(user, expected, actual) {
-        if (!window.jspdf) {
-            customAlert("Napaka: Knjižnica za PDF se ni naložila. Preveri internet.");
-            return;
-        }
-
+    /* ================= PDF GENERATOR (SHIFT) ================= */
+    function generateShiftPDF(user, expected, actual) {
+        if (!window.jspdf) return;
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: [57, 2000] 
-        });
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [57, 2000] });
 
         doc.setFont("courier", "bold");
         doc.setFontSize(9);
-
         let y = 10;
-        const lineH = 4;
         const margin = 2;
+        const lineH = 4;
 
-        function clean(str) {
-            if(!str) return "";
-            return str.toString()
-                .replace(/č/g, 'c').replace(/Č/g, 'C')
-                .replace(/š/g, 's').replace(/Š/g, 'S')
-                .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
-        }
-
-        function addLine(text) {
-            doc.text(clean(text), margin, y); 
-            y += lineH;
-        }
-
-        function addSeparator() {
-            addLine("****************************");
-        }
+        function addLine(text) { doc.text(cleanStr(text), margin, y); y += lineH; }
+        function addSeparator() { addLine("****************************"); }
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('sl-SI') + " " + now.toLocaleTimeString('sl-SI');
@@ -1012,33 +1064,23 @@
         const countCash = sessionReceipts.filter(r => r.type === 'CASH').length;
         const countCard = sessionReceipts.filter(r => r.type === 'CARD').length;
 
-        // HEADER
         doc.setFontSize(11);
         addLine("IZPIS BLAGAJNE:");
         doc.setFontSize(9);
         addSeparator();
         
-        // PODATKI
         addLine(`Id blagajnika: ${user.id}`);
         addLine(`Blagajnik: ${user.name}`);
         addLine(`Datum: ${dateStr}`);
-        
         addSeparator();
-
-        // FINANCE
         addLine(`Zacetni depozit: ${formatMoney(user.startCash)}`);
-        addLine(`Gotovina konec prodaje: ${formatMoney(expected)}`);
-        
+        addLine(`Gotovina konec: ${formatMoney(expected)}`);
         addSeparator();
-
-        // STATISTIKA
-        addLine(`Stevilo racunov skupaj: ${countTotal}`);
-        addLine(`Gotovinski racuni: ${countCash}`);
-        addLine(`Karticni racuni: ${countCard}`);
-
+        addLine(`Stevilo racunov: ${countTotal}`);
+        addLine(`Gotovinski: ${countCash}`);
+        addLine(`Karticni: ${countCard}`);
         addSeparator();
         
-        // SEZNAM RAČUNOV
         doc.setFontSize(11);
         addLine("IZPIS RACUNOV:");
         doc.setFontSize(8);
@@ -1066,8 +1108,62 @@
                 addLine("----------------------------");
             });
         }
-
         doc.save(`zakljucek_${user.id}_${now.getTime()}.pdf`);
+    }
+
+    /* ================= PDF GENERATOR (SINGLE RECEIPT - ROF) ================= */
+    function generateSingleReceiptPDF(rec) {
+        if (!window.jspdf) return;
+        const { jsPDF } = window.jspdf;
+        // Kratek format za posamezen račun
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [57, 200] });
+
+        doc.setFont("courier", "bold");
+        doc.setFontSize(9);
+        let y = 10;
+        const margin = 2;
+        const lineH = 4;
+
+        function addLine(text) { doc.text(cleanStr(text), margin, y); y += lineH; }
+        
+        const dateObj = new Date(rec.time);
+        const dateStr = dateObj.toLocaleDateString('sl-SI') + " " + dateObj.toLocaleTimeString('sl-SI');
+
+        // HEADER
+        doc.setFontSize(12);
+        addLine("WII SHOP CHANNEL");
+        doc.setFontSize(9);
+        addLine("----------------------------");
+        addLine(`RACUN #${rec.id}`);
+        addLine(`Datum: ${dateStr}`);
+        addLine(`Blagajnik: ${cleanStr(rec.cashier)}`);
+        addLine("----------------------------");
+
+        // ITEMS
+        rec.items.forEach(item => {
+            let name = item.name;
+            if(item.isVoid) name = "[X] " + name;
+            else if(item.isPromo) name = "[P] " + name;
+            
+            if(item.qty > 1) {
+                 addLine(`${item.qty}x ${name}`);
+                 addLine(`   ${formatMoney(item.price*item.qty)}`);
+            } else {
+                 addLine(`${name}`);
+                 addLine(`   ${formatMoney(item.price)}`);
+            }
+        });
+
+        addLine("----------------------------");
+        doc.setFontSize(11);
+        addLine(`ZA PLACILO: ${formatMoney(rec.total)}`);
+        doc.setFontSize(9);
+        addLine(`Nacin placila: ${rec.type}`);
+        addLine("----------------------------");
+        addLine("Hvala za nakup!");
+        addLine("Se vidimo!");
+
+        doc.save(`racun_${rec.id}.pdf`);
     }
 
 
@@ -1247,6 +1343,33 @@
         });
     }
 
+    /* --- MANAGER ZGODOVINA (MGR) --- */
+    function mgrShowHistory() {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "MGR ZGODOVINA";
+        
+        let html = '<div class="modal-list">';
+        // Prikaz zadnjih vnosov
+        if(db.mgrHistory.length === 0) {
+            html += '<div style="padding:10px; text-align:center;">Prazna zgodovina</div>';
+        } else {
+            db.mgrHistory.forEach(entry => {
+                const date = new Date(entry.time);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                html += `
+                    <div class="modal-list-item" style="display:block">
+                        <div style="font-weight:bold; font-size:12px">${dateStr}</div>
+                        <div>${entry.user} (${entry.role})</div>
+                        <div style="font-size:11px; color:#555">${entry.action}</div>
+                    </div>
+                `;
+            });
+        }
+        html += '</div>';
+        content.innerHTML = html;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
 
     /* --- BANKA --- */
     function mgrBank() {
@@ -1381,21 +1504,17 @@
 
     /* ================= FIZIČNA TIPKOVNICA ZA ARTIKLE ================= */
     document.addEventListener('keydown', (e) => {
-        // Če je modal odprt, ignoriraj (razen če bi hoteli supportirati tipkanje v modalu, ampak je complex)
-        // Dovolimo Enter v modalu za potrditev
+        // Če je modal odprt, ignoriraj
         const modalOpen = document.getElementById('modal-overlay').style.display === 'flex';
         
         if (modalOpen) {
             if (e.key === 'Enter') submitInput();
-            // Opcijsko: support za tipkanje številk v keypadu
             if (e.key >= '0' && e.key <= '9') kpIn(e.key);
             if (e.key === 'Backspace') kpIn('BACK');
             return;
         }
 
-        // Če modal NI odprt in smo v ARTICLES mode:
         if (currentMode === 'ARTICLES' && !modalOpen) {
-            // Če pritisne številko, odpri keypad in vnesi to številko
             if (e.key >= '0' && e.key <= '9') {
                 showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
                 kpIn(e.key);
