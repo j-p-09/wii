@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII SHOP BLAGAJNA FINAL v5 (Broadcast)</title>
+    <title>WII SHOP BLAGAJNA FINAL v6 (Codes + Custom UI)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -140,6 +140,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
+            grid-auto-rows: 1fr; /* Za search bar */
             gap: 8px;
             overflow-y: auto;
         }
@@ -168,6 +169,7 @@
 
         .btn-grey { background: #ccc; color: #666; }
         .btn-red { background: #ffcccc; }
+        .btn-search { background: #fffacd; border: 2px solid #555; font-size: 16px; } 
         .btn-nav { background: #333; color: white; border-color: #000; box-shadow: none; border-right: 1px solid #555; }
 
         /* NAVIGACIJA */
@@ -284,6 +286,9 @@
         }
         .modal-list-item:hover { background: #ffffd0; }
         .list-btn-action { font-size: 10px; padding: 2px 5px; background: #eee; border: 1px solid #000; }
+        
+        /* CUSTOM ALERT TEXT */
+        .msg-text { font-size: 18px; margin: 20px 0; line-height: 1.4; }
 
     </style>
 </head>
@@ -332,12 +337,59 @@
 </div>
 
 <script>
-    /* ================= BROADCAST SYSTEM (NOVO!) ================= */
-    // Ta kanal komunicira z drugim oknom (Customer Display)
+    /* ================= BROADCAST SYSTEM ================= */
     const displayChannel = new BroadcastChannel('wii_shop_display');
 
     function broadcastUpdate(type, data) {
         displayChannel.postMessage({ type: type, payload: data });
+    }
+
+    /* ================= CUSTOM DIALOGS (REPLACEMENT FOR ALERT/CONFIRM) ================= */
+    let _alertCallback = null;
+    let _confirmYes = null;
+    let _confirmNo = null;
+
+    function customAlert(msg, callback) {
+        _alertCallback = callback;
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "OBVESTILO";
+        content.innerHTML = `
+            <div class="msg-text">${msg}</div>
+            <button class="btn" style="width:100%; height:50px; background:#f0f0f0;" onclick="closeCustomAlert()">V REDU</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function closeCustomAlert() {
+        closeModal();
+        if (_alertCallback) {
+            const cb = _alertCallback;
+            _alertCallback = null;
+            cb();
+        }
+    }
+
+    function customConfirm(msg, onYes, onNo) {
+        _confirmYes = onYes;
+        _confirmNo = onNo;
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "POTRDITEV";
+        content.innerHTML = `
+            <div class="msg-text">${msg}</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn" style="height:50px; background:#8f8;" onclick="confirmAction(true)">DA</button>
+                <button class="btn" style="height:50px; background:#faa;" onclick="confirmAction(false)">NE</button>
+            </div>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function confirmAction(result) {
+        closeModal();
+        if (result && _confirmYes) _confirmYes();
+        if (!result && _confirmNo) _confirmNo();
+        _confirmYes = null; 
+        _confirmNo = null;
     }
 
     /* ================= PODATKOVNA BAZA ================= */
@@ -346,18 +398,18 @@
             { id: '000', name: 'ADMINISTRATOR', role: 'MANAGER', code: '000' }
         ],
         articles: [
-            { name: 'KARTA', price: 10.00, enabled: true },
-            { name: 'KAZEN', price: 40.00, enabled: true },
-            { name: 'KLAVIR (min)', price: 0.90, enabled: true },
-            { name: 'WII POT', price: 1.70, enabled: true },
-            { name: 'POPRAVILO', price: 5.00, enabled: true },
-            { name: 'VREČKA', price: 2.10, enabled: true },
-            { name: 'NALEPKA', price: 0.75, enabled: true },
-            { name: 'KUVERTA', price: 4.20, enabled: true },
-            { name: 'POŠTNINA', price: 2.50, enabled: true },
-            { name: 'ZNAMKA', price: 1.00, enabled: true },
-            { name: 'PS (min)', price: 1.10, enabled: true },
-            { name: 'OSTALO', price: 0.01, enabled: true }
+            { name: 'KARTA', price: 10.00, enabled: true, code: "1" },
+            { name: 'KAZEN', price: 40.00, enabled: true, code: "2" },
+            { name: 'KLAVIR (min)', price: 0.90, enabled: true, code: "3" },
+            { name: 'WII POT', price: 1.70, enabled: true, code: "4" },
+            { name: 'POPRAVILO', price: 5.00, enabled: true, code: "5" },
+            { name: 'VREČKA', price: 2.10, enabled: true, code: "6" },
+            { name: 'NALEPKA', price: 0.75, enabled: true, code: "7" },
+            { name: 'KUVERTA', price: 4.20, enabled: true, code: "8" },
+            { name: 'POŠTNINA', price: 2.50, enabled: true, code: "9" },
+            { name: 'ZNAMKA', price: 1.00, enabled: true, code: "10" },
+            { name: 'PS (min)', price: 1.10, enabled: true, code: "11" },
+            { name: 'OSTALO', price: 0.01, enabled: true, code: "12" }
         ],
         bankAccounts: {}, 
         receipts: [],
@@ -367,6 +419,17 @@
     };
 
     let db = JSON.parse(localStorage.getItem('wiiShopDBv3')) || defaultData;
+    
+    // MIGRACIJA: Če artikli nimajo šifre, jim jo dodeli (index + 1)
+    let migrationNeeded = false;
+    db.articles.forEach((art, idx) => {
+        if (art.code === undefined || art.code === null) {
+            art.code = (idx + 1).toString();
+            migrationNeeded = true;
+        }
+    });
+    if (migrationNeeded) saveDB();
+
     function saveDB() { localStorage.setItem('wiiShopDBv3', JSON.stringify(db)); }
 
     /* ================= STATE & PERSISTENCE ================= */
@@ -452,7 +515,6 @@
             nameCell.textContent = "";
         }
         
-        // Broadcast status (odprto/zaprto)
         broadcastUpdate('STATUS', { isOpen: !!currentUser });
     }
 
@@ -505,7 +567,6 @@
         document.getElementById('total-amount').textContent = totalStr;
         saveSession(); 
         
-        // --- BROADCAST SPREMEMBE NA DRUGI EKRAN ---
         if (currentUser) {
             broadcastUpdate('CART', {
                 items: currentReceipt,
@@ -527,13 +588,13 @@
                     activeManagerMenu = 'MANAGER';
                     renderButtons();
                 } else {
-                    alert("Ta koda nima dostopa do funkcij!");
+                    customAlert("Ta koda nima dostopa do funkcij!");
                 }
             });
             return;
         }
 
-        if (!currentUser) { alert("Najprej se mora prijaviti manager/blagajnik!"); return; }
+        if (!currentUser) { customAlert("Najprej se mora prijaviti manager/blagajnik!"); return; }
         currentMode = mode;
         renderButtons();
     }
@@ -543,6 +604,17 @@
         container.innerHTML = '';
 
         if (currentMode === 'ARTICLES') {
+            // --- ISKALNIK PO KODI ---
+            const searchRow = document.createElement('div');
+            searchRow.style.gridColumn = "span 4";
+            searchRow.className = "btn btn-search";
+            searchRow.innerHTML = "🔍 VNESI ŠIFRO / SCAN";
+            searchRow.onclick = () => {
+                showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
+            };
+            container.appendChild(searchRow);
+
+            // --- ARTIKLI ---
             db.articles.forEach(art => {
                 const btn = document.createElement('button');
                 btn.className = 'btn';
@@ -624,6 +696,22 @@
     }
 
     /* ================= LOGIKA BLAGAJNE ================= */
+    
+    // Nov handler za iskanje po kodi
+    function processArticleCode(code) {
+        const art = db.articles.find(a => a.code === code);
+        closeModal();
+        if (art) {
+            if (art.enabled) {
+                addItem(art);
+            } else {
+                customAlert("Artikel s to šifro je onemogočen!");
+            }
+        } else {
+            customAlert("Šifra ne obstaja!");
+        }
+    }
+
     function addItem(article) {
         if (!timerRunning) startTimer();
         currentReceipt.push({
@@ -641,11 +729,11 @@
 
     function getSelectedItem() {
         if (selectedItemIndex < 0 || selectedItemIndex >= currentReceipt.length) {
-            alert("Izberi artikel!");
+            customAlert("Izberi artikel!");
             return null;
         }
         if (currentReceipt[selectedItemIndex].isVoid) {
-            alert("Artikel je storniran!");
+            customAlert("Artikel je storniran!");
             return null;
         }
         return currentReceipt[selectedItemIndex];
@@ -695,6 +783,7 @@
 
     function fnDiscount() {
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "POPUST";
         content.innerHTML = `
             <h3>Izberi popust</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -745,6 +834,7 @@
 
         const total = currentReceipt.reduce((acc, i) => acc + (i.price * i.qty), 0);
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "PLAČILO";
         content.innerHTML = `
             <h3>ZNESEK: ${formatMoney(total)}</h3>
             <button class="btn" style="height:60px" onclick="paymentCash(${total})">GOTOVINA</button>
@@ -758,7 +848,7 @@
         showKeypad("Vnesi prejeto gotovino:", false, (val) => {
             const received = parseFloat(val);
             const change = received - total;
-            if (change < 0) { alert("Premalo denarja!"); return; }
+            if (change < 0) { customAlert("Premalo denarja!"); return; }
             
             // --- POŠLJI VRAČILO NA DISPLAY ---
             broadcastUpdate('CHANGE', { 
@@ -766,15 +856,17 @@
                 changeStr: formatMoney(change) 
             });
 
-            alert(`VRAČILO: ${formatMoney(change)}`);
-            finalizeTransaction(total, 'CASH');
+            customAlert(`VRAČILO: ${formatMoney(change)}`, () => {
+                finalizeTransaction(total, 'CASH');
+            });
         });
     }
 
     window.paymentCard = function(total) {
         showKeypad("Vnesi ID banke stranke:", false, (clientId) => {
-            if (db.bankAccounts[clientId] === undefined) { alert("Stranka ne obstaja!"); return; }
+            if (db.bankAccounts[clientId] === undefined) { customAlert("Stranka ne obstaja!"); return; }
             const content = document.getElementById('modal-content');
+            document.getElementById('modal-title').innerText = "BANKA";
             content.innerHTML = `
                 <h3>Stranka: ${clientId}</h3>
                 <p>Stanje: ${formatMoney(db.bankAccounts[clientId])}</p>
@@ -786,7 +878,7 @@
     }
 
     window.processBankPayment = function(id, amount) {
-        if (db.bankAccounts[id] < amount) { alert("Ni kritja!"); return; }
+        if (db.bankAccounts[id] < amount) { customAlert("Ni kritja!"); return; }
         db.bankAccounts[id] -= amount;
         finalizeTransaction(amount, 'CARD');
     }
@@ -804,7 +896,6 @@
         });
         saveDB();
         
-        // --- SPOROČI USPEH NA DRUG EKRAN ---
         broadcastUpdate('SUCCESS', { total: amount });
 
         currentReceipt = [];
@@ -818,7 +909,7 @@
     function mgrLogin() {
         showKeypad("Vnesi ID zaposlenega:", false, (id) => {
             const worker = db.employees.find(e => e.id === id);
-            if (!worker) { alert("Neznan delavec!"); return; }
+            if (!worker) { customAlert("Neznan delavec!"); return; }
             showKeypad(`Zaposleni: ${worker.name}\nZačetni depozit:`, false, (cash) => {
                 currentUser = {
                     ...worker,
@@ -844,6 +935,7 @@
         const soldCount = sessionReceipts.length;
 
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "ZAKLJUČEK";
         content.innerHTML = `
             <div style="text-align:left; font-size:14px;">
                 Blagajnik: ${currentUser.name}<br>
@@ -874,10 +966,10 @@
         });
     }
 
-    /* ================= PDF GENERATOR (BREZ ŠUMNIKOV) ================= */
+    /* ================= PDF GENERATOR ================= */
     function generatePDF(user, expected, actual) {
         if (!window.jspdf) {
-            alert("Napaka: Knjižnica za PDF se ni naložila. Preveri internet.");
+            customAlert("Napaka: Knjižnica za PDF se ni naložila. Preveri internet.");
             return;
         }
 
@@ -979,21 +1071,22 @@
     }
 
 
-    function mgrInterim() { alert(`TRENUTNO STANJE: ${formatMoney(db.cashInDrawer)}`); }
+    function mgrInterim() { customAlert(`TRENUTNO STANJE: ${formatMoney(db.cashInDrawer)}`); }
     function mgrSkym() {
         showKeypad("Znesek dviga (SKIM):", false, (val) => {
             const amount = parseFloat(val);
-            if (amount > db.cashInDrawer) { alert("Ni dovolj denarja!"); return; }
+            if (amount > db.cashInDrawer) { customAlert("Ni dovolj denarja!"); return; }
             db.cashInDrawer -= amount;
             db.shiftLog.push({ type: 'SKYM', user: currentUser.name, amount: amount, time: new Date() });
             saveDB();
-            alert("Odvzem zabeležen.");
+            customAlert("Odvzem zabeležen.");
             closeModal();
         });
     }
     
     function mgrStorno() {
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "STORNO";
         let html = '<div class="modal-list">';
         db.receipts.slice(-10).reverse().forEach((r, idx) => {
              html += `<div class="modal-list-item" onclick="processStorno(${r.id})"><span>#${r.id} (${formatMoney(r.total)})</span> <button class="list-btn-action">STORNO</button></div>`;
@@ -1003,22 +1096,23 @@
         document.getElementById('modal-overlay').style.display = 'flex';
     }
     window.processStorno = function(id) {
-        if(confirm(`Storniraj račun #${id}?`)) {
+        customConfirm(`Storniraj račun #${id}?`, () => {
             const rIndex = db.receipts.findIndex(r => r.id === id);
             if (rIndex > -1) {
                 const r = db.receipts[rIndex];
                 if (r.type === 'CASH') db.cashInDrawer -= r.total;
                 db.receipts.splice(rIndex, 1);
                 saveDB();
-                alert("Stornirano!");
+                customAlert("Stornirano!");
                 closeModal();
             }
-        }
+        });
     }
 
     /* --- MANAGER ZAPOSLENI (FULL) --- */
     function mgrEmployees() {
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "ZAPOSLENI";
         content.innerHTML = `
             <h3>UREJANJE ZAPOSLENIH</h3>
             <button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewEmployeeStep1()">+ DODAJ NOVEGA</button>
@@ -1038,41 +1132,45 @@
 
     window.addNewEmployeeStep1 = function() {
         showKeypad("Vnesi ID (številka):", false, (id) => {
-            if (db.employees.find(e => e.id === id)) { alert("ID že obstaja!"); return; }
+            if (db.employees.find(e => e.id === id)) { customAlert("ID že obstaja!"); return; }
             showKeyboard("Vnesi IME in PRIIMEK:", (name) => {
-                
-                let role = 'ZAPOSLENI';
-                if (confirm("Ali je MANAGER? (OK=DA, Cancel=NE)")) {
-                    role = 'MANAGER';
-                } else {
-                    if (confirm("Ali je HOST? (OK=DA, Cancel=NE)")) {
-                        role = 'HOST';
-                    }
-                }
+                // Izbira vloge preko Custom UI
+                const content = document.getElementById('modal-content');
+                document.getElementById('modal-title').innerText = "VLOGA";
+                content.innerHTML = `
+                    <h3>Izberi vlogo za ${name}:</h3>
+                    <button class="btn" style="width:100%; margin:5px 0" onclick="addNewEmployeeStep2('${id}', '${name}', 'ZAPOSLENI')">ZAPOSLENI</button>
+                    <button class="btn" style="width:100%; margin:5px 0" onclick="addNewEmployeeStep2('${id}', '${name}', 'MANAGER')">MANAGER</button>
+                    <button class="btn" style="width:100%; margin:5px 0; background:#fcc" onclick="addNewEmployeeStep2('${id}', '${name}', 'HOST')">HOST</button>
+                `;
+            });
+        });
+    }
 
-                showKeypad("Določi osebno kodo:", true, (code) => {
-                    db.employees.push({ id, name, role, code });
-                    saveDB();
-                    alert(`Zaposleni dodan z vlogo: ${role}`);
-                    mgrEmployees(); 
-                });
+    window.addNewEmployeeStep2 = function(id, name, role) {
+        showKeypad("Določi osebno kodo:", true, (code) => {
+            db.employees.push({ id, name, role, code });
+            saveDB();
+            customAlert(`Zaposleni dodan z vlogo: ${role}`, () => {
+                mgrEmployees();
             });
         });
     }
 
     window.editEmployee = function(idx) {
         const emp = db.employees[idx];
-        if (confirm(`Želiš izbrisati zaposlenega ${emp.name}?`)) {
-            if(emp.id === '000') { alert("Administratorja ne moreš izbrisati!"); return; }
+        customConfirm(`Želiš izbrisati zaposlenega ${emp.name}?`, () => {
+            if(emp.id === '000') { customAlert("Administratorja ne moreš izbrisati!"); return; }
             db.employees.splice(idx, 1);
             saveDB();
             mgrEmployees();
-        }
+        });
     }
 
     /* --- MANAGER ARTIKLI (FULL) --- */
     function mgrArticles() {
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "ARTIKLI";
         
         let html = '<h3>UREJANJE ARTIKLOV</h3>';
         html += '<button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewArticle()">+ DODAJ ARTIKEL</button>';
@@ -1081,7 +1179,7 @@
         db.articles.forEach((art, idx) => {
             const style = art.enabled ? '' : 'text-decoration:line-through; color:red;';
             html += `<div class="modal-list-item" style="${style}" onclick="editArticle(${idx})">
-                        <span>${art.name}</span>
+                        <span>[${art.code}] ${art.name}</span>
                         <span>${formatMoney(art.price)}</span>
                      </div>`;
         });
@@ -1091,12 +1189,16 @@
     }
 
     window.addNewArticle = function() {
-        showKeyboard("Ime artikla:", (name) => {
-            showKeypad("Cena artikla (npr. 1.50):", false, (priceVal) => {
-                const price = parseFloat(priceVal);
-                db.articles.push({ name: name.toUpperCase(), price: price, enabled: true });
-                saveDB();
-                mgrArticles();
+        showKeypad("Vnesi ŠIFRO artikla (npr. 50):", false, (code) => {
+             if (db.articles.find(a => a.code === code)) { customAlert("Šifra že obstaja!"); return; }
+             
+             showKeyboard("Ime artikla:", (name) => {
+                showKeypad("Cena artikla (npr. 1.50):", false, (priceVal) => {
+                    const price = parseFloat(priceVal);
+                    db.articles.push({ name: name.toUpperCase(), price: price, enabled: true, code: code });
+                    saveDB();
+                    mgrArticles();
+                });
             });
         });
     }
@@ -1104,13 +1206,25 @@
     window.editArticle = function(idx) {
         const art = db.articles[idx];
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "UREDI";
         content.innerHTML = `
             <h3>${art.name}</h3>
+            <p>Trenutna šifra: ${art.code}</p>
+            <button class="btn" style="width:100%; margin:5px 0" onclick="changeArtCode(${idx})">SPREMENI ŠIFRO</button>
             <button class="btn" style="width:100%; margin:5px 0" onclick="changeArtPrice(${idx})">SPREMENI CENO</button>
             <button class="btn" style="width:100%; margin:5px 0" onclick="toggleArtStatus(${idx})">${art.enabled ? 'ONEMOGOČI' : 'OMOGOČI'}</button>
             <button class="btn" style="width:100%; margin:5px 0; background:#ffcccc" onclick="deleteArt(${idx})">IZBRIŠI</button>
             <button class="btn" style="width:100%; margin:20px 0" onclick="mgrArticles()">NAZAJ</button>
         `;
+    }
+
+    window.changeArtCode = function(idx) {
+        showKeypad("Nova šifra:", false, (val) => {
+            if (db.articles.find(a => a.code === val)) { customAlert("Šifra že obstaja!"); return; }
+            db.articles[idx].code = val;
+            saveDB();
+            mgrArticles();
+        });
     }
 
     window.changeArtPrice = function(idx) {
@@ -1126,17 +1240,18 @@
         mgrArticles();
     }
     window.deleteArt = function(idx) {
-        if(confirm("Res izbrišem?")) {
+        customConfirm("Res izbrišem ta artikel?", () => {
             db.articles.splice(idx, 1);
             saveDB();
             mgrArticles();
-        }
+        });
     }
 
 
     /* --- BANKA --- */
     function mgrBank() {
         const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "BANKA";
         content.innerHTML = `
             <h3>BANKA</h3>
             <button class="btn" onclick="bankNewClient()">NOVA STRANKA</button>
@@ -1147,22 +1262,22 @@
     }
     window.bankNewClient = function() {
         showKeypad("ID nove stranke:", false, (id) => {
-            if (db.bankAccounts[id] !== undefined) { alert("Obstaja!"); return; }
+            if (db.bankAccounts[id] !== undefined) { customAlert("Obstaja!"); return; }
             showKeypad("Polog:", false, (val) => {
                 db.bankAccounts[id] = parseFloat(val);
                 saveDB();
-                alert("Odprto!");
+                customAlert("Odprto!");
                 closeModal();
             });
         });
     }
     window.bankEditClient = function() {
         showKeypad("ID stranke:", false, (id) => {
-            if (db.bankAccounts[id] === undefined) { alert("Ni stranke!"); return; }
+            if (db.bankAccounts[id] === undefined) { customAlert("Ni stranke!"); return; }
             showKeypad(`Stanje: ${formatMoney(db.bankAccounts[id])}\nZnesek (+/-):`, false, (val) => {
                 db.bankAccounts[id] += parseFloat(val);
                 saveDB();
-                alert("Novo stanje: " + formatMoney(db.bankAccounts[id]));
+                customAlert("Novo stanje: " + formatMoney(db.bankAccounts[id]));
                 closeModal();
             });
         });
@@ -1226,7 +1341,10 @@
 
     window.kpIn = function(val) {
         const content = document.getElementById('modal-content');
-        let current = content.dataset.value;
+        // Če modal ni odprt ali ni inicializiran za input, ignoriraj
+        if (document.getElementById('modal-overlay').style.display === 'none') return;
+        
+        let current = content.dataset.value || "";
         
         if (val === 'C') current = "";
         else if (val === 'BACK') current = current.slice(0, -1);
@@ -1236,8 +1354,10 @@
         content.dataset.value = current;
         
         const display = document.getElementById('kp-display');
-        if (content.dataset.secret === 'true') display.textContent = "*".repeat(current.length);
-        else display.textContent = current;
+        if(display) {
+            if (content.dataset.secret === 'true') display.textContent = "*".repeat(current.length);
+            else display.textContent = current;
+        }
     }
 
     window.submitInput = function() {
@@ -1254,10 +1374,34 @@
                 closeModal(); 
                 cb(u); 
             } else { 
-                alert("Napačna koda!"); 
+                customAlert("Napačna koda!"); 
             }
         });
     }
+
+    /* ================= FIZIČNA TIPKOVNICA ZA ARTIKLE ================= */
+    document.addEventListener('keydown', (e) => {
+        // Če je modal odprt, ignoriraj (razen če bi hoteli supportirati tipkanje v modalu, ampak je complex)
+        // Dovolimo Enter v modalu za potrditev
+        const modalOpen = document.getElementById('modal-overlay').style.display === 'flex';
+        
+        if (modalOpen) {
+            if (e.key === 'Enter') submitInput();
+            // Opcijsko: support za tipkanje številk v keypadu
+            if (e.key >= '0' && e.key <= '9') kpIn(e.key);
+            if (e.key === 'Backspace') kpIn('BACK');
+            return;
+        }
+
+        // Če modal NI odprt in smo v ARTICLES mode:
+        if (currentMode === 'ARTICLES' && !modalOpen) {
+            // Če pritisne številko, odpri keypad in vnesi to številko
+            if (e.key >= '0' && e.key <= '9') {
+                showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
+                kpIn(e.key);
+            }
+        }
+    });
 
     // Ob zagonu strani poskusi naložiti sejo
     loadSession();
