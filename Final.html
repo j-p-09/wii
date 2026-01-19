@@ -639,11 +639,13 @@
         container.innerHTML = '';
 
         if (currentMode === 'ARTICLES') {
-            // --- ISKALNIK PO KODI ---
+            // --- ISKALNIK PO KODI (ZAMENJANA SLIKA) ---
             const searchRow = document.createElement('div');
             searchRow.style.gridColumn = "span 4";
             searchRow.className = "btn btn-search";
-            searchRow.innerHTML = "🔍 VNESI ŠIFRO / SCAN";
+            // ZAMENJANO Z SLIKO scan.png, odstranjen padding
+            searchRow.style.padding = "0";
+            searchRow.innerHTML = '<img src="scan.png" style="width:100%; height:100%; object-fit:contain;" alt="SCAN">';
             searchRow.onclick = () => {
                 showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
             };
@@ -694,37 +696,50 @@
             container.appendChild(btn);
         }
         else if (currentMode === 'MANAGER') {
+             // DEFINICIJA GUMBOV Z SLIKAMI
              const managerOnlyBtns = [
-                 { name: 'LOGOUT', icon: '🔴', action: mgrLogout },
-                 { name: 'ARTIKLI', action: mgrArticles },
-                 { name: 'ZAPOSLENI', action: mgrEmployees },
-                 { name: 'STORNO', action: mgrStorno },
-                 { name: 'BANKA', action: mgrBank },
-                 // [REQ 2 & 3 & 4] Novi gumbi
+                 { name: 'LOGOUT', img: 'logout.png', action: mgrLogout },
+                 { name: 'ARTIKLI', img: 'artikli.png', action: mgrArticles },
+                 { name: 'ZAPOSLENI', img: 'zaposleni.png', action: mgrEmployees },
+                 { name: 'STORNO', img: 'storno.png', action: mgrStorno },
+                 { name: 'BANKA', img: 'banka.png', action: mgrBank },
+                 // [REQ 2 & 3 & 4] Novi gumbi (OSTANEJO TEXT)
                  { name: `P.O.A. ${db.settings.poa ? 'ON' : 'OFF'}`, action: togglePOA, customClass: db.settings.poa ? 'btn-green' : 'btn-red' },
                  { name: `R.O.F. ${db.settings.rof ? 'ON' : 'OFF'}`, action: toggleROF, customClass: db.settings.rof ? 'btn-green' : 'btn-red' },
-                 { name: 'MGR ZGOD.', action: mgrShowHistory }
+                 { name: 'MGR ZGOD.', img: 'mgrzgod.png', action: mgrShowHistory }
              ];
 
              const commonBtns = [
-                 { name: 'LOGIN', icon: '🟢', action: mgrLogin },
-                 { name: 'VMESNO', action: mgrInterim },
-                 { name: 'SKYM', action: mgrSkym }
+                 { name: 'LOGIN', img: 'login.png', action: mgrLogin },
+                 { name: 'VMESNO', img: 'vmesno.png', action: mgrInterim },
+                 { name: 'SKYM', img: 'skym.png', action: mgrSkym }
              ];
 
+             // RENDER COMMON
              commonBtns.forEach(b => {
                  const btn = document.createElement('button');
                  btn.className = 'btn';
-                 btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
+                 if (b.img) {
+                     btn.style.padding = "0";
+                     btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}">`;
+                 } else {
+                     btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
+                 }
                  btn.onclick = b.action;
                  container.appendChild(btn);
              });
 
+             // RENDER MANAGER ONLY
              if (activeManagerMenu === 'MANAGER') {
                  managerOnlyBtns.forEach(b => {
                      const btn = document.createElement('button');
                      btn.className = `btn ${b.customClass || ''}`;
-                     btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
+                     if (b.img) {
+                         btn.style.padding = "0";
+                         btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}">`;
+                     } else {
+                         btn.innerHTML = (b.icon ? b.icon + " " : "") + b.name;
+                     }
                      btn.onclick = b.action;
                      container.appendChild(btn);
                  });
