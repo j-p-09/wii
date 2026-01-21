@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII SHOP BLAGAJNA FINAL v7 (POA/ROF/MGR)</title>
+    <title>WII SHOP BLAGAJNA FINAL v8 (SCANNER + UNLIMITED)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -418,16 +418,16 @@
         receiptCounter: 1000,
         cashInDrawer: 0.00,
         shiftLog: [],
-        mgrHistory: [], // [REQ 4] Zgodovina manager dostopov
+        mgrHistory: [], 
         settings: {
-            poa: true, // [REQ 2] Product On Article (show/hide buttons)
-            rof: false // [REQ 3] Receipt On Finish (auto PDF)
+            poa: true, 
+            rof: false 
         }
     };
 
     let db = JSON.parse(localStorage.getItem('wiiShopDBv4')) || defaultData;
     
-    // Zagotovimo nove strukture, če je stara verzija baze
+    // Zagotovimo nove strukture
     if(!db.mgrHistory) db.mgrHistory = [];
     if(!db.settings) db.settings = { poa: true, rof: false };
 
@@ -450,7 +450,7 @@
     let timerInterval = null;
     let timerSeconds = 0;
     let timerRunning = false;
-    let isPOF = false; // Prikaz cen (ne smešat s P.O.A)
+    let isPOF = false; 
     let currentMode = 'ARTICLES';
     let activeManagerMenu = null; 
 
@@ -483,7 +483,6 @@
         return parseFloat(amount).toFixed(2) + " WII";
     }
     
-    // Čistilec šumnikov za PDF
     function cleanStr(str) {
         if(!str) return "";
         return str.toString()
@@ -499,7 +498,6 @@
             role: user.role,
             action: action
         });
-        // Obdržimo samo zadnjih 100 zapisov
         if(db.mgrHistory.length > 100) db.mgrHistory.pop();
         saveDB();
     }
@@ -582,7 +580,6 @@
             container.appendChild(div);
         });
 
-        // Zaključeni
         const lastItem = currentReceipt[currentReceipt.length-1];
         if (lastItem && lastItem.isFinal) {
              const line = document.createElement('div');
@@ -611,7 +608,6 @@
     function setMode(mode) {
         if (mode === 'MANAGER') {
             requestAuthCode("Vnesi KODO za dostop:", (user) => {
-                // [REQ 4] Zabeleži dostop v MGR meni
                 logMgrAction(user, "ACCESSED MGR MENU");
 
                 if (user.role === 'HOST') {
@@ -639,11 +635,9 @@
         container.innerHTML = '';
 
         if (currentMode === 'ARTICLES') {
-            // --- ISKALNIK PO KODI (ZAMENJANA SLIKA) ---
             const searchRow = document.createElement('div');
             searchRow.style.gridColumn = "span 4";
             searchRow.className = "btn btn-search";
-            // ZAMENJANO Z SLIKO scan.png, odstranjen padding
             searchRow.style.padding = "0";
             searchRow.innerHTML = '<img src="scan.png" style="width:100%; height:100%; object-fit:contain;" alt="SCAN">';
             searchRow.onclick = () => {
@@ -651,9 +645,7 @@
             };
             container.appendChild(searchRow);
 
-            // [REQ 2] P.O.A - Če je vklopljeno, pokaži gumbe, sicer ne.
             if (db.settings.poa) {
-                // --- ARTIKLI ---
                 db.articles.forEach(art => {
                     const btn = document.createElement('button');
                     btn.className = 'btn';
@@ -696,14 +688,12 @@
             container.appendChild(btn);
         }
         else if (currentMode === 'MANAGER') {
-             // DEFINICIJA GUMBOV Z SLIKAMI
              const managerOnlyBtns = [
                  { name: 'LOGOUT', img: 'logout.png', action: mgrLogout },
                  { name: 'ARTIKLI', img: 'artikli.png', action: mgrArticles },
                  { name: 'ZAPOSLENI', img: 'zaposleni.png', action: mgrEmployees },
                  { name: 'STORNO', img: 'storno.png', action: mgrStorno },
                  { name: 'BANKA', img: 'banka.png', action: mgrBank },
-                 // [REQ 2 & 3 & 4] Novi gumbi (OSTANEJO TEXT)
                  { name: `P.O.A. ${db.settings.poa ? 'ON' : 'OFF'}`, action: togglePOA, customClass: db.settings.poa ? 'btn-green' : 'btn-red' },
                  { name: `R.O.F. ${db.settings.rof ? 'ON' : 'OFF'}`, action: toggleROF, customClass: db.settings.rof ? 'btn-green' : 'btn-red' },
                  { name: 'MGR ZGOD.', img: 'mgrzgod.png', action: mgrShowHistory }
@@ -715,7 +705,6 @@
                  { name: 'SKYM', img: 'skym.png', action: mgrSkym }
              ];
 
-             // RENDER COMMON
              commonBtns.forEach(b => {
                  const btn = document.createElement('button');
                  btn.className = 'btn';
@@ -729,7 +718,6 @@
                  container.appendChild(btn);
              });
 
-             // RENDER MANAGER ONLY
              if (activeManagerMenu === 'MANAGER') {
                  managerOnlyBtns.forEach(b => {
                      const btn = document.createElement('button');
@@ -752,18 +740,16 @@
         if (currentMode === 'ARTICLES') renderButtons();
     }
     
-    // [REQ 2] Toggle POA
     function togglePOA() {
         db.settings.poa = !db.settings.poa;
         saveDB();
-        renderButtons(); // Re-render to update label
+        renderButtons(); 
     }
 
-    // [REQ 3] Toggle ROF
     function toggleROF() {
         db.settings.rof = !db.settings.rof;
         saveDB();
-        renderButtons(); // Re-render to update label
+        renderButtons(); 
     }
 
     /* ================= LOGIKA BLAGAJNE ================= */
@@ -783,16 +769,11 @@
     }
 
     function addItem(article) {
-        // [REQ 1] Limit: Max 2 artikla iste kode
-        const existingCount = currentReceipt.filter(i => i.code === article.code).length;
-        if (existingCount >= 2) {
-            customAlert("Limit dosežen: Ta artikel je že 2x na računu!");
-            return;
-        }
-
+        // [SPREMEMBA] ODSTRANJEN LIMIT 2 KOSOV
+        
         if (!timerRunning) startTimer();
         currentReceipt.push({
-            code: article.code, // Shranimo kodo za preverjanje
+            code: article.code, 
             name: article.name,
             price: article.price,
             originalPrice: article.price,
@@ -979,7 +960,6 @@
         
         broadcastUpdate('SUCCESS', { total: amount });
 
-        // [REQ 3] R.O.F - Generate PDF if enabled
         if (db.settings.rof) {
             generateSingleReceiptPDF(receiptData);
         }
@@ -1006,7 +986,6 @@
                 db.cashInDrawer = parseFloat(cash);
                 db.shiftLog.push({ type: 'LOGIN', user: worker.name, amount: parseFloat(cash), time: new Date() });
                 
-                // [REQ 4] Log login
                 logMgrAction(worker, "LOGGED IN TO REGISTER");
 
                 saveDB();
@@ -1130,7 +1109,6 @@
     function generateSingleReceiptPDF(rec) {
         if (!window.jspdf) return;
         const { jsPDF } = window.jspdf;
-        // Kratek format za posamezen račun
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [57, 200] });
 
         doc.setFont("courier", "bold");
@@ -1144,7 +1122,6 @@
         const dateObj = new Date(rec.time);
         const dateStr = dateObj.toLocaleDateString('sl-SI') + " " + dateObj.toLocaleTimeString('sl-SI');
 
-        // HEADER
         doc.setFontSize(12);
         addLine("WII SHOP CHANNEL");
         doc.setFontSize(9);
@@ -1154,7 +1131,6 @@
         addLine(`Blagajnik: ${cleanStr(rec.cashier)}`);
         addLine("----------------------------");
 
-        // ITEMS
         rec.items.forEach(item => {
             let name = item.name;
             if(item.isVoid) name = "[X] " + name;
@@ -1245,7 +1221,6 @@
         showKeypad("Vnesi ID (številka):", false, (id) => {
             if (db.employees.find(e => e.id === id)) { customAlert("ID že obstaja!"); return; }
             showKeyboard("Vnesi IME in PRIIMEK:", (name) => {
-                // Izbira vloge preko Custom UI
                 const content = document.getElementById('modal-content');
                 document.getElementById('modal-title').innerText = "VLOGA";
                 content.innerHTML = `
@@ -1479,7 +1454,6 @@
 
     window.kpIn = function(val) {
         const content = document.getElementById('modal-content');
-        // Če modal ni odprt ali ni inicializiran za input, ignoriraj
         if (document.getElementById('modal-overlay').style.display === 'none') return;
         
         let current = content.dataset.value || "";
@@ -1517,27 +1491,90 @@
         });
     }
 
-    /* ================= FIZIČNA TIPKOVNICA ZA ARTIKLE ================= */
+    /* ================= SCANNER & KEYBOARD HANDLER ================= */
+    let barcodeBuffer = "";
+    let barcodeTimer = null;
+
     document.addEventListener('keydown', (e) => {
-        // Če je modal odprt, ignoriraj
-        const modalOpen = document.getElementById('modal-overlay').style.display === 'flex';
-        
-        if (modalOpen) {
-            if (e.key === 'Enter') submitInput();
-            if (e.key >= '0' && e.key <= '9') kpIn(e.key);
-            if (e.key === 'Backspace') kpIn('BACK');
-            return;
+        // Ignoriraj posebne kombinacije
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+        const isModalOpen = document.getElementById('modal-overlay').style.display === 'flex';
+
+        // 1. ZAZNAVANJE "ENTER" (Konec skeniranja ali potrditev vnosa)
+        if (e.key === 'Enter') {
+            if (barcodeBuffer.length > 0) {
+                // Če imamo v bufferju podatke, je to verjetno skener
+                e.preventDefault();
+                handleBarcodeScan(barcodeBuffer);
+                barcodeBuffer = "";
+                return;
+            } else if (isModalOpen) {
+                // Če ni skener, ampak je odprto okno, je to "Potrdi"
+                submitInput();
+                return;
+            }
         }
 
-        if (currentMode === 'ARTICLES' && !modalOpen) {
-            if (e.key >= '0' && e.key <= '9') {
-                showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
-                kpIn(e.key);
-            }
+        // 2. ZBIRANJE ZNAKOV (Buffer)
+        if (e.key.length === 1) {
+            barcodeBuffer += e.key;
+            // Če je premor med znaki predolg, ni skener ampak ročno tipkanje
+            clearTimeout(barcodeTimer);
+            barcodeTimer = setTimeout(() => {
+                barcodeBuffer = "";
+            }, 200); // 200ms tolerance za skener
+        }
+
+        // 3. ROČNI VNOS (Če je odprt modal, tipke delujejo)
+        if (isModalOpen) {
+            if (e.key >= '0' && e.key <= '9') kpIn(e.key);
+            if (e.key === 'Backspace') kpIn('BACK');
+            // Za črke ne kompliciramo, ker skener običajno pošlje številke
+        } 
+        // 4. ROČNI BLIŽNJICA ZA ARTIKLE (Če ni modala in ni skener)
+        else if (currentMode === 'ARTICLES' && barcodeBuffer.length <= 1) {
+             // Opomba: Če tipkaš ročno, se bo buffer sproti praznil.
+             // Tukaj pustimo staro logiko, če želiš ročno odpreti keypad s številko
+             if (e.key >= '0' && e.key <= '9') {
+                 // Ampak počakajmo malce, če je to prvi znak skenerja!
+                 // Ker je težko ločiti, bomo pustili, da se odpre keypad.
+                 // Če skener nadaljuje, bo "isModalOpen" postal true in številke letijo v keypad.
+                 // Ko skener pošlje Enter, se bo izvedel submitInput.
+                 showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
+                 kpIn(e.key);
+             }
         }
     });
 
-    // Ob zagonu strani poskusi naložiti sejo
+    function handleBarcodeScan(code) {
+        const isModalOpen = document.getElementById('modal-overlay').style.display === 'flex';
+        
+        if (isModalOpen) {
+            // Če je okno odprto, vpiši skenirano kodo in potrdi
+            const content = document.getElementById('modal-content');
+            content.dataset.value = code;
+            
+            // Vizualna posodobitev (opcijsko)
+            const display = document.getElementById('kp-display');
+            if(display) {
+                if (content.dataset.secret === 'true') display.textContent = "*".repeat(code.length);
+                else display.textContent = code;
+            }
+            
+            // Avtomatska potrditev
+            setTimeout(submitInput, 50);
+        } else {
+            // Če ni okna in smo v prodaji
+            if (currentMode === 'ARTICLES') {
+                processArticleCode(code);
+            } else {
+                // Če smo kje drugje, lahko ignoriramo ali javimo napako
+                console.log("Skenirano v napačnem načinu: " + code);
+            }
+        }
+    }
+
     loadSession();
     updateStatusBar();
 </script>
