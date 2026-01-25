@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII SHOP BLAGAJNA FINAL v9 (MENU + TASKS + MGR KEYPAD)</title>
+    <title>WII SHOP BLAGAJNA FINAL v9 (TASKS + MENUS + MGR UPDATE)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -11,15 +11,17 @@
             --main-border: 2px solid #000;
             --double-border: 4px double #000;
             --highlight-yellow: #fffacd; 
-            --card-ok-yellow: #fff59d;
-            --card-bad-red: #ff8a80;
             --promo-red: #d00000;
-            --task-red: #d00000;
-            --task-green: #008000;
+            --task-red: #cc0000;
+            --task-green: #008800;
+            --pastel-yellow: #ffffcc;
             --font-main: Arial, sans-serif;
         }
 
-        * { box-sizing: border-box; user-select: none; }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
 
         body {
             font-family: var(--font-main);
@@ -52,25 +54,28 @@
         #receipt-header {
             padding: 5px;
             text-align: center;
-            border-bottom: 2px solid #000;
+            border-bottom: var(--double-border);
             font-weight: bold;
             background: #ccc;
             font-size: 14px;
-            display: flex;
-            flex-direction: column;
         }
 
+        /* NOVO: STATUS KARTICE */
         #card-status-bar {
-            height: 25px;
-            font-size: 12px;
-            display: none; /* Hidden by default */
+            height: 0;
+            overflow: hidden;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            border-top: 1px solid #999;
-            font-weight: bold;
+            transition: height 0.2s;
+            border-bottom: 0px solid #000;
         }
-        .card-ok { background-color: var(--card-ok-yellow); color: #000; display: flex !important; }
-        .card-wrong { background-color: var(--card-bad-red); color: #fff; display: flex !important; }
+        #card-status-bar.active { height: 30px; border-bottom: 2px solid #000; }
+        .card-ok { background-color: var(--pastel-yellow); color: #000; }
+        .card-wrong { background-color: #ffcccc; color: #d00000; }
 
         #receipt-body {
             flex-grow: 1;
@@ -86,31 +91,30 @@
             cursor: pointer;
             border-bottom: 1px dotted #ccc;
         }
-
-        .ri-main {
+        .receipt-row-main {
             display: flex;
             justify-content: space-between;
         }
 
         .receipt-item.selected { background-color: var(--highlight-yellow); }
-        .receipt-item.promo .ri-main { color: var(--promo-red); font-weight: bold; }
-        .receipt-item.voided .ri-main { text-decoration: line-through; color: #888; }
+        .receipt-item.promo .receipt-row-main { color: var(--promo-red); font-weight: bold; }
+        .receipt-item.voided .receipt-row-main { text-decoration: line-through; color: #888; }
 
-        .ri-sub {
-            font-size: 11px;
-            padding-left: 15px;
+        /* NOVO: SUB ITEMS & TASKS IN RECEIPT */
+        .sub-item-row {
+            font-size: 0.85em;
             color: #555;
+            padding-left: 10px;
             display: flex;
             justify-content: space-between;
         }
-
-        .ri-task {
-            font-size: 10px;
-            padding-left: 15px;
+        .task-row {
+            font-size: 0.8em;
+            padding-left: 10px;
             font-weight: bold;
         }
-        .task-pending { color: var(--task-red); }
-        .task-done { color: var(--task-green); }
+        .task-row.pending { color: var(--task-red); }
+        .task-row.done { color: var(--task-green); }
 
         #receipt-footer {
             border-top: var(--double-border);
@@ -128,48 +132,35 @@
             display: flex;
             flex-direction: column;
             background-color: var(--bg-color);
-            position: relative;
         }
 
-        /* STATUS / TASK BAR CONTAINER */
         #status-bar-container {
             padding: 10px 20px;
             border-bottom: var(--main-border);
-            height: 80px; 
-            background: var(--bg-color);
+            min-height: 60px; /* fiksna višina da ne skače */
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        /* Navaden status bar */
-        #normal-status-bar {
-            display: block;
-        }
-        
-        /* Pas z gumbi za opravila */
-        #task-belt-bar {
-            display: none; /* Hidden unless conditional article selected */
+        /* NOVO: TASK PANEL (zamenja status bar) */
+        #task-panel {
+            display: none;
             width: 100%;
             height: 100%;
-            background: #fffacd;
-            border: 2px dashed #000;
-            align-items: center;
+            flex-direction: row;
+            gap: 5px;
             overflow-x: auto;
-            white-space: nowrap;
-            padding: 5px;
         }
-
         .task-btn {
-            height: 40px;
-            padding: 0 15px;
-            margin-right: 5px;
             background: #fff;
-            border: 1px solid #000;
-            box-shadow: 2px 2px 0 #000;
+            border: 2px solid #000;
             font-weight: bold;
-            font-size: 12px;
+            padding: 5px 10px;
             cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            box-shadow: 2px 2px 0 #000;
         }
         .task-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
 
@@ -197,6 +188,7 @@
             font-size: 16px;
             border-right: 2px solid #000;
         }
+
         .st-id { width: 15%; }
         .st-name { width: 70%; text-transform: uppercase;}
         .st-timer { width: 15%; border-right: none; }
@@ -206,86 +198,18 @@
             color: transparent;
         }
 
-        /* --- MAIN DISPLAY --- */
+        /* GUMBI */
         #main-display {
             flex-grow: 1;
             padding: 10px;
-            overflow-y: auto;
-            display: flex; /* Changed from grid to flex to handle different layouts */
-            flex-direction: column;
-        }
-
-        /* Standard Grid for Articles */
-        .grid-layout {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            grid-auto-rows: 1fr;
+            grid-auto-rows: 1fr; /* Za search bar */
             gap: 8px;
-            height: 100%;
+            overflow-y: auto;
+            position: relative; /* Za manager overlay */
         }
-
-        /* Manager Main Layout */
-        .manager-main-layout {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 10px;
-            height: 100%;
-        }
-        
-        .mgr-left-col {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .mgr-keypad-display {
-            background: #fff;
-            border: 2px inset #000;
-            height: 40px;
-            font-family: monospace;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 5px;
-        }
-        .mgr-prompt-text { font-size: 12px; color: #555; font-weight: bold; }
-
-        .mgr-keypad-grid {
-            flex-grow: 1;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-        }
-
-        .mgr-kp-btn {
-            background: #000; /* Default disabled */
-            color: #555;
-            font-weight: bold;
-            font-size: 20px;
-            border: none;
-            cursor: not-allowed;
-            border-radius: 4px;
-        }
-        
-        .mgr-kp-btn.active {
-            background: #ccc;
-            color: #000;
-            border: 1px solid #555;
-            box-shadow: 2px 2px 0 #000;
-            cursor: pointer;
-        }
-        .mgr-kp-btn.active:active { transform: translate(1px,1px); box-shadow: none; }
-
-
-        .mgr-right-col {
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-auto-rows: 1fr;
-            gap: 8px;
-        }
-
 
         .btn {
             background: #f0f0f0;
@@ -361,7 +285,7 @@
             overflow-y: auto;
         }
 
-        /* DISPLAY ZA VNOS (Modal) */
+        /* DISPLAY ZA VNOS */
         .input-display {
             width: 100%;
             height: 40px;
@@ -377,7 +301,7 @@
             justify-content: flex-end;
         }
 
-        /* ŠTEVILČNICA MODAL */
+        /* ŠTEVILČNICA */
         .keypad-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -434,17 +358,73 @@
         /* CUSTOM ALERT TEXT */
         .msg-text { font-size: 18px; margin: 20px 0; line-height: 1.4; }
 
+        /* --- NOVO: MGR EMBEDDED KEYPAD --- */
+        #mgr-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+        #mgr-top-buttons {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+        #mgr-bottom-section {
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid #000;
+            padding-top: 5px;
+            background: #ccc;
+        }
+        #mgr-input-line {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 5px;
+            font-size: 14px;
+            margin-bottom: 5px;
+            height: 25px;
+            display: flex; 
+            align-items: center;
+        }
+        #mgr-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            flex-grow: 1;
+        }
+        .mgr-key {
+            background: #333; /* Onemogočeno */
+            color: #555;
+            border: 1px solid #000;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: not-allowed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mgr-key.active {
+            background: #e0e0e0;
+            color: #000;
+            cursor: pointer;
+            box-shadow: 2px 2px 0 #000;
+        }
+        .mgr-key.active:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+
     </style>
 </head>
 <body>
 
 <div id="app-container">
     <div id="left-panel">
-        <div id="receipt-header">
-            <div>RAČUN #<span id="receipt-num">----</span></div>
-            <div id="card-status-bar"></div>
-        </div>
-        
+        <div id="receipt-header">RAČUN #<span id="receipt-num">----</span></div>
+        <div id="card-status-bar"><span id="card-status-text"></span></div>
         <div id="receipt-body"></div>
         <div id="receipt-footer">
             <span>SKUPAJ:</span>
@@ -454,7 +434,7 @@
 
     <div id="right-panel">
         <div id="status-bar-container">
-            <div id="normal-status-bar">
+            <div id="normal-status-view">
                 <div class="status-label" id="status-label-text">ODJAVLJENA BLAGAJNA</div>
                 <div class="status-table logged-out" id="status-table">
                     <div class="st-cell st-id" id="disp-id">000</div>
@@ -462,7 +442,7 @@
                     <div class="st-cell st-timer" id="disp-timer">0:00</div>
                 </div>
             </div>
-            <div id="task-belt-bar"></div>
+            <div id="task-panel"></div>
         </div>
 
         <div id="main-display"></div>
@@ -490,6 +470,7 @@
 <script>
     /* ================= BROADCAST SYSTEM ================= */
     const displayChannel = new BroadcastChannel('wii_shop_display');
+
     function broadcastUpdate(type, data) {
         displayChannel.postMessage({ type: type, payload: data });
     }
@@ -548,33 +529,48 @@
             { id: '000', name: 'ADMINISTRATOR', role: 'MANAGER', code: '000' }
         ],
         articles: [
-            { name: 'KARTA', price: 10.00, enabled: true, code: "48392", type: 'SIMPLE', hasCondition: false, subItems: [] },
-            { name: 'KAZEN', price: 40.00, enabled: true, code: "75014", type: 'SIMPLE', hasCondition: false, subItems: [] },
-            { name: 'VREČKA', price: 2.10, enabled: true, code: "57290", type: 'SIMPLE', hasCondition: false, subItems: [] },
+            { name: 'KARTA', price: 10.00, enabled: true, code: "48392" },
+            { name: 'KAZEN', price: 40.00, enabled: true, code: "75014" },
+            { name: 'KLAVIR (min)', price: 0.90, enabled: true, code: "92637" },
+            { name: 'WII POT', price: 1.70, enabled: true, code: "18465" },
+            { name: 'POPRAVILO', price: 5.00, enabled: true, code: "63928" },
+            { name: 'VREČKA', price: 2.10, enabled: true, code: "57290" },
+            { name: 'NALEPKA', price: 0.75, enabled: true, code: "81046" },
+            { name: 'KUVERTA', price: 4.20, enabled: true, code: "29571" },
+            { name: 'POŠTNINA', price: 2.50, enabled: true, code: "46803" },
+            { name: 'ZNAMKA', price: 1.00, enabled: true, code: "90752" },
+            { name: 'PS (min)', price: 1.10, enabled: true, code: "13489" },
+            { name: 'OSTALO', price: 0.01, enabled: true, code: "12" }
         ],
         bankAccounts: {}, 
-        clientTasks: {}, // { "clientID": ["Opravilo 1", "Opravilo 2"] }
+        customerTasks: {}, /* NOVO: Shranjevanje opravil po ID stranke */
         receipts: [],
         receiptCounter: 1000,
         cashInDrawer: 0.00,
         shiftLog: [],
         mgrHistory: [], 
-        settings: { poa: true, rof: false }
+        settings: {
+            poa: true, 
+            rof: false 
+        }
     };
 
     let db = JSON.parse(localStorage.getItem('wiiShopDBv5')) || defaultData;
     
-    // Zagotovimo strukturo za nove featureje
-    if(!db.clientTasks) db.clientTasks = {};
-    db.articles.forEach(art => {
-        if(!art.type) art.type = 'SIMPLE';
-        if(!art.subItems) art.subItems = [];
-        if(art.hasCondition === undefined) art.hasCondition = false;
+    if(!db.customerTasks) db.customerTasks = {}; 
+    
+    // MIGRACIJA KOD & NOVIH POLJ (Menu, Condition)
+    db.articles.forEach((art, idx) => {
+        if (!art.code) art.code = (idx + 1).toString();
+        if (art.isMenu === undefined) art.isMenu = false;
+        if (art.condition === undefined) art.condition = false;
+        if (!art.subItems) art.subItems = [];
     });
+    saveDB();
 
     function saveDB() { localStorage.setItem('wiiShopDBv5', JSON.stringify(db)); }
 
-    /* ================= STATE ================= */
+    /* ================= STATE & PERSISTENCE ================= */
     let currentUser = null; 
     let currentReceipt = []; 
     let selectedItemIndex = -1;
@@ -583,23 +579,28 @@
     let timerRunning = false;
     let isPOF = false; 
     let currentMode = 'ARTICLES';
-    let activeManagerMenu = 'MAIN'; // MAIN | EXTRA
+    let activeManagerMenu = null; 
+    let managerSubMode = 'MAIN'; // MAIN ali EXTRA
     
-    // NEW STATES
-    let scannedCardId = null; 
-    let cardStatusTimer = null;
-    
-    // MANAGER KEYPAD STATE
-    let mgrKpState = 'IDLE'; // IDLE, LOGIN_ID, LOGIN_CASH, SKYM_AMT
-    let mgrKpBuffer = "";
-    let mgrKpTempUser = null; // Stores user object between login steps
+    // NOVO: Kartica
+    let activeCustomerId = null; 
+    let cardStatusTimeout = null;
+
+    // NOVO: MGR Keypad State
+    let embeddedKeypad = {
+        active: false,
+        buffer: "",
+        mode: "", // LOGIN_ID, LOGIN_CASH, SKYM
+        tempId: null
+    };
 
     function saveSession() {
         const session = {
             user: currentUser,
             receipt: currentReceipt,
             timer: timerSeconds,
-            cardId: scannedCardId
+            mode: currentMode,
+            activeCustomerId: activeCustomerId
         };
         localStorage.setItem('wiiShopSession', JSON.stringify(session));
     }
@@ -610,17 +611,21 @@
             currentUser = saved.user;
             currentReceipt = saved.receipt || [];
             timerSeconds = saved.timer || 0;
-            scannedCardId = saved.cardId || null;
-            
+            currentMode = 'ARTICLES'; 
+            activeCustomerId = saved.activeCustomerId || null;
             updateStatusBar();
             renderReceipt();
+            if (activeCustomerId) showCardStatus(true);
             if (currentReceipt.length > 0) startTimer();
+            renderButtons();
         }
-        setMode('ARTICLES');
     }
 
     /* ================= UTILS ================= */
-    function formatMoney(amount) { return parseFloat(amount).toFixed(2) + " WII"; }
+    function formatMoney(amount) {
+        return parseFloat(amount).toFixed(2) + " WII";
+    }
+    
     function cleanStr(str) {
         if(!str) return "";
         return str.toString()
@@ -628,6 +633,7 @@
             .replace(/š/g, 's').replace(/Š/g, 'S')
             .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
     }
+
     function logMgrAction(user, action) {
         db.mgrHistory.unshift({
             time: new Date(),
@@ -683,30 +689,68 @@
         }
         
         broadcastUpdate('STATUS', { isOpen: !!currentUser });
+        
+        // Check for Condition Panel
+        checkConditionPanel();
     }
 
-    function setCardStatus(status, id) {
-        const bar = document.getElementById('card-status-bar');
-        clearTimeout(cardStatusTimer);
+    // NOVO: Preverjanje ali prikažemo pas z opravili
+    function checkConditionPanel() {
+        const normalView = document.getElementById('normal-status-view');
+        const taskPanel = document.getElementById('task-panel');
+        
+        // Če imamo izbran artikel IN ima naloge
+        const item = getSelectedItem(true); // true = silent (no alert)
+        
+        if (item && item.tasks && item.tasks.length > 0) {
+            normalView.style.display = 'none';
+            taskPanel.style.display = 'flex';
+            renderTaskPanel(item);
+        } else {
+            normalView.style.display = 'block';
+            taskPanel.style.display = 'none';
+        }
+    }
 
-        if (status === 'OK') {
-            scannedCardId = id;
-            bar.textContent = `CARD OK (${id})`;
-            bar.className = 'card-ok';
-            saveSession();
-            // Re-render receipt to update conditional tasks if selected item has conditions
-            renderReceipt();
-        } else if (status === 'WRONG') {
-            bar.textContent = "CARD WRONG";
-            bar.className = 'card-wrong';
-            cardStatusTimer = setTimeout(() => {
-                bar.style.display = 'none';
+    function renderTaskPanel(item) {
+        const panel = document.getElementById('task-panel');
+        panel.innerHTML = '';
+        item.tasks.forEach((task, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'task-btn';
+            btn.textContent = task.name;
+            btn.onclick = () => {
+                // Toggle task status
+                task.done = !task.done;
+                renderReceipt();
+                // Ohranimo fokus
+            };
+            // Vizualno označimo gumb? Zaenkrat pustimo belega, text v računu se barva
+            if(task.done) {
+                 btn.style.background = "#ccffcc"; 
+            }
+            panel.appendChild(btn);
+        });
+    }
+
+    function showCardStatus(isValid) {
+        const bar = document.getElementById('card-status-bar');
+        const text = document.getElementById('card-status-text');
+        
+        if (cardStatusTimeout) clearTimeout(cardStatusTimeout);
+        
+        bar.className = isValid ? 'active card-ok' : 'active card-wrong';
+        text.textContent = isValid ? "CARD OK" : "CARD WRONG";
+
+        if (!isValid) {
+            cardStatusTimeout = setTimeout(() => {
+                bar.className = '';
+                text.textContent = '';
+                activeCustomerId = null;
+                saveSession();
             }, 3000);
         } else {
-            scannedCardId = null;
-            bar.style.display = 'none';
-            saveSession();
-            renderReceipt();
+            // Ostane
         }
     }
 
@@ -716,92 +760,63 @@
         let total = 0;
 
         document.getElementById('receipt-num').textContent = currentUser ? (currentReceipt.length > 0 ? "WIP" : "----") : "----";
-        
-        // Check Card Status persistence
-        if (scannedCardId) {
-            const bar = document.getElementById('card-status-bar');
-            bar.textContent = `CARD OK (${scannedCardId})`;
-            bar.className = 'card-ok';
-        }
 
-        // Logic for Task Belt (Right Panel)
-        const taskBelt = document.getElementById('task-belt-bar');
-        const normalStatus = document.getElementById('normal-status-bar');
-        let showBelt = false;
-        
         currentReceipt.forEach((item, index) => {
-            if (!item.isVoid) {
-                total += (item.price * item.qty);
-                if (item.subItems) {
-                    item.subItems.forEach(sub => total += (sub.price * item.qty));
-                }
+            if (!item.isVoid) total += (item.price * item.qty);
+            
+            // Sub items cost
+            if (!item.isVoid && item.subItems) {
+                item.subItems.forEach(sub => total += (sub.price * item.qty));
             }
 
             const div = document.createElement('div');
             div.className = `receipt-item ${index === selectedItemIndex ? 'selected' : ''} ${item.isPromo ? 'promo' : ''} ${item.isVoid ? 'voided' : ''}`;
-            
             div.onclick = () => {
                 if(currentUser && !item.isFinal) {
                     selectedItemIndex = index;
                     renderReceipt();
+                    checkConditionPanel();
                 }
             };
 
-            // Main Line
             let prefix = item.isPromo ? "P " : "";
             let nameDisplay = item.name;
             if (item.qty > 1) nameDisplay += ` (${item.qty}x)`;
-            
-            let mainPrice = item.price * item.qty;
+
             if (!item.isPromo && !item.isVoid && item.price < item.originalPrice) {
                 const discountPercent = Math.round((1 - (item.price / item.originalPrice)) * 100);
                 nameDisplay += ` [-${discountPercent}%]`;
             }
 
-            const mainLine = document.createElement('div');
-            mainLine.className = 'ri-main';
-            mainLine.innerHTML = `<span>${prefix}${nameDisplay}</span><span>${formatMoney(mainPrice)}</span>`;
-            div.appendChild(mainLine);
+            // MAIN ROW
+            const mainRow = document.createElement('div');
+            mainRow.className = 'receipt-row-main';
+            mainRow.innerHTML = `<span>${prefix}${nameDisplay}</span><span>${formatMoney(item.price * item.qty)}</span>`;
+            div.appendChild(mainRow);
 
-            // Sub Items (MENU)
+            // SUB ITEMS (MENU)
             if (item.subItems && item.subItems.length > 0) {
                 item.subItems.forEach(sub => {
-                    const subDiv = document.createElement('div');
-                    subDiv.className = 'ri-sub';
-                    subDiv.innerHTML = `<span>- ${sub.name}</span><span>${sub.price > 0 ? formatMoney(sub.price*item.qty) : ''}</span>`;
-                    div.appendChild(subDiv);
+                    const subRow = document.createElement('div');
+                    subRow.className = 'sub-item-row';
+                    subRow.innerHTML = `<span>- ${sub.name}</span><span>${sub.price > 0 ? formatMoney(sub.price*item.qty) : ''}</span>`;
+                    div.appendChild(subRow);
                 });
             }
 
-            // Conditional Tasks
+            // TASKS (CONDITION)
             if (item.tasks && item.tasks.length > 0) {
                 item.tasks.forEach(task => {
-                    const tDiv = document.createElement('div');
-                    tDiv.className = `ri-task ${task.done ? 'task-done' : 'task-pending'}`;
-                    tDiv.textContent = `> ${task.name}`;
-                    div.appendChild(tDiv);
+                    const tRow = document.createElement('div');
+                    tRow.className = `task-row ${task.done ? 'done' : 'pending'}`;
+                    tRow.innerText = `- ${task.name}`;
+                    div.appendChild(tRow);
                 });
-                
-                // If this item is selected, show belt
-                if (index === selectedItemIndex && !item.isVoid && !item.isFinal) {
-                    showBelt = true;
-                    renderTaskBelt(item);
-                }
             }
 
             container.appendChild(div);
         });
 
-        // Update Belt Visibility
-        if (showBelt) {
-            taskBelt.style.display = 'flex';
-            normalStatus.style.display = 'none';
-        } else {
-            taskBelt.style.display = 'none';
-            normalStatus.style.display = 'block';
-        }
-
-        // Final line
         const lastItem = currentReceipt[currentReceipt.length-1];
         if (lastItem && lastItem.isFinal) {
              const line = document.createElement('div');
@@ -819,64 +834,51 @@
         saveSession(); 
         
         if (currentUser) {
-            broadcastUpdate('CART', { items: currentReceipt, total: total, totalStr: totalStr });
+            broadcastUpdate('CART', {
+                items: currentReceipt,
+                total: total,
+                totalStr: totalStr
+            });
         }
-    }
-
-    function renderTaskBelt(item) {
-        const belt = document.getElementById('task-belt-bar');
-        belt.innerHTML = '';
-        if(!item.tasks) return;
-        
-        item.tasks.forEach((task, tIdx) => {
-            const btn = document.createElement('button');
-            btn.className = 'task-btn';
-            btn.textContent = task.name;
-            btn.style.background = task.done ? '#ccffcc' : '#fff';
-            btn.onclick = () => {
-                task.done = !task.done;
-                renderReceipt(); // Re-render to update color and button state
-            };
-            belt.appendChild(btn);
-        });
     }
 
     function setMode(mode) {
         if (mode === 'MANAGER') {
-             // First enter Manager Main View (Keypad Locked)
-             // Only requires auth if trying to access sub-menus later or if strict logic needed.
-             // But prompt says "When manager clicks login, keypad enables". This implies Manager view is accessible.
-             // Let's protect the button itself with a simple auth check OR just open the view and rely on the Keypad for Login.
-             // Given the instructions, we can enter MANAGER mode, but nothing works until Login via keypad.
-             currentMode = 'MANAGER';
-             activeManagerMenu = 'MAIN';
-             mgrKpState = 'IDLE';
-             mgrKpBuffer = "";
-             renderButtons();
-             return;
+            requestAuthCode("Vnesi KODO za dostop:", (user) => {
+                logMgrAction(user, "ACCESSED MGR MENU");
+                currentMode = 'MANAGER';
+                managerSubMode = 'MAIN';
+                // Reset keypad logic
+                embeddedKeypad.active = false;
+                embeddedKeypad.mode = "";
+                
+                if (user.role === 'HOST') activeManagerMenu = 'HOST';
+                else if (user.role === 'MANAGER') activeManagerMenu = 'MANAGER';
+                else { customAlert("Ta koda nima dostopa do funkcij!"); return; }
+                
+                renderButtons();
+            });
+            return;
         }
 
-        if (!currentUser && mode !== 'MANAGER') { customAlert("Najprej se mora prijaviti manager/blagajnik!"); return; }
+        if (!currentUser) { customAlert("Najprej se mora prijaviti manager/blagajnik!"); return; }
         currentMode = mode;
         renderButtons();
     }
 
-    /* ================= RENDER MAIN BUTTONS ================= */
     function renderButtons() {
         const container = document.getElementById('main-display');
         container.innerHTML = '';
-        container.className = ''; // Reset class
+        checkConditionPanel(); // Re-check condition panel status when mode changes
 
-        // --- ARTICLES ---
         if (currentMode === 'ARTICLES') {
-            container.className = 'grid-layout';
             const searchRow = document.createElement('div');
             searchRow.style.gridColumn = "span 4";
             searchRow.className = "btn btn-search";
             searchRow.style.padding = "0";
-            searchRow.innerHTML = '<img src="scan.png" style="width:100%; height:100%; object-fit:contain;" alt="SCAN" onerror="this.parentNode.innerText=\'SCAN\'">';
+            searchRow.innerHTML = '<img src="scan.png" style="width:100%; height:100%; object-fit:contain;" alt="SCAN">';
             searchRow.onclick = () => {
-                showKeypad("Vnesi šifro ali kartico:", false, (val) => processScanOrInput(val));
+                showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
             };
             container.appendChild(searchRow);
 
@@ -888,12 +890,11 @@
                         btn.classList.add('btn-grey');
                         btn.disabled = true;
                     }
-                    let content = `<span>${art.name}</span>`;
-                    if (isPOF) {
-                        content += `<br><span style="font-size:0.9em">${formatMoney(art.price)}</span>`;
-                        if(art.type === 'MENU') content += `<br><span style="font-size:0.8em; color:blue">MENU</span>`;
-                    }
-                    btn.innerHTML = content;
+                    // Menu indikator ali navaden
+                    let displayPrice = formatMoney(art.price);
+                    if(art.isMenu) displayPrice += "+";
+                    
+                    btn.innerHTML = `<span>${art.name}</span>` + (isPOF ? `<br><span style="font-size:0.9em">${displayPrice}</span>` : '');
                     
                     if (art.enabled) {
                         btn.onclick = () => addItem(art);
@@ -902,14 +903,13 @@
                 });
             }
         } 
-        // --- FUNCTIONS ---
         else if (currentMode === 'FUNCTIONS') {
-            container.className = 'grid-layout';
             const functions = [
                 { name: 'KOLIČINA', action: fnQuantity },
                 { name: 'PROMO', action: fnPromo },
                 { name: 'VOID', action: fnVoid },
-                { name: '% POPUST', action: fnDiscount }
+                { name: '% POPUST', action: fnDiscount },
+                { name: 'SKENIRAJ KARTICO', action: fnScanCard } 
             ];
             functions.forEach(f => {
                 const btn = document.createElement('button');
@@ -919,9 +919,7 @@
                 container.appendChild(btn);
             });
         }
-        // --- FINISH ---
         else if (currentMode === 'FINISH') {
-            container.className = 'grid-layout';
             const btn = document.createElement('button');
             btn.className = 'btn';
             btn.style.gridColumn = "span 4";
@@ -931,221 +929,217 @@
             btn.onclick = finishReceiptSequence;
             container.appendChild(btn);
         }
-        // --- MANAGER ---
         else if (currentMode === 'MANAGER') {
-            if (activeManagerMenu === 'MAIN') {
-                container.className = 'manager-main-layout';
+            if (managerSubMode === 'MAIN') {
+                // GLAVNI MANAGER POGLED (S številčnico)
+                container.style.display = 'block'; // Zahtevano zaradi custom layouta
                 
-                // LEFT COL: Keypad UI
-                const leftCol = document.createElement('div');
-                leftCol.className = 'mgr-left-col';
-                
-                // Display
-                const kpDisp = document.createElement('div');
-                kpDisp.className = 'mgr-keypad-display';
-                let promptTxt = "ZAKLENJENO";
-                let dispVal = "";
-                
-                if (mgrKpState === 'IDLE') { promptTxt = "IZBERI FUNKCIJO"; }
-                else if (mgrKpState === 'LOGIN_ID') { promptTxt = "VNESI ID:"; dispVal = mgrKpBuffer; }
-                else if (mgrKpState === 'LOGIN_CASH') { promptTxt = `DEPOZIT ZA ${mgrKpTempUser.name}:`; dispVal = mgrKpBuffer; }
-                else if (mgrKpState === 'SKYM_AMT') { promptTxt = "ZNESEK DVIGA:"; dispVal = mgrKpBuffer; }
-                
-                kpDisp.innerHTML = `<span class="mgr-prompt-text">${promptTxt}</span><span>${dispVal}</span>`;
-                leftCol.appendChild(kpDisp);
+                // HTML Layout za Manager Main
+                container.innerHTML = `
+                <div id="mgr-layout">
+                    <div id="mgr-top-buttons">
+                        </div>
+                    <div id="mgr-bottom-section">
+                        <div id="mgr-input-line"></div>
+                        <div id="mgr-keypad">
+                            <button class="mgr-key" data-k="7">7</button><button class="mgr-key" data-k="8">8</button><button class="mgr-key" data-k="9">9</button>
+                            <button class="mgr-key" data-k="4">4</button><button class="mgr-key" data-k="5">5</button><button class="mgr-key" data-k="6">6</button>
+                            <button class="mgr-key" data-k="1">1</button><button class="mgr-key" data-k="2">2</button><button class="mgr-key" data-k="3">3</button>
+                            <button class="mgr-key" data-k="C">C</button><button class="mgr-key" data-k="0">0</button><button class="mgr-key" data-k="OK">OK</button>
+                        </div>
+                    </div>
+                </div>`;
 
-                // Keypad Grid
-                const grid = document.createElement('div');
-                grid.className = 'mgr-keypad-grid';
-                const keys = ['7','8','9','4','5','6','1','2','3','C','0','OK'];
-                keys.forEach(k => {
-                    const kBtn = document.createElement('button');
-                    kBtn.className = 'mgr-kp-btn ' + (mgrKpState !== 'IDLE' ? 'active' : '');
-                    kBtn.textContent = k;
-                    kBtn.onclick = () => handleMgrKeypad(k);
-                    grid.appendChild(kBtn);
-                });
-                leftCol.appendChild(grid);
-                container.appendChild(leftCol);
-
-                // RIGHT COL: Actions
-                const rightCol = document.createElement('div');
-                rightCol.className = 'mgr-right-col';
-
-                // Gumbi glavnega menija
-                const btns = [
-                    { name: 'LOGIN', img: 'login.png', action: () => initMgrKeypadAction('LOGIN') },
-                    { name: 'DVIG (SKYM)', img: 'skym.png', action: () => initMgrKeypadAction('SKYM') },
-                    { name: 'OPRAVILA', img: 'opravila.png', action: mgrTasks },
-                    { name: 'PRODAJA', img: 'prodaja.png', action: mgrSalesAnalysis },
-                    { name: 'DODATNO', img: 'dodatno.png', action: () => { activeManagerMenu = 'EXTRA'; renderButtons(); } },
+                const btnContainer = document.getElementById('mgr-top-buttons');
+                const mainBtns = [
+                    { name: 'LOGIN', img: 'login.png', action: () => activateMgrKeypad('LOGIN') },
+                    { name: 'VMESNO', img: 'vmesno.png', action: mgrInterim },
+                    { name: 'SKYM', img: 'skym.png', action: () => activateMgrKeypad('SKYM') },
+                    { name: 'DOLOČI OPRAVILA', img: 'opravila.png', action: mgrTasks },
+                    { name: 'DODATNO', img: 'dodatno.png', action: () => { managerSubMode = 'EXTRA'; renderButtons(); } },
                     { name: 'LOGOUT', img: 'logout.png', action: mgrLogout }
                 ];
 
-                btns.forEach(b => {
+                mainBtns.forEach(b => {
                     const btn = document.createElement('button');
                     btn.className = 'btn';
                     if (b.img) {
-                         btn.style.padding = "0";
-                         btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}" onerror="this.parentNode.innerText='${b.name}'">`;
-                    } else btn.innerText = b.name;
+                        btn.style.padding = "0";
+                        btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}">`;
+                    } else { btn.innerText = b.name; }
                     btn.onclick = b.action;
-                    rightCol.appendChild(btn);
+                    btnContainer.appendChild(btn);
                 });
-                container.appendChild(rightCol);
 
-            } else if (activeManagerMenu === 'EXTRA') {
-                // Submenu grid
-                container.className = 'grid-layout';
-                
-                // Back button
-                const backBtn = document.createElement('button');
-                backBtn.className = 'btn';
-                backBtn.style.background = '#ccc';
-                backBtn.innerText = "NAZAJ";
-                backBtn.onclick = () => { activeManagerMenu = 'MAIN'; renderButtons(); };
-                container.appendChild(backBtn);
+                // Inicializacija keypad listeners
+                document.querySelectorAll('.mgr-key').forEach(k => {
+                    k.onclick = () => handleMgrKeyInput(k.dataset.k);
+                });
+                updateMgrKeypadVisuals();
 
+            } else {
+                // DODATNO MENU (Original items + Sales)
+                container.style.display = 'grid'; // Nazaj na grid
                 const extraBtns = [
+                    { name: 'NAZAJ', action: () => { managerSubMode = 'MAIN'; renderButtons(); } },
                     { name: 'ARTIKLI', img: 'artikli.png', action: mgrArticles },
                     { name: 'ZAPOSLENI', img: 'zaposleni.png', action: mgrEmployees },
-                    { name: 'STORNO RAC.', img: 'storno.png', action: mgrStornoReceipts },
+                    { name: 'STORNO', img: 'storno.png', action: mgrStorno },
                     { name: 'BANKA', img: 'banka.png', action: mgrBank },
-                    { name: 'VMESNO', img: 'vmesno.png', action: mgrInterim },
+                    { name: 'PRODAJA', img: 'prodaja.png', action: mgrSales }, // NOVO
                     { name: `P.O.A. ${db.settings.poa ? 'ON' : 'OFF'}`, action: togglePOA, customClass: db.settings.poa ? 'btn-green' : 'btn-red' },
                     { name: `R.O.F. ${db.settings.rof ? 'ON' : 'OFF'}`, action: toggleROF, customClass: db.settings.rof ? 'btn-green' : 'btn-red' },
                     { name: 'MGR ZGOD.', img: 'mgrzgod.png', action: mgrShowHistory }
                 ];
-                
+
                 extraBtns.forEach(b => {
-                    const btn = document.createElement('button');
-                    btn.className = `btn ${b.customClass || ''}`;
-                    if (b.img) {
+                     const btn = document.createElement('button');
+                     btn.className = `btn ${b.customClass || ''}`;
+                     if (b.img) {
                          btn.style.padding = "0";
-                         btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}" onerror="this.parentNode.innerText='${b.name}'">`;
-                    } else btn.innerText = b.name;
-                    btn.onclick = () => {
-                        // Simple Auth for submenu items
-                        requestAuthCode("Vnesi KODO:", (u) => {
-                             if(u.role === 'MANAGER' || u.role === 'HOST') b.action();
-                             else customAlert("Ni pravic!");
-                        });
-                    };
-                    container.appendChild(btn);
-                });
+                         btn.innerHTML = `<img src="${b.img}" style="width:100%; height:100%; object-fit:contain;" alt="${b.name}">`;
+                     } else { btn.innerText = b.name; }
+                     btn.onclick = b.action;
+                     container.appendChild(btn);
+                 });
             }
         }
     }
-
-    function togglePOF() { isPOF = !isPOF; if (currentMode === 'ARTICLES') renderButtons(); }
-    function togglePOA() { db.settings.poa = !db.settings.poa; saveDB(); renderButtons(); }
-    function toggleROF() { db.settings.rof = !db.settings.rof; saveDB(); renderButtons(); }
 
     /* ================= MANAGER KEYPAD LOGIC ================= */
-    
-    function initMgrKeypadAction(action) {
-        if (action === 'LOGIN') {
-            mgrKpState = 'LOGIN_ID';
-            mgrKpBuffer = "";
-            mgrKpTempUser = null;
-        } else if (action === 'SKYM') {
-            if(!currentUser) { customAlert("Nihče ni prijavljen!"); return; }
-            mgrKpState = 'SKYM_AMT';
-            mgrKpBuffer = "";
-        }
-        renderButtons(); // update display
+    function activateMgrKeypad(mode) {
+        embeddedKeypad.active = true;
+        embeddedKeypad.mode = mode;
+        embeddedKeypad.buffer = "";
+        embeddedKeypad.tempId = null;
+        embeddedKeypad.step = 1; // 1 = ID, 2 = CASH/AMOUNT
+        updateMgrKeypadVisuals();
     }
 
-    function handleMgrKeypad(key) {
-        if (mgrKpState === 'IDLE') return;
+    function updateMgrKeypadVisuals() {
+        const line = document.getElementById('mgr-input-line');
+        const keys = document.querySelectorAll('.mgr-key');
+        
+        if (!embeddedKeypad.active) {
+            if(line) line.innerText = "";
+            keys.forEach(k => k.classList.remove('active'));
+        } else {
+            keys.forEach(k => k.classList.add('active'));
+            // Prompt text
+            let prompt = "";
+            if (embeddedKeypad.mode === 'LOGIN') {
+                prompt = embeddedKeypad.step === 1 ? "ID ZAPOSLENEGA: " : `ZAPOSLENI: ${embeddedKeypad.tempName} | DEPOZIT: `;
+            } else if (embeddedKeypad.mode === 'SKYM') {
+                prompt = "ZNESEK DVIGA (SKYM): ";
+            }
+            if(line) line.innerText = prompt + embeddedKeypad.buffer;
+        }
+    }
+
+    function handleMgrKeyInput(key) {
+        if (!embeddedKeypad.active) return;
 
         if (key === 'C') {
-            mgrKpBuffer = "";
+            embeddedKeypad.buffer = "";
         } else if (key === 'OK') {
-            processMgrKpEnter();
-            return; // render called inside process
+            processMgrKeypadEnter();
         } else {
-            mgrKpBuffer += key;
+            embeddedKeypad.buffer += key;
         }
-        renderButtons();
+        updateMgrKeypadVisuals();
     }
 
-    function processMgrKpEnter() {
-        if (mgrKpState === 'LOGIN_ID') {
-            const user = db.employees.find(e => e.id === mgrKpBuffer);
-            if (!user) { customAlert("Napačen ID!"); mgrKpBuffer = ""; }
-            else {
-                mgrKpTempUser = user;
-                mgrKpState = 'LOGIN_CASH';
-                mgrKpBuffer = ""; // Reset for cash input
+    function processMgrKeypadEnter() {
+        const val = embeddedKeypad.buffer;
+        
+        if (embeddedKeypad.mode === 'LOGIN') {
+            if (embeddedKeypad.step === 1) {
+                // Check ID
+                const worker = db.employees.find(e => e.id === val);
+                if (!worker) {
+                    customAlert("Neznan delavec!");
+                    embeddedKeypad.buffer = "";
+                } else {
+                    embeddedKeypad.tempId = worker.id;
+                    embeddedKeypad.tempName = worker.name;
+                    embeddedKeypad.tempWorker = worker;
+                    embeddedKeypad.step = 2;
+                    embeddedKeypad.buffer = "";
+                }
+            } else if (embeddedKeypad.step === 2) {
+                // Finalize Login
+                const cash = parseFloat(val);
+                if (isNaN(cash)) { customAlert("Napaka!"); return; }
+                
+                currentUser = {
+                    ...embeddedKeypad.tempWorker,
+                    loginTime: new Date(),
+                    startCash: cash,
+                    sessionVoids: 0
+                };
+                db.cashInDrawer = cash;
+                db.shiftLog.push({ type: 'LOGIN', user: currentUser.name, amount: cash, time: new Date() });
+                logMgrAction(currentUser, "LOGGED IN TO REGISTER");
+                saveDB(); saveSession(); updateStatusBar();
+                
+                // Reset UI
+                embeddedKeypad.active = false;
+                setMode('ARTICLES');
             }
-        } 
-        else if (mgrKpState === 'LOGIN_CASH') {
-            const amount = parseFloat(mgrKpBuffer);
-            if (isNaN(amount)) { customAlert("Napaka!"); return; }
-            
-            // Perform Login
-            currentUser = {
-                ...mgrKpTempUser,
-                loginTime: new Date(),
-                startCash: amount,
-                sessionVoids: 0
-            };
-            db.cashInDrawer = amount;
-            db.shiftLog.push({ type: 'LOGIN', user: currentUser.name, amount: amount, time: new Date() });
-            logMgrAction(currentUser, "LOGGED IN (KEYPAD)");
-            
-            saveDB();
-            saveSession();
-            updateStatusBar();
-            mgrKpState = 'IDLE';
-            customAlert(`Pozdravljen, ${currentUser.name}!`, () => setMode('ARTICLES'));
+        } else if (embeddedKeypad.mode === 'SKYM') {
+            const amount = parseFloat(val);
+            if (amount > db.cashInDrawer) { customAlert("Ni dovolj denarja!"); embeddedKeypad.buffer=""; }
+            else {
+                db.cashInDrawer -= amount;
+                db.shiftLog.push({ type: 'SKYM', user: currentUser.name, amount: amount, time: new Date() });
+                saveDB();
+                customAlert("Odvzem zabeležen.");
+                embeddedKeypad.active = false;
+                managerSubMode = 'MAIN';
+                renderButtons();
+            }
         }
-        else if (mgrKpState === 'SKYM_AMT') {
-             const amount = parseFloat(mgrKpBuffer);
-             if (amount > db.cashInDrawer) { customAlert("Ni dovolj denarja!"); return; }
-             db.cashInDrawer -= amount;
-             db.shiftLog.push({ type: 'SKYM', user: currentUser.name, amount: amount, time: new Date() });
-             saveDB();
-             customAlert(`Odvzem: ${formatMoney(amount)}`);
-             mgrKpState = 'IDLE';
-        }
-        renderButtons();
+        updateMgrKeypadVisuals();
     }
 
-    /* ================= MAIN SALES LOGIC ================= */
+
+    /* ================= LOGIKA BLAGAJNE ================= */
     
-    function processScanOrInput(code) {
-        // Check Article
+    function togglePOF() {
+        isPOF = !isPOF;
+        if (currentMode === 'ARTICLES') renderButtons();
+    }
+    
+    function togglePOA() {
+        db.settings.poa = !db.settings.poa;
+        saveDB();
+        renderButtons(); 
+    }
+
+    function toggleROF() {
+        db.settings.rof = !db.settings.rof;
+        saveDB();
+        renderButtons(); 
+    }
+
+    function processArticleCode(code) {
         const art = db.articles.find(a => a.code === code);
-        if (art) {
-            closeModal();
-            if (art.enabled) addItem(art);
-            else customAlert("Artikel onemogočen!");
-            return;
-        }
-        
-        // Check Card (Client ID exists in tasks OR bank)
-        if (db.clientTasks[code] || db.bankAccounts[code] !== undefined) {
-             closeModal();
-             setCardStatus('OK', code);
-             return;
-        }
-        
-        // Assume it might be a card even if new?
-        // Prompt says: "If card/stranka is NOT in system -> CARD WRONG"
-        // So we strictly check DB.
         closeModal();
-        // If length > 3 assume it was an attempt at card
-        if (code.length > 3) setCardStatus('WRONG');
-        else customAlert("Šifra ne obstaja!");
+        if (art) {
+            if (art.enabled) {
+                addItem(art);
+            } else {
+                customAlert("Artikel s to šifro je onemogočen!");
+            }
+        } else {
+            customAlert("Šifra ne obstaja!");
+        }
     }
 
     function addItem(article) {
         if (!timerRunning) startTimer();
-        
-        // Create base item
-        const item = {
+
+        let newItem = {
             code: article.code, 
             name: article.name,
             price: article.price,
@@ -1154,114 +1148,46 @@
             isPromo: false,
             isVoid: false,
             isFinal: false,
+            isMenu: article.isMenu,
             subItems: [],
             tasks: []
         };
 
-        // Handle MENU type
-        if (article.type === 'MENU' && article.subItems) {
-            // Deep copy subitems
-            item.subItems = article.subItems.map(s => ({ name: s.name, price: s.price }));
+        // MENU LOGIKA
+        if (article.isMenu && article.subItems && article.subItems.length > 0) {
+            newItem.subItems = JSON.parse(JSON.stringify(article.subItems)); // Deep copy
         }
 
-        // Handle CONDITION (Tasks)
-        if (article.hasCondition && scannedCardId && db.clientTasks[scannedCardId]) {
-            // Load tasks for this client
-            db.clientTasks[scannedCardId].forEach(tStr => {
-                item.tasks.push({ name: tStr, done: false });
-            });
+        // POGOJ & TASK LOGIKA
+        if (article.condition && activeCustomerId) {
+            const tasks = db.customerTasks[activeCustomerId];
+            if (tasks && tasks.length > 0) {
+                newItem.tasks = tasks.map(t => ({ name: t, done: false }));
+            }
         }
 
-        currentReceipt.push(item);
+        currentReceipt.push(newItem);
         selectedItemIndex = currentReceipt.length - 1;
         renderReceipt();
+        checkConditionPanel();
     }
 
-    /* ================= TASKS MANAGER ================= */
-    function mgrTasks() {
-        requestAuthCode("Avtorizacija:", (u) => {
-            showKeypad("Vnesi/Skeniraj ID stranke:", false, (cid) => {
-                openTaskEditor(cid);
-                closeModal();
-            });
-        });
+    function getSelectedItem(silent = false) {
+        if (selectedItemIndex < 0 || selectedItemIndex >= currentReceipt.length) {
+            if(!silent) customAlert("Izberi artikel!");
+            return null;
+        }
+        if (currentReceipt[selectedItemIndex].isVoid) {
+            if(!silent) customAlert("Artikel je storniran!");
+            return null;
+        }
+        return currentReceipt[selectedItemIndex];
     }
 
-    function openTaskEditor(cid) {
-        const tasks = db.clientTasks[cid] || [];
-        const content = document.getElementById('modal-content');
-        document.getElementById('modal-title').innerText = `OPRAVILA: ${cid}`;
-        
-        // Render List
-        let html = `<h3>Urejanje opravil za ${cid}</h3>`;
-        html += `<div class="modal-list" id="task-list-edit">`;
-        tasks.forEach((t, i) => {
-            html += `<div class="modal-list-item"><span>${t}</span> <button class="list-btn-action" onclick="removeTask('${cid}', ${i})">X</button></div>`;
-        });
-        html += `</div>`;
-        html += `<button class="btn" style="width:100%; margin-top:10px" onclick="addNewTaskInput('${cid}')">+ DODAJ OPRAVILO</button>`;
-        html += `<button class="btn" style="width:100%; margin-top:10px; background:#ccc" onclick="renderButtons()">KONČAJ</button>`; // Just close modal essentially
-        
-        content.innerHTML = html;
-        document.getElementById('modal-overlay').style.display = 'flex';
-    }
-
-    window.removeTask = function(cid, idx) {
-        db.clientTasks[cid].splice(idx, 1);
-        saveDB();
-        openTaskEditor(cid);
-    }
-
-    window.addNewTaskInput = function(cid) {
-        showKeyboard("Vnesi naziv opravila:", (val) => {
-            if(!db.clientTasks[cid]) db.clientTasks[cid] = [];
-            db.clientTasks[cid].push(val.toUpperCase());
-            saveDB();
-            openTaskEditor(cid);
-        });
-    }
-
-    /* ================= SALES ANALYSIS ================= */
-    function mgrSalesAnalysis() {
-        if (!currentUser) { customAlert("Ni aktivne izmene!"); return; }
-        
-        const loginTime = new Date(currentUser.loginTime);
-        const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= loginTime);
-        
-        let totalCash = 0;
-        let totalCard = 0;
-        let count = sessionReceipts.length;
-
-        sessionReceipts.forEach(r => {
-            if (r.type === 'CASH') totalCash += r.total;
-            if (r.type === 'CARD') totalCard += r.total;
-        });
-
-        const content = document.getElementById('modal-content');
-        document.getElementById('modal-title').innerText = "PRODAJA";
-        content.innerHTML = `
-            <h3>ANALIZA IZMENE</h3>
-            <div style="text-align:left; font-size:16px; line-height:1.5;">
-                Blagajnik: ${currentUser.name}<br>
-                Začetek: ${loginTime.toLocaleTimeString()}<br>
-                ----------------<br>
-                Št. računov: ${count}<br>
-                Gotovina: ${formatMoney(totalCash)}<br>
-                Kartice: ${formatMoney(totalCard)}<br>
-                ----------------<br>
-                <strong>SKUPAJ: ${formatMoney(totalCash + totalCard)}</strong>
-            </div>
-            <button class="btn" style="width:100%; margin-top:20px" onclick="closeModal()">ZAPRI</button>
-        `;
-        document.getElementById('modal-overlay').style.display = 'flex';
-    }
-
-    /* ================= STANDARD FUNCTIONS (Quantity, Void, Payment) ================= */
-    
+    /* --- FUNCTIONS BUTTONS --- */
     function fnQuantity() {
-        if (selectedItemIndex < 0) return;
-        const item = currentReceipt[selectedItemIndex];
-        if (item.isVoid) return;
+        const item = getSelectedItem();
+        if (!item) return;
         showKeypad("Vnesi količino:", false, (val) => {
             const qty = parseInt(val);
             if (qty > 0) { item.qty = qty; renderReceipt(); }
@@ -1270,26 +1196,38 @@
     }
 
     function fnPromo() {
-        if (selectedItemIndex < 0) return;
+        const item = getSelectedItem();
+        if (!item) return;
         requestAuthCode("Vnesi MGR/HOST kodo:", (user) => {
-            currentReceipt[selectedItemIndex].isPromo = true;
-            currentReceipt[selectedItemIndex].price = 0.00;
+            item.isPromo = true;
+            item.price = 0.00;
+            // Promo also sets subitems to 0? Usually yes.
+            if(item.subItems) item.subItems.forEach(s => s.price = 0);
             renderReceipt();
             closeModal();
         });
     }
 
     function fnVoid() {
-        if (selectedItemIndex < 0) return;
-        const item = currentReceipt[selectedItemIndex];
+        const item = getSelectedItem();
+        if (!item) return;
         if (currentUser.sessionVoids >= 2) {
              requestAuthCode("Limit! Vnesi MGR/HOST kodo:", (user) => {
-                 item.isVoid = true; item.price = 0; renderReceipt(); closeModal();
+                 performVoid(item);
+                 closeModal();
              });
         } else {
-            item.isVoid = true; item.price = 0;
-            currentUser.sessionVoids++; saveSession(); renderReceipt();
+            performVoid(item);
+            currentUser.sessionVoids++;
+            saveSession();
         }
+    }
+
+    function performVoid(item) {
+        item.isVoid = true;
+        item.price = 0;
+        if(item.subItems) item.subItems.forEach(s => s.price = 0);
+        renderReceipt();
     }
 
     function fnDiscount() {
@@ -1302,35 +1240,66 @@
                 <button class="btn" onclick="applyDiscount('COIN')">🪙 WII CEKIN (-70%)</button>
                 <button class="btn" onclick="applyDiscount('CUSTOM')">✏️ ROČNI VNOS</button>
             </div>
-            <br><label><input type="checkbox" id="disc-all"> Na celoten račun?</label>
+            <br>
+            <label><input type="checkbox" id="disc-all"> Na celoten račun?</label>
         `;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
 
+    // NOVO: SCAN CARD
+    function fnScanCard() {
+        showKeypad("Skeniraj kartico stranke:", false, (id) => {
+            // Preverimo če obstaja v Banki ali CustomerTasks
+            const exists = (db.bankAccounts[id] !== undefined) || (db.customerTasks[id] !== undefined);
+            
+            if (exists) {
+                activeCustomerId = id;
+                showCardStatus(true);
+            } else {
+                activeCustomerId = null;
+                showCardStatus(false);
+            }
+            saveSession();
+            closeModal();
+        });
+    }
+
     window.applyDiscount = function(type) {
         const applyToAll = document.getElementById('disc-all').checked;
-        let percent = 0;
-        
-        const doD = (p) => {
-            const factor = (100 - p) / 100;
-            if (applyToAll) {
-                currentReceipt.forEach(i => { if(!i.isVoid && !i.isPromo) i.price = i.originalPrice * factor; });
-            } else {
-                if(selectedItemIndex >= 0) {
-                     const it = currentReceipt[selectedItemIndex];
-                     if(!it.isVoid && !it.isPromo) it.price = it.originalPrice * factor;
-                }
-            }
-            renderReceipt(); closeModal();
-        };
+        if (type === 'USER') doDiscount(40, applyToAll);
+        else if (type === 'COIN') doDiscount(70, applyToAll);
+        else {
+             showKeypad("Vnesi odstotek popusta:", false, (val) => {
+                 doDiscount(parseInt(val), applyToAll);
+                 closeModal();
+             });
+        }
+    }
 
-        if (type === 'USER') doD(40);
-        else if (type === 'COIN') doD(70);
-        else showKeypad("Vnesi %:", false, (v) => doD(parseInt(v)));
+    function doDiscount(percent, applyToAll) {
+        if (percent <= 0 || percent > 100) return;
+        const factor = (100 - percent) / 100;
+        if (applyToAll) {
+            currentReceipt.forEach(i => { 
+                if (!i.isVoid && !i.isPromo) {
+                    i.price = i.originalPrice * factor; 
+                    if(i.subItems) i.subItems.forEach(s => s.price = s.price * factor);
+                }
+            });
+        } else {
+            const item = getSelectedItem();
+            if (item && !item.isPromo) {
+                item.price = item.originalPrice * factor;
+                if(item.subItems) item.subItems.forEach(s => s.price = s.price * factor);
+            }
+        }
+        renderReceipt();
+        closeModal();
     }
 
     function finishReceiptSequence() {
         if (currentReceipt.length === 0) return;
+        
         const rId = db.receiptCounter++;
         saveDB(); 
         currentReceipt.forEach(i => i.isFinal = true);
@@ -1338,12 +1307,10 @@
         renderReceipt();
         stopTimer();
 
-        let total = 0;
+        let total = currentReceipt.reduce((acc, i) => acc + (i.price * i.qty), 0);
+        // Add subitems totals
         currentReceipt.forEach(i => {
-             if(!i.isVoid) {
-                 total += (i.price * i.qty);
-                 if(i.subItems) i.subItems.forEach(s => total += (s.price * i.qty));
-             }
+            if(i.subItems) i.subItems.forEach(s => total += (s.price * i.qty));
         });
 
         const content = document.getElementById('modal-content');
@@ -1358,41 +1325,47 @@
     }
 
     window.paymentCash = function(total) {
-        showKeypad("Vnesi gotovino:", false, (val) => {
+        showKeypad("Vnesi prejeto gotovino:", false, (val) => {
             const received = parseFloat(val);
             const change = received - total;
-            if (change < 0) { customAlert("Premalo!"); return; }
-            broadcastUpdate('CHANGE', { change: change, changeStr: formatMoney(change) });
-            customAlert(`VRAČILO: ${formatMoney(change)}`, () => finalizeTransaction(total, 'CASH'));
+            if (change < 0) { customAlert("Premalo denarja!"); return; }
+            
+            broadcastUpdate('CHANGE', { 
+                change: change, 
+                changeStr: formatMoney(change) 
+            });
+
+            customAlert(`VRAČILO: ${formatMoney(change)}`, () => {
+                finalizeTransaction(total, 'CASH');
+            });
         });
     }
 
     window.paymentCard = function(total) {
-        // Use scanned card if available
-        if (scannedCardId && db.bankAccounts[scannedCardId] !== undefined) {
-             processBankPayment(scannedCardId, total);
-             return;
+        // Če je stranka že skenirana, uporabi ta ID
+        if(activeCustomerId && db.bankAccounts[activeCustomerId] !== undefined) {
+             processBankPaymentHelper(activeCustomerId, total);
+        } else {
+            showKeypad("Vnesi ID banke stranke:", false, (clientId) => {
+                if (db.bankAccounts[clientId] === undefined) { customAlert("Stranka ne obstaja!"); return; }
+                processBankPaymentHelper(clientId, total);
+            });
         }
-
-        showKeypad("Vnesi ID banke:", false, (clientId) => {
-            if (db.bankAccounts[clientId] === undefined) { customAlert("Ni računa!"); return; }
-            processBankPayment(clientId, total);
-        });
     }
 
-    window.processBankPayment = function(id, amount) {
+    function processBankPaymentHelper(clientId, total) {
         const content = document.getElementById('modal-content');
         document.getElementById('modal-title').innerText = "BANKA";
         content.innerHTML = `
-            <h3>Stranka: ${id}</h3>
-            <p>Stanje: ${formatMoney(db.bankAccounts[id])}</p>
-            <p>Plačilo: ${formatMoney(amount)}</p>
-            <button class="btn" style="height:50px; background:#8f8;" onclick="execBankPay('${id}', ${amount})">POTRDI</button>
+            <h3>Stranka: ${clientId}</h3>
+            <p>Stanje: ${formatMoney(db.bankAccounts[clientId])}</p>
+            <p>Za plačilo: ${formatMoney(total)}</p>
+            <button class="btn" style="height:50px; background:#8f8;" onclick="processBankPayment('${clientId}', ${total})">POTRDI PLAČILO</button>
         `;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
 
-    window.execBankPay = function(id, amount) {
+    window.processBankPayment = function(id, amount) {
         if (db.bankAccounts[id] < amount) { customAlert("Ni kritja!"); return; }
         db.bankAccounts[id] -= amount;
         finalizeTransaction(amount, 'CARD');
@@ -1405,7 +1378,7 @@
         const rId = currentReceipt[currentReceipt.length-1].receiptId;
         const receiptData = {
             id: rId,
-            items: [...currentReceipt], // Deep copy needed? Basic ref usually ok here as we clear currentReceipt
+            items: [...currentReceipt],
             total: amount,
             type: type,
             cashier: currentUser.name,
@@ -1416,27 +1389,42 @@
         saveDB();
         
         broadcastUpdate('SUCCESS', { total: amount });
-        if (db.settings.rof) generateSingleReceiptPDF(receiptData);
 
-        // Reset
+        if (db.settings.rof) {
+            generateSingleReceiptPDF(receiptData);
+        }
+
         currentReceipt = [];
         selectedItemIndex = -1;
-        setCardStatus('RESET'); // Clear card
+        activeCustomerId = null; // Reset card logic
+        document.getElementById('card-status-bar').className = '';
+        document.getElementById('card-status-text').textContent = '';
+        
         saveSession();
         renderReceipt();
-        setMode('ARTICLES'); // Back to start
+        checkConditionPanel();
     }
 
-    /* ================= EXTRA MANAGER FUNCTIONS (Articles, etc) ================= */
+    /* ================= MANAGER LOGIC ================= */
     
+    // LOGIN & SKYM are handled by embedded keypad now in MAIN mode
+
     function mgrLogout() {
         if (!currentUser) return;
         const expected = db.cashInDrawer;
+        const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= new Date(currentUser.loginTime));
+        const soldCount = sessionReceipts.length;
+
         const content = document.getElementById('modal-content');
         document.getElementById('modal-title').innerText = "ZAKLJUČEK";
         content.innerHTML = `
-            <div style="text-align:left; font-size:14px;">Pričakovano: ${formatMoney(expected)}</div>
-            <br><button class="btn" onclick="finalizeLogout(${expected})">VNESI DEJAN. STANJE</button>
+            <div style="text-align:left; font-size:14px;">
+                Blagajnik: ${currentUser.name}<br>
+                Pričakovano: ${formatMoney(expected)}<br>
+                Računov: ${soldCount}
+            </div>
+            <br>
+            <button class="btn" onclick="finalizeLogout(${expected})">VNESI DEJAN. STANJE</button>
         `;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
@@ -1446,30 +1434,293 @@
             const actual = parseFloat(val);
             db.shiftLog.push({ type: 'LOGOUT', user: currentUser.name, expected: expected, actual: actual, diff: actual-expected, time: new Date() });
             
-            // Generate PDF logic here (simplified for space)
-            
+            generateShiftPDF(currentUser, expected, actual);
+
             saveDB();
             currentUser = null;
             currentReceipt = [];
             stopTimer();
-            setCardStatus('RESET');
             localStorage.removeItem('wiiShopSession'); 
             updateStatusBar();
             closeModal();
-            setMode('MANAGER'); // Go back to manager login screen
+            document.getElementById('main-display').innerHTML = '';
+            
+            // Reset Layout to grid if it was flex
+            document.getElementById('main-display').style.display = 'grid';
         });
     }
 
-    // ARTIKLI (UPDATED FOR MENU & CONDITION)
+    /* ================= PDF GENERATOR (SHIFT) ================= */
+    function generateShiftPDF(user, expected, actual) {
+        if (!window.jspdf) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [57, 2000] });
+
+        doc.setFont("courier", "bold");
+        doc.setFontSize(9);
+        let y = 10;
+        const margin = 2;
+        const lineH = 4;
+
+        function addLine(text) { doc.text(cleanStr(text), margin, y); y += lineH; }
+        function addSeparator() { addLine("****************************"); }
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('sl-SI') + " " + now.toLocaleTimeString('sl-SI');
+        
+        const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= new Date(user.loginTime));
+        const countTotal = sessionReceipts.length;
+        const countCash = sessionReceipts.filter(r => r.type === 'CASH').length;
+        const countCard = sessionReceipts.filter(r => r.type === 'CARD').length;
+
+        doc.setFontSize(11);
+        addLine("IZPIS BLAGAJNE:");
+        doc.setFontSize(9);
+        addSeparator();
+        
+        addLine(`Id blagajnika: ${user.id}`);
+        addLine(`Blagajnik: ${user.name}`);
+        addLine(`Datum: ${dateStr}`);
+        addSeparator();
+        addLine(`Zacetni depozit: ${formatMoney(user.startCash)}`);
+        addLine(`Gotovina konec: ${formatMoney(expected)}`);
+        addSeparator();
+        addLine(`Stevilo racunov: ${countTotal}`);
+        addLine(`Gotovinski: ${countCash}`);
+        addLine(`Karticni: ${countCard}`);
+        addSeparator();
+        
+        doc.setFontSize(11);
+        addLine("IZPIS RACUNOV:");
+        doc.setFontSize(8);
+
+        if (sessionReceipts.length === 0) {
+            addLine("(Ni racunov v tej izmeni)");
+        } else {
+            sessionReceipts.forEach(rec => {
+                y += 2;
+                addLine(`RACUN #${rec.id} (${rec.time.split('T')[1].slice(0,5)})`);
+                addLine(`Nacin: ${rec.type}`);
+                rec.items.forEach(item => {
+                    let name = item.name;
+                    if(item.isVoid) name = "[X] " + name;
+                    else if(item.isPromo) name = "[P] " + name;
+                    
+                    if(item.qty > 1) {
+                         addLine(` ${item.qty}x ${name}`);
+                         addLine(`   = ${formatMoney(item.price*item.qty)}`);
+                    } else {
+                         addLine(` ${name} ${formatMoney(item.price)}`);
+                    }
+                });
+                addLine(`SKUPAJ: ${formatMoney(rec.total)}`);
+                addLine("----------------------------");
+            });
+        }
+        doc.save(`zakljucek_${user.id}_${now.getTime()}.pdf`);
+    }
+
+    /* ================= PDF GENERATOR (SINGLE RECEIPT - ROF) ================= */
+    function generateSingleReceiptPDF(rec) {
+        if (!window.jspdf) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: [57, 200] });
+
+        doc.setFont("courier", "bold");
+        doc.setFontSize(9);
+        let y = 10;
+        const margin = 2;
+        const lineH = 4;
+
+        function addLine(text) { doc.text(cleanStr(text), margin, y); y += lineH; }
+        
+        const dateObj = new Date(rec.time);
+        const dateStr = dateObj.toLocaleDateString('sl-SI') + " " + dateObj.toLocaleTimeString('sl-SI');
+
+        doc.setFontSize(12);
+        addLine("WII SHOP CHANNEL");
+        doc.setFontSize(9);
+        addLine("----------------------------");
+        addLine(`RACUN #${rec.id}`);
+        addLine(`Datum: ${dateStr}`);
+        addLine(`Blagajnik: ${cleanStr(rec.cashier)}`);
+        addLine("----------------------------");
+
+        rec.items.forEach(item => {
+            let name = item.name;
+            if(item.isVoid) name = "[X] " + name;
+            else if(item.isPromo) name = "[P] " + name;
+            
+            if(item.qty > 1) {
+                 addLine(`${item.qty}x ${name}`);
+                 addLine(`   ${formatMoney(item.price*item.qty)}`);
+            } else {
+                 addLine(`${name}`);
+                 addLine(`   ${formatMoney(item.price)}`);
+            }
+            if(item.subItems) {
+                item.subItems.forEach(s => addLine(` - ${cleanStr(s.name)}`));
+            }
+        });
+
+        addLine("----------------------------");
+        doc.setFontSize(11);
+        addLine(`ZA PLACILO: ${formatMoney(rec.total)}`);
+        doc.setFontSize(9);
+        addLine(`Nacin placila: ${rec.type}`);
+        addLine("----------------------------");
+        addLine("Hvala za nakup!");
+        addLine("Se vidimo!");
+
+        doc.save(`racun_${rec.id}.pdf`);
+    }
+
+
+    function mgrInterim() { customAlert(`TRENUTNO STANJE: ${formatMoney(db.cashInDrawer)}`); }
+    
+    function mgrStorno() {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "STORNO";
+        let html = '<div class="modal-list">';
+        db.receipts.slice(-10).reverse().forEach((r, idx) => {
+             html += `<div class="modal-list-item" onclick="processStorno(${r.id})"><span>#${r.id} (${formatMoney(r.total)})</span> <button class="list-btn-action">STORNO</button></div>`;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    window.processStorno = function(id) {
+        customConfirm(`Storniraj račun #${id}?`, () => {
+            const rIndex = db.receipts.findIndex(r => r.id === id);
+            if (rIndex > -1) {
+                const r = db.receipts[rIndex];
+                if (r.type === 'CASH') db.cashInDrawer -= r.total;
+                db.receipts.splice(rIndex, 1);
+                saveDB();
+                customAlert("Stornirano!");
+                closeModal();
+            }
+        });
+    }
+
+    /* --- MANAGER DOLOČI OPRAVILA (NOVO) --- */
+    function mgrTasks() {
+        showKeypad("Vnesi ID stranke:", false, (id) => {
+             openTaskEditor(id);
+        });
+    }
+
+    function openTaskEditor(id) {
+        const existing = db.customerTasks[id] || [];
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "OPRAVILA";
+        
+        let taskText = existing.join('\n');
+        
+        content.innerHTML = `
+            <h3>Stranka: ${id}</h3>
+            <p>Vnesi opravila (vsako v svojo vrstico):</p>
+            <textarea id="task-area" style="width:100%; height:150px; font-size:16px;">${taskText}</textarea>
+            <button class="btn" style="width:100%; margin-top:10px" onclick="saveTasks('${id}')">SHRANI</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.saveTasks = function(id) {
+        const text = document.getElementById('task-area').value;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        db.customerTasks[id] = lines;
+        saveDB();
+        closeModal();
+        customAlert("Opravila shranjena.");
+    }
+
+    /* --- MANAGER PRODAJA (NOVO) --- */
+    function mgrSales() {
+        if (!currentUser) return;
+        const sessionReceipts = db.receipts.filter(r => new Date(r.time) >= new Date(currentUser.loginTime) && r.cashier === currentUser.name);
+        const total = sessionReceipts.reduce((acc, r) => acc + r.total, 0);
+
+        customAlert(`
+            BLAGAJNIK: ${currentUser.name}
+            ----------------
+            SKUPAJ PRODAJA: ${formatMoney(total)}
+            ŠT. RAČUNOV: ${sessionReceipts.length}
+        `);
+    }
+
+
+    /* --- MANAGER ZAPOSLENI (FULL) --- */
+    function mgrEmployees() {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "ZAPOSLENI";
+        content.innerHTML = `
+            <h3>UREJANJE ZAPOSLENIH</h3>
+            <button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewEmployeeStep1()">+ DODAJ NOVEGA</button>
+            <div class="modal-list" id="emp-list"></div>
+        `;
+        
+        const list = document.getElementById('emp-list');
+        db.employees.forEach((emp, idx) => {
+            const div = document.createElement('div');
+            div.className = 'modal-list-item';
+            div.innerHTML = `<span>${emp.id} - ${emp.name} (${emp.role})</span> <span style="font-size:10px">UREDI</span>`;
+            div.onclick = () => editEmployee(idx);
+            list.appendChild(div);
+        });
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    window.addNewEmployeeStep1 = function() {
+        showKeypad("Vnesi ID (številka):", false, (id) => {
+            if (db.employees.find(e => e.id === id)) { customAlert("ID že obstaja!"); return; }
+            showKeyboard("Vnesi IME in PRIIMEK:", (name) => {
+                const content = document.getElementById('modal-content');
+                document.getElementById('modal-title').innerText = "VLOGA";
+                content.innerHTML = `
+                    <h3>Izberi vlogo za ${name}:</h3>
+                    <button class="btn" style="width:100%; margin:5px 0" onclick="addNewEmployeeStep2('${id}', '${name}', 'ZAPOSLENI')">ZAPOSLENI</button>
+                    <button class="btn" style="width:100%; margin:5px 0" onclick="addNewEmployeeStep2('${id}', '${name}', 'MANAGER')">MANAGER</button>
+                    <button class="btn" style="width:100%; margin:5px 0; background:#fcc" onclick="addNewEmployeeStep2('${id}', '${name}', 'HOST')">HOST</button>
+                `;
+            });
+        });
+    }
+
+    window.addNewEmployeeStep2 = function(id, name, role) {
+        showKeypad("Določi osebno kodo:", true, (code) => {
+            db.employees.push({ id, name, role, code });
+            saveDB();
+            customAlert(`Zaposleni dodan z vlogo: ${role}`, () => {
+                mgrEmployees();
+            });
+        });
+    }
+
+    window.editEmployee = function(idx) {
+        const emp = db.employees[idx];
+        customConfirm(`Želiš izbrisati zaposlenega ${emp.name}?`, () => {
+            if(emp.id === '000') { customAlert("Administratorja ne moreš izbrisati!"); return; }
+            db.employees.splice(idx, 1);
+            saveDB();
+            mgrEmployees();
+        });
+    }
+
+    /* --- MANAGER ARTIKLI (UPDATED FOR MENU & CONDITION) --- */
     function mgrArticles() {
         const content = document.getElementById('modal-content');
         document.getElementById('modal-title').innerText = "ARTIKLI";
-        let html = '<button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewArticle()">+ DODAJ ARTIKEL</button>';
+        
+        let html = '<h3>UREJANJE ARTIKLOV</h3>';
+        html += '<button class="btn" style="width:100%; margin-bottom:10px" onclick="addNewArticle()">+ DODAJ ARTIKEL</button>';
+        
         html += '<div class="modal-list">';
         db.articles.forEach((art, idx) => {
             const style = art.enabled ? '' : 'text-decoration:line-through; color:red;';
+            const menuTag = art.isMenu ? ' [MENU]' : '';
             html += `<div class="modal-list-item" style="${style}" onclick="editArticle(${idx})">
-                        <span>[${art.code}] ${art.name} (${art.type})</span>
+                        <span>[${art.code}] ${art.name}${menuTag}</span>
                         <span>${formatMoney(art.price)}</span>
                      </div>`;
         });
@@ -1479,108 +1730,201 @@
     }
 
     window.addNewArticle = function() {
-        showKeypad("Šifra:", false, (code) => {
-             if (db.articles.find(a => a.code === code)) { customAlert("Obstaja!"); return; }
-             showKeyboard("Ime:", (name) => {
-                showKeypad("Cena:", false, (price) => {
-                    const newArt = { 
-                        name: name.toUpperCase(), 
-                        price: parseFloat(price), 
-                        enabled: true, 
-                        code: code,
-                        type: 'SIMPLE',
-                        hasCondition: false,
-                        subItems: []
-                    };
-                    
+        showKeypad("Vnesi ŠIFRO artikla (npr. 50):", false, (code) => {
+             if (db.articles.find(a => a.code === code)) { customAlert("Šifra že obstaja!"); return; }
+             
+             showKeyboard("Ime artikla:", (name) => {
+                showKeypad("Cena artikla (npr. 1.50):", false, (priceVal) => {
+                    const price = parseFloat(priceVal);
                     // Ask for Type
                     const content = document.getElementById('modal-content');
                     content.innerHTML = `
-                        <h3>Tip artikla?</h3>
-                        <button class="btn" style="width:100%; margin:5px 0" onclick="finishArtAdd(${JSON.stringify(newArt).replace(/"/g, '&quot;')}, 'SIMPLE')">NAVADEN</button>
-                        <button class="btn" style="width:100%; margin:5px 0" onclick="finishArtAdd(${JSON.stringify(newArt).replace(/"/g, '&quot;')}, 'MENU')">MENI</button>
+                        <h3>Tip artikla: ${name}</h3>
+                        <button class="btn" style="width:100%; margin:5px 0" onclick="finishAddArticle('${code}','${name}',${price}, false)">NAVADEN</button>
+                        <button class="btn" style="width:100%; margin:5px 0" onclick="finishAddArticle('${code}','${name}',${price}, true)">MENU</button>
                     `;
                 });
             });
         });
     }
 
-    window.finishArtAdd = function(artObj, type) {
-        artObj.type = type;
-        db.articles.push(artObj);
+    window.finishAddArticle = function(code, name, price, isMenu) {
+        const newArt = { 
+            name: name.toUpperCase(), 
+            price: price, 
+            enabled: true, 
+            code: code,
+            isMenu: isMenu,
+            subItems: [],
+            condition: false
+        };
+        db.articles.push(newArt);
         saveDB();
-        editArticle(db.articles.length - 1); // Open edit immediately to add subitems/conditions
+        if(isMenu) {
+            editArticle(db.articles.length - 1); // Go straight to edit to add subitems
+        } else {
+            mgrArticles();
+        }
     }
 
     window.editArticle = function(idx) {
         const art = db.articles[idx];
         const content = document.getElementById('modal-content');
-        document.getElementById('modal-title').innerText = "UREDI: " + art.name;
-        
-        let subItemHtml = '';
-        if (art.type === 'MENU') {
-            subItemHtml = '<div style="border:1px solid #999; padding:5px; margin:5px 0;"><b>PODARTIKLI (Max 5):</b><br>';
-            art.subItems.forEach((s, i) => {
-                subItemHtml += `<div style="font-size:10px; display:flex; justify-content:space-between;">${s.name} (${s.price}) <span onclick="removeSubItem(${idx},${i})" style="color:red; cursor:pointer">X</span></div>`;
-            });
-            if(art.subItems.length < 5) {
-                subItemHtml += `<button class="btn" style="height:20px; font-size:10px" onclick="addSubItem(${idx})">+ DODAJ</button>`;
-            }
-            subItemHtml += '</div>';
-        }
-
+        document.getElementById('modal-title').innerText = "UREDI";
         content.innerHTML = `
+            <h3>${art.name} ${art.isMenu ? '(MENU)' : ''}</h3>
             <p>Šifra: ${art.code} | Cena: ${formatMoney(art.price)}</p>
-            <label><input type="checkbox" ${art.hasCondition ? 'checked' : ''} onchange="toggleCondition(${idx})"> POGOJ (Opravila)</label>
-            ${subItemHtml}
+            <button class="btn" style="width:100%; margin:5px 0" onclick="changeArtCode(${idx})">SPREMENI ŠIFRO</button>
             <button class="btn" style="width:100%; margin:5px 0" onclick="changeArtPrice(${idx})">SPREMENI CENO</button>
             <button class="btn" style="width:100%; margin:5px 0" onclick="toggleArtStatus(${idx})">${art.enabled ? 'ONEMOGOČI' : 'OMOGOČI'}</button>
+            <button class="btn" style="width:100%; margin:5px 0; ${art.condition?'background:#8f8':''}" onclick="toggleArtCondition(${idx})">POGOJI: ${art.condition ? 'DA' : 'NE'}</button>
+            ${art.isMenu ? `<button class="btn" style="width:100%; margin:5px 0; background:#fffacd" onclick="editSubItems(${idx})">UREDI PODARTIKLE</button>` : ''}
             <button class="btn" style="width:100%; margin:5px 0; background:#ffcccc" onclick="deleteArt(${idx})">IZBRIŠI</button>
-            <button class="btn" style="width:100%; margin:10px 0" onclick="mgrArticles()">NAZAJ</button>
+            <button class="btn" style="width:100%; margin:20px 0" onclick="mgrArticles()">NAZAJ</button>
         `;
+    }
+
+    window.editSubItems = function(idx) {
+        const art = db.articles[idx];
+        const content = document.getElementById('modal-content');
+        let html = `<h3>Podartikli: ${art.name}</h3><div class="modal-list">`;
+        art.subItems.forEach((sub, sIdx) => {
+            html += `<div class="modal-list-item"><span>${sub.name} (+${formatMoney(sub.price)})</span> <button class="list-btn-action" onclick="delSubItem(${idx}, ${sIdx})">X</button></div>`;
+        });
+        html += `</div>`;
+        if (art.subItems.length < 5) {
+            html += `<button class="btn" style="width:100%; margin-top:10px" onclick="addSubItem(${idx})">+ DODAJ PODARTIKEL</button>`;
+        } else {
+            html += `<p>Max 5 podartiklov!</p>`;
+        }
+        html += `<button class="btn" style="width:100%; margin-top:10px" onclick="editArticle(${idx})">NAZAJ</button>`;
+        content.innerHTML = html;
+    }
+
+    window.addSubItem = function(idx) {
+        showKeyboard("Ime podartikla:", (name) => {
+             showKeypad("Doplačilo (0 če ni):", false, (val) => {
+                 db.articles[idx].subItems.push({ name: name.toUpperCase(), price: parseFloat(val) });
+                 saveDB();
+                 editSubItems(idx);
+             });
+        });
+    }
+
+    window.delSubItem = function(idx, sIdx) {
+        db.articles[idx].subItems.splice(sIdx, 1);
+        saveDB();
+        editSubItems(idx);
+    }
+
+    window.toggleArtCondition = function(idx) {
+        db.articles[idx].condition = !db.articles[idx].condition;
+        saveDB();
+        editArticle(idx);
+    }
+
+    window.changeArtCode = function(idx) {
+        showKeypad("Nova šifra:", false, (val) => {
+            if (db.articles.find(a => a.code === val)) { customAlert("Šifra že obstaja!"); return; }
+            db.articles[idx].code = val;
+            saveDB();
+            editArticle(idx);
+        });
+    }
+
+    window.changeArtPrice = function(idx) {
+        showKeypad("Nova cena:", false, (val) => {
+            db.articles[idx].price = parseFloat(val);
+            saveDB();
+            editArticle(idx);
+        });
+    }
+    window.toggleArtStatus = function(idx) {
+        db.articles[idx].enabled = !db.articles[idx].enabled;
+        saveDB();
+        editArticle(idx);
+    }
+    window.deleteArt = function(idx) {
+        customConfirm("Res izbrišem ta artikel?", () => {
+            db.articles.splice(idx, 1);
+            saveDB();
+            mgrArticles();
+        });
+    }
+
+    /* --- MANAGER ZGODOVINA (MGR) --- */
+    function mgrShowHistory() {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "MGR ZGODOVINA";
+        
+        let html = '<div class="modal-list">';
+        // Prikaz zadnjih vnosov
+        if(db.mgrHistory.length === 0) {
+            html += '<div style="padding:10px; text-align:center;">Prazna zgodovina</div>';
+        } else {
+            db.mgrHistory.forEach(entry => {
+                const date = new Date(entry.time);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                html += `
+                    <div class="modal-list-item" style="display:block">
+                        <div style="font-weight:bold; font-size:12px">${dateStr}</div>
+                        <div>${entry.user} (${entry.role})</div>
+                        <div style="font-size:11px; color:#555">${entry.action}</div>
+                    </div>
+                `;
+            });
+        }
+        html += '</div>';
+        content.innerHTML = html;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
 
-    window.addSubItem = function(artIdx) {
-        showKeyboard("Ime podartikla:", (name) => {
-            showKeypad("Dodatek na ceno (0 za free):", false, (price) => {
-                db.articles[artIdx].subItems.push({ name: name.toUpperCase(), price: parseFloat(price) });
+
+    /* --- BANKA --- */
+    function mgrBank() {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal-title').innerText = "BANKA";
+        content.innerHTML = `
+            <h3>BANKA</h3>
+            <button class="btn" onclick="bankNewClient()">NOVA STRANKA</button>
+            <br><br>
+            <button class="btn" onclick="bankEditClient()">TRANSAKCIJA</button>
+        `;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    window.bankNewClient = function() {
+        showKeypad("ID nove stranke:", false, (id) => {
+            if (db.bankAccounts[id] !== undefined) { customAlert("Obstaja!"); return; }
+            showKeypad("Polog:", false, (val) => {
+                db.bankAccounts[id] = parseFloat(val);
                 saveDB();
-                editArticle(artIdx);
+                customAlert("Odprto!");
+                closeModal();
+            });
+        });
+    }
+    window.bankEditClient = function() {
+        showKeypad("ID stranke:", false, (id) => {
+            if (db.bankAccounts[id] === undefined) { customAlert("Ni stranke!"); return; }
+            showKeypad(`Stanje: ${formatMoney(db.bankAccounts[id])}\nZnesek (+/-):`, false, (val) => {
+                db.bankAccounts[id] += parseFloat(val);
+                saveDB();
+                customAlert("Novo stanje: " + formatMoney(db.bankAccounts[id]));
+                closeModal();
             });
         });
     }
 
-    window.removeSubItem = function(artIdx, subIdx) {
-        db.articles[artIdx].subItems.splice(subIdx, 1);
-        saveDB();
-        editArticle(artIdx);
-    }
+    /* ================= KEYPAD & KEYBOARD SYSTEM ================= */
+    let inputCallback = null;
 
-    window.toggleCondition = function(idx) {
-        db.articles[idx].hasCondition = !db.articles[idx].hasCondition;
-        saveDB();
-        // No re-render needed, checkbox updates visual
-    }
-    
-    // Helper helpers
-    window.changeArtPrice = function(idx) { showKeypad("Nova cena:", false, (v) => { db.articles[idx].price = parseFloat(v); saveDB(); editArticle(idx); }); }
-    window.toggleArtStatus = function(idx) { db.articles[idx].enabled = !db.articles[idx].enabled; saveDB(); editArticle(idx); }
-    window.deleteArt = function(idx) { db.articles.splice(idx,1); saveDB(); mgrArticles(); }
-
-    // OSTALE PRESTAVLJENE FUNKCIJE
-    function mgrEmployees() { /* ... obstoječa logika ... */ customAlert("Funkcija zaposleni (PLACEHOLDER)"); }
-    function mgrStornoReceipts() { /* ... obstoječa logika ... */ customAlert("Funkcija storno (PLACEHOLDER)"); }
-    function mgrBank() { /* ... obstoječa logika ... */ customAlert("Funkcija banka (PLACEHOLDER)"); }
-    function mgrInterim() { customAlert(`TRENUTNO: ${formatMoney(db.cashInDrawer)}`); }
-    function mgrShowHistory() { /* ... */ customAlert("Zgodovina (PLACEHOLDER)"); }
-
-    /* ================= KEYPAD/SCANNER ================= */
-    // Obstoječi keypad logic za popup okna
+    // NUMERIČNA
     function showKeypad(title, isSecret, callback) {
+        inputCallback = callback;
         const content = document.getElementById('modal-content');
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-overlay').style.display = 'flex';
+        
         content.innerHTML = `
             <div id="kp-display" class="input-display"></div>
             <div class="keypad-grid">
@@ -1601,18 +1945,19 @@
         `;
         content.dataset.secret = isSecret; 
         content.dataset.value = "";
-        content.dataset.cb = "MAIN"; // Tag as main keypad
-        window._kpCallback = callback;
     }
 
+    // ALFANUMERIČNA (QWERTY poenostavljena)
     function showKeyboard(title, callback) {
-        // ... (Poenostavljen QWERTY) ...
+        inputCallback = callback;
         const content = document.getElementById('modal-content');
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-overlay').style.display = 'flex';
+
         const keys = "QWERTYUIOPASDFGHJKLZXCVBNM".split('');
         let keysHtml = '';
         keys.forEach(k => { keysHtml += `<button class="kb-btn" onclick="kpIn('${k}')">${k}</button>`; });
+        
         content.innerHTML = `
             <div id="kp-display" class="input-display" style="justify-content:flex-start; font-size:18px"></div>
             <div class="keyboard-grid">
@@ -1622,18 +1967,23 @@
             </div>
             <button class="btn" style="width:100%; margin-top:10px; height:40px; background:#8f8" onclick="submitInput()">POTRDI</button>
         `;
+        content.dataset.secret = false;
         content.dataset.value = "";
-        window._kpCallback = callback;
     }
 
     window.kpIn = function(val) {
         const content = document.getElementById('modal-content');
+        if (document.getElementById('modal-overlay').style.display === 'none') return;
+        
         let current = content.dataset.value || "";
+        
         if (val === 'C') current = "";
         else if (val === 'BACK') current = current.slice(0, -1);
         else if (val === 'SPACE') current += " ";
         else current += val;
+
         content.dataset.value = current;
+        
         const display = document.getElementById('kp-display');
         if(display) {
             if (content.dataset.secret === 'true') display.textContent = "*".repeat(current.length);
@@ -1643,79 +1993,110 @@
 
     window.submitInput = function() {
         const val = document.getElementById('modal-content').dataset.value;
-        if (window._kpCallback) window._kpCallback(val);
+        if (inputCallback) inputCallback(val);
     }
 
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-
+    
     function requestAuthCode(title, cb) {
         showKeypad(title, true, (code) => {
             const u = db.employees.find(e => e.code === code);
-            if(u && (u.role==='MANAGER'||u.role==='HOST')) { closeModal(); cb(u); } 
-            else { customAlert("Napačna koda!"); }
+            if(u && (u.role==='MANAGER'||u.role==='HOST')) { 
+                closeModal(); 
+                cb(u); 
+            } else { 
+                customAlert("Napačna koda!"); 
+            }
         });
     }
 
-    // PDF GENERATION (Basic placeholder for ROF)
-    function generateSingleReceiptPDF(rec) {
-        // Logic similar to previous version...
-    }
-
-    /* ================= GLOBAL LISTENERS ================= */
+    /* ================= SCANNER & KEYBOARD HANDLER ================= */
     let barcodeBuffer = "";
     let barcodeTimer = null;
 
     document.addEventListener('keydown', (e) => {
+        // Ignoriraj posebne kombinacije
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        
-        // Handle MANAGER KEYPAD physical keyboard mapping if in that mode
-        if (currentMode === 'MANAGER' && activeManagerMenu === 'MAIN' && mgrKpState !== 'IDLE') {
-             if (e.key >= '0' && e.key <= '9') { handleMgrKeypad(e.key); return; }
-             if (e.key === 'Enter') { handleMgrKeypad('OK'); return; }
-             if (e.key === 'Backspace') { handleMgrKeypad('C'); return; } // Simplified C
-        }
 
         const isModalOpen = document.getElementById('modal-overlay').style.display === 'flex';
 
+        // 1. ZAZNAVANJE "ENTER"
         if (e.key === 'Enter') {
             if (barcodeBuffer.length > 0) {
                 e.preventDefault();
-                handleGlobalScan(barcodeBuffer);
+                handleBarcodeScan(barcodeBuffer);
                 barcodeBuffer = "";
                 return;
-            } else if (isModalOpen) { submitInput(); return; }
+            } else if (isModalOpen) {
+                submitInput();
+                return;
+            }
         }
 
+        // 2. ZBIRANJE ZNAKOV
         if (e.key.length === 1) {
             barcodeBuffer += e.key;
             clearTimeout(barcodeTimer);
-            barcodeTimer = setTimeout(() => { barcodeBuffer = ""; }, 200);
+            barcodeTimer = setTimeout(() => {
+                barcodeBuffer = "";
+            }, 200);
         }
-        
-        // Manual Entry
+
+        // 3. ROČNI VNOS
         if (isModalOpen) {
             if (e.key >= '0' && e.key <= '9') kpIn(e.key);
             if (e.key === 'Backspace') kpIn('BACK');
-            // Simplified for QWERTY support mapping would be complex here, assuming mouse for QWERTY
+        } 
+        // 4. ROČNI BLIŽNJICA ZA ARTIKLE
+        else if (currentMode === 'ARTICLES' && barcodeBuffer.length <= 1) {
+             if (e.key >= '0' && e.key <= '9') {
+                 showKeypad("Vnesi šifro artikla:", false, (val) => processArticleCode(val));
+                 kpIn(e.key);
+             }
+        }
+        // 5. MANAGER KEYPAD
+        else if (currentMode === 'MANAGER' && managerSubMode === 'MAIN' && embeddedKeypad.active) {
+            if (e.key >= '0' && e.key <= '9') handleMgrKeyInput(e.key);
+            if (e.key === 'c' || e.key === 'C') handleMgrKeyInput('C');
+            if (e.key === 'Enter') handleMgrKeyInput('OK');
         }
     });
 
-    function handleGlobalScan(code) {
+    function handleBarcodeScan(code) {
         const isModalOpen = document.getElementById('modal-overlay').style.display === 'flex';
+        
         if (isModalOpen) {
-            // Fill active modal
             const content = document.getElementById('modal-content');
             content.dataset.value = code;
+            
+            const display = document.getElementById('kp-display');
+            if(display) {
+                if (content.dataset.secret === 'true') display.textContent = "*".repeat(code.length);
+                else display.textContent = code;
+            }
             setTimeout(submitInput, 50);
         } else {
-            // Main Sales Mode
             if (currentMode === 'ARTICLES') {
-                processScanOrInput(code);
+                processArticleCode(code);
+            } else if (currentMode === 'FUNCTIONS') {
+                // Če smo v funkcijah in skeniramo kartico
+                const exists = (db.bankAccounts[code] !== undefined) || (db.customerTasks[code] !== undefined);
+                if (exists) {
+                    activeCustomerId = code;
+                    showCardStatus(true);
+                } else {
+                    activeCustomerId = null;
+                    showCardStatus(false);
+                }
+                saveSession();
+            } else {
+                console.log("Skenirano v napačnem načinu: " + code);
             }
         }
     }
 
     loadSession();
+    updateStatusBar();
 </script>
 </body>
 </html>
