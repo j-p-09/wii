@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKnjiga - Knjižnični sistem</title>
+    <style>
+        /* --- WINDOWS 95 THEME & CSS --- */
+        :root {
+            --win-gray: #c0c0c0;
+            --win-dark: #808080;
+            --win-black: #000000;
+            --win-light: #ffffff;
+            --win-blue: #000080;
+            --pastel-red: #ffcccb;
+            --pastel-green: #ccffcc;
+            --pastel-yellow: #ffffcc;
+        }
+
+        body {
+            background-color: #008080; /* Win95 desktop color */
+            font-family: 'MS Sans Serif', 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Utility Classes for Win95 3D effects */
+        .win-box {
+            background-color: var(--win-gray);
+            border-top: 2px solid var(--win-light);
+            border-left: 2px solid var(--win-light);
+            border-right: 2px solid var(--win-dark);
+            border-bottom: 2px solid var(--win-black);
+            padding: 4px;
+        }
+
+        .win-inset {
+            background-color: #fff;
+            border-top: 2px solid var(--win-dark);
+            border-left: 2px solid var(--win-dark);
+            border-right: 2px solid var(--win-light);
+            border-bottom: 2px solid var(--win-light);
+        }
+
+        .win-btn {
+            background-color: var(--win-gray);
+            border-top: 2px solid var(--win-light);
+            border-left: 2px solid var(--win-light);
+            border-right: 2px solid var(--win-dark);
+            border-bottom: 2px solid var(--win-black);
+            padding: 4px 12px;
+            font-weight: bold;
+            cursor: pointer;
+            active: transform: translate(1px, 1px);
+        }
+
+        .win-btn:active {
+            border-top: 2px solid var(--win-black);
+            border-left: 2px solid var(--win-black);
+            border-right: 2px solid var(--win-light);
+            border-bottom: 2px solid var(--win-light);
+        }
+
+        /* Main Application Container */
+        #app-container {
+            width: 95vw;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .title-bar {
+            background: linear-gradient(90deg, var(--win-blue), #1084d0);
+            color: white;
+            padding: 4px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* Typography */
+        h1, h2, h3 { margin-top: 0; }
+        .bold { font-weight: bold; }
+        .small { font-size: 0.8em; }
+        
+        /* Inputs */
+        input, select {
+            background: white;
+            border: 2px solid;
+            border-color: var(--win-dark) var(--win-light) var(--win-light) var(--win-dark);
+            padding: 4px;
+            font-family: inherit;
+        }
+
+        /* Screens */
+        .screen { display: none; height: 100%; }
+        .screen.active { display: block; }
+
+        /* Login Screen */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .login-box { width: 300px; padding: 20px; }
+
+        /* Home Screen */
+        #home-screen { text-align: center; }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .menu-btn {
+            height: 60px;
+            font-size: 1.2em;
+        }
+
+        /* Custom Modal (Pogovorno okno) */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-window {
+            min-width: 300px;
+            max-width: 90%;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 10px;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* IZPOSOJA SCREEN (Complex) */
+        .izposoja-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 10px;
+        }
+        /* Polje 1: User Info */
+        .izp-section-1 {
+            border: 2px groove white;
+            padding: 10px;
+            background: #d4d0c8;
+        }
+        .user-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .pencil-btn { padding: 0 4px; font-size: 10px; }
+
+        /* Polje 2: Table */
+        .izp-section-2 {
+            flex-grow: 1;
+            overflow: auto;
+            background: white;
+            border: 2px inset white;
+        }
+        table.izp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .izp-table th, .izp-table td {
+            border: 1px solid #d0d0d0; /* Very thin lines */
+            padding: 4px;
+            text-align: left;
+        }
+        .izp-table th { background: #e0e0e0; border-bottom: 2px solid black; }
+        
+        /* Row Colors */
+        .row-yellow { background-color: var(--pastel-yellow); } /* Izposojeno */
+        .row-red { background-color: var(--pastel-red); } /* Zasedeno/Rezervirano */
+        .row-green { background-color: var(--pastel-green); } /* Prosto za rezervacijo */
+        .text-red { color: red; } /* Zamuda */
+
+        /* Polje 3: Controls */
+        .izp-section-3 {
+            border: 2px groove white;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .control-row-1 { display: flex; align-items: center; gap: 10px; }
+        .book-preview { text-align: center; margin: 10px 0; min-height: 40px;}
+        .control-buttons { display: flex; gap: 10px; justify-content: center; }
+        .btn-green { color: green; font-weight: bold; }
+
+        /* Global Exit/Logout Buttons */
+        #global-exit-btn, #global-logout-btn {
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: none;
+            width: 100px;
+        }
+
+        /* Admin/Data Tables */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { border: 1px solid gray; padding: 4px; }
+        .data-table tr:nth-child(even) { background: #eee; }
+
+    </style>
+</head>
+<body>
+
+    <button class="win-btn" id="global-logout-btn" onclick="logout()">ODJAVA</button>
+    <button class="win-btn" id="global-exit-btn" onclick="goToHome()">IZHOD</button>
+
+    <div id="app-container" class="win-box">
+        <div class="title-bar">
+            <span>MKnjiga - Sistem v1.0</span>
+            <span style="background:var(--win-gray); color:black; padding:0 4px;">X</span>
+        </div>
+
+        <div class="content-area">
+
+            <div id="login-screen" class="screen active">
+                <div class="win-box login-box">
+                    <h3 style="text-align:center; margin-bottom: 20px;">Prijava v sistem</h3>
+                    <div style="margin-bottom: 10px;">
+                        <label>Uporabniško ime:</label><br>
+                        <input type="text" id="login-username" style="width: 90%;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label>Geslo:</label><br>
+                        <input type="password" id="login-password" style="width: 90%;">
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="win-btn" onclick="attemptLogin()">POTRDI</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="home-screen" class="screen">
+                <div class="top-bar">
+                    <div class="bold" id="home-user-display">Janez Novak</div>
+                    <div class="bold" id="home-clock-display">12:00:00</div>
+                </div>
+                
+                <br><br>
+                <div class="menu-grid">
+                    <button class="win-btn menu-btn" onclick="openModule('izposoja')">IZPOSOJA</button>
+                    <button class="win-btn menu-btn" onclick="openModule('skladisce')">SKLADIŠČE</button>
+                    <button class="win-btn menu-btn" onclick="openAdminCheck()">PODATKI</button>
+                    <button class="win-btn menu-btn" onclick="openModule('profil')">PROFIL</button>
+                </div>
+            </div>
+
+            <div id="profil-screen" class="screen">
+                <h2>Urejanje Profila</h2>
+                <hr>
+                <div style="max-width: 400px;">
+                    <p>Ime in priimek: <input type="text" id="prof-name"></p>
+                    <p>Gmail: <input type="text" id="prof-email"></p>
+                    <p>Uporabniško ime: <input type="text" id="prof-user"></p>
+                    <p>Geslo: <input type="password" id="prof-pass"></p>
+                    <button class="win-btn" onclick="saveProfile()">SHRANI</button>
+                </div>
+            </div>
+
+            <div id="admin-screen" class="screen">
+                <h2>Administracija Podatkov</h2>
+                <div class="win-box" style="padding: 10px; margin-bottom: 20px;">
+                    <button class="win-btn" onclick="renderAdminSub('uporabniki')">Uporabniki</button>
+                    <button class="win-btn" onclick="renderAdminSub('rok')">Rok & Zamude</button>
+                    <button class="win-btn" onclick="renderAdminSub('knjige')">Knjige</button>
+                    <button class="win-btn" onclick="renderAdminSub('skladisca')">Skladišča</button>
+                    <button class="win-btn" onclick="renderAdminSub('stranke')">Stranke</button>
+                </div>
+                <div id="admin-content" class="win-inset" style="padding:10px; height: 60%; overflow: auto;">
+                    </div>
+            </div>
+
+            <div id="skladisce-screen" class="screen">
+                <h2>Pregled Skladišča</h2>
+                <div style="margin-bottom: 20px;">
+                    Išči (Naslov/Avtor/Šifra): <input type="text" id="stock-search" onkeyup="searchStock()">
+                </div>
+                <div class="win-inset" style="height: 300px; overflow: auto;">
+                    <table class="data-table" id="stock-table">
+                        <thead>
+                            <tr><th>Šifra</th><th>Naslov</th><th>Količina</th><th>Skladišče</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="izposoja-screen" class="screen">
+                <div class="izposoja-layout">
+                    
+                    <div class="izp-section-1">
+                        <div class="user-row">
+                            <span class="bold">Član:</span> 
+                            <span id="izp-member-id"></span> 
+                            <span id="izp-member-name" class="bold"></span>
+                            <button class="win-btn pencil-btn" onclick="editMemberData()">✎</button>
+                        </div>
+                        <div class="user-row">
+                            <span>Terjatve EUR:</span> 
+                            <span id="izp-member-debt">0.0000</span>
+                            <button class="win-btn pencil-btn" onclick="payDebt()">✎</button>
+                        </div>
+                        <div class="user-row">
+                            <span class="text-red">Opomba:</span> 
+                            <span id="izp-member-note" class="text-red"></span>
+                            <button class="win-btn pencil-btn" onclick="editNote()">✎</button>
+                        </div>
+                    </div>
+
+                    <div class="izp-section-2">
+                        <table class="izp-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px;">#</th>
+                                    <th style="width:80px;">Šifra</th>
+                                    <th>Opis (Avtor, Naslov, Leto)</th>
+                                    <th style="width:120px;">Datum Izposoje</th>
+                                    <th style="width:120px;">Rok Vrnitve</th>
+                                    <th style="width:80px;">Terjatev</th>
+                                </tr>
+                            </thead>
+                            <tbody id="izp-loans-body">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <div class="izp-section-3">
+                        <div class="control-row-1">
+                            <span class="bold">IN/CN=</span>
+                            <input type="text" id="izp-book-input" placeholder="Vnesi šifro knjige..." onkeyup="checkBookInput(event)">
+                        </div>
+                        
+                        <div class="book-preview" id="izp-book-preview">
+                            </div>
+
+                        <div class="control-buttons">
+                            <button class="win-btn btn-green" onclick="actionIzposodi()">Izposodi</button>
+                            <button class="win-btn" onclick="actionVrni()">Vrni</button>
+                            <button class="win-btn" onclick="actionZadrzi()">Zadrži</button>
+                            <button class="win-btn" onclick="actionPodaljsaj()">Podaljšaj</button>
+                            <button class="win-btn" onclick="actionRezerviraj()">Rezerviraj</button>
+                            <button class="win-btn" onclick="actionZagotovnica()">Zagotovnica</button>
+                            <button class="win-btn" onclick="goToHome()">Zapri</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="win-box modal-window">
+            <div class="title-bar" id="modal-title">Obvestilo</div>
+            <div class="modal-body" id="modal-content"></div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="win-btn" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & STATE MANAGEMENT ---
+        
+        // Initial Data Structure
+        const defaultData = {
+            users: [
+                { id: 1, name: "Administrator", user: "ADMIN", pass: "ADMIN", role: "admin" }, // Default Admin
+                { id: 2, name: "Janez Novak", user: "janez", pass: "1234", role: "librarian", email: "janez@gmail.com" }
+            ],
+            settings: {
+                rentDays: 14,
+                lateFeePerMinute: 0.50
+            },
+            books: [
+                { id: "0000002", author: "Shakespeare, William", title: "Hamlet", year: "1603", total: 5, stock: 5, location: "Skladišče A" },
+                { id: "0000004", author: "Dickens, Charles", title: "Great Expectations", year: "1861", total: 3, stock: 2, location: "Skladišče B" }
+            ],
+            warehouses: ["Skladišče A", "Skladišče B", "Klet"],
+            customers: [
+                { id: "0100001", name: "John Smith", type: "zaposleni", note: "Počasi bere", debt: 0.00 },
+                { id: "0100002", name: "Micka Kovač", type: "študent", note: "", debt: 0.00 }
+            ],
+            loans: [] // { bookId, customerId, dateOut, dateDue, returned: false, reserved: false }
+        };
+
+        // State variables
+        let appData = {};
+        let currentUser = null; // Logged in user
+        let activeCustomer = null; // Customer in 'Izposoja' view
+        let scannedBook = null; // Currently scanned book in 'Izposoja'
+
+        // --- INIT & PERSISTENCE ---
+
+        function init() {
+            const stored = localStorage.getItem('mknjiga_data');
+            if (stored) {
+                appData = JSON.parse(stored);
+            } else {
+                appData = JSON.parse(JSON.stringify(defaultData));
+                saveData();
+            }
+            startClock();
+        }
+
+        function saveData() {
+            localStorage.setItem('mknjiga_data', JSON.stringify(appData));
+        }
+
+        // --- NAVIGATION ---
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId + '-screen').classList.add('active');
+
+            // Handle Global Buttons
+            const logoutBtn = document.getElementById('global-logout-btn');
+            const exitBtn = document.getElementById('global-exit-btn');
+
+            if (screenId === 'login') {
+                logoutBtn.style.display = 'none';
+                exitBtn.style.display = 'none';
+            } else if (screenId === 'home') {
+                logoutBtn.style.display = 'block';
+                exitBtn.style.display = 'none';
+                updateHomeDisplay();
+            } else {
+                logoutBtn.style.display = 'none';
+                exitBtn.style.display = 'block'; // "Izhod" shows on modules
+            }
+        }
+
+        function goToHome() { showScreen('home'); }
+        
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-username').value = "";
+            document.getElementById('login-password').value = "";
+            showScreen('login');
+        }
+
+        function openModule(module) {
+            if (module === 'izposoja') {
+                // Prompt for customer selection first
+                promptForCustomer();
+            } else if (module === 'profil') {
+                loadProfile();
+                showScreen('profil');
+            } else if (module === 'skladisce') {
+                renderStockTable();
+                showScreen('skladisce');
+            }
+        }
+
+        // --- LOGIN LOGIC ---
+
+        function attemptLogin() {
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+            
+            const user = appData.users.find(x => x.user === u && x.pass === p);
+            
+            if (user) {
+                currentUser = user;
+                showScreen('home');
+            } else {
+                showModal("Napaka", "Dostop zavrnjen! Napačno uporabniško ime ali geslo.");
+            }
+        }
+
+        // --- HOME LOGIC ---
+
+        function updateHomeDisplay() {
+            document.getElementById('home-user-display').innerText = currentUser.name;
+        }
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('home-clock-display').innerText = now.toLocaleTimeString('sl-SI');
+            }, 1000);
+        }
+
+        // --- PROFIL MODULE ---
+        function loadProfile() {
+            document.getElementById('prof-name').value = currentUser.name;
+            document.getElementById('prof-email').value = currentUser.email || "";
+            document.getElementById('prof-user').value = currentUser.user;
+            document.getElementById('prof-pass').value = currentUser.pass;
+        }
+
+        function saveProfile() {
+            currentUser.name = document.getElementById('prof-name').value;
+            currentUser.email = document.getElementById('prof-email').value;
+            currentUser.user = document.getElementById('prof-user').value;
+            currentUser.pass = document.getElementById('prof-pass').value;
+            
+            // Update in array
+            const idx = appData.users.findIndex(u => u.id === currentUser.id);
+            appData.users[idx] = currentUser;
+            saveData();
+            showModal("Uspeh", "Podatki posodobljeni.");
+        }
+
+        // --- ADMIN MODULE ---
+
+        function openAdminCheck() {
+            showPrompt("Varnost", "Vnesite ADMIN geslo:", (val) => {
+                const adminUser = appData.users.find(u => u.user === 'ADMIN');
+                if (val === adminUser.pass) {
+                    showScreen('admin');
+                    renderAdminSub('uporabniki'); // Default
+                } else {
+                    showModal("Napaka", "Napačno geslo!");
+                }
+            }, true);
+        }
+
+        function renderAdminSub(sub) {
+            const container = document.getElementById('admin-content');
+            let html = "";
+
+            if (sub === 'uporabniki') {
+                html = `<h3>Urejanje uporabnikov</h3>
+                        <button class="win-btn" onclick="addUser()">Dodaj novega</button><br><br>
+                        <table class="data-table">
+                        <tr><th>ID</th><th>Ime</th><th>User</th><th>Akcija</th></tr>
+                        ${appData.users.map(u => `
+                            <tr>
+                                <td>${u.id}</td>
+                                <td>${u.name}</td>
+                                <td>${u.user}</td>
+                                <td><button onclick="deleteUser(${u.id})">Briši</button></td>
+                            </tr>`).join('')}
+                        </table>`;
+            } else if (sub === 'rok') {
+                html = `<h3>Nastavitve Roka</h3>
+                        <p>Rok izposoje (dni): <input type="number" id="set-days" value="${appData.settings.rentDays}"></p>
+                        <p>Cena zamude (€/min): <input type="number" id="set-fee" value="${appData.settings.lateFeePerMinute}"></p>
+                        <button class="win-btn" onclick="saveSettings()">Shrani</button>`;
+            } else if (sub === 'knjige') {
+                html = `<h3>Urejanje Knjig</h3>
+                        <button class="win-btn" onclick="addBook()">Dodaj knjigo</button><br><br>
+                        <table class="data-table">
+                        <tr><th>Šifra</th><th>Naslov</th><th>Zaloga</th><th>Skladišče</th><th>Akcija</th></tr>
+                        ${appData.books.map(b => `
+                            <tr>
+                                <td>${b.id}</td>
+                                <td>${b.title}</td>
+                                <td>${b.stock}/${b.total}</td>
+                                <td>${b.location}</td>
+                                <td><button onclick="editBook('${b.id}')">Uredi</button></td>
+                            </tr>`).join('')}
+                        </table>`;
+            } else if (sub === 'stranke') {
+                html = `<h3>Urejanje Strank</h3>
+                        <button class="win-btn" onclick="addCustomer()">Dodaj stranko</button><br><br>
+                        <table class="data-table">
+                        <tr><th>ID</th><th>Ime</th><th>Tip</th><th>Akcija</th></tr>
+                        ${appData.customers.map(c => `
+                            <tr>
+                                <td>${c.id}</td>
+                                <td>${c.name}</td>
+                                <td>${c.type}</td>
+                                <td><button onclick="deleteCustomer('${c.id}')">Briši</button></td>
+                            </tr>`).join('')}
+                        </table>`;
+            }
+             else if (sub === 'skladisca') {
+                html = `<h3>Skladišča</h3>
+                        <textarea id="warehouses-txt" style="width:100%; height:100px;">${appData.warehouses.join('\n')}</textarea>
+                        <button class="win-btn" onclick="saveWarehouses()">Shrani seznam</button>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Admin Helpers
+        function addUser() {
+            // Simplified addition
+            const name = prompt("Ime in Priimek:");
+            if(name) {
+                appData.users.push({ id: Date.now(), name: name, user: "user"+Date.now(), pass: "1234", role: "librarian" });
+                saveData(); renderAdminSub('uporabniki');
+            }
+        }
+        function deleteUser(id) {
+            if(confirm("Briši?")) {
+                appData.users = appData.users.filter(u => u.id !== id);
+                saveData(); renderAdminSub('uporabniki');
+            }
+        }
+        function saveSettings() {
+            appData.settings.rentDays = parseInt(document.getElementById('set-days').value);
+            appData.settings.lateFeePerMinute = parseFloat(document.getElementById('set-fee').value);
+            saveData(); showModal("Info", "Shranjeno.");
+        }
+        function saveWarehouses() {
+            appData.warehouses = document.getElementById('warehouses-txt').value.split('\n');
+            saveData(); showModal("Info", "Shranjeno.");
+        }
+        
+        // --- SKLADIŠČE MODULE ---
+        function searchStock() {
+            renderStockTable(document.getElementById('stock-search').value.toLowerCase());
+        }
+        function renderStockTable(filter = "") {
+            const tbody = document.querySelector("#stock-table tbody");
+            tbody.innerHTML = appData.books
+                .filter(b => b.title.toLowerCase().includes(filter) || b.author.toLowerCase().includes(filter) || b.id.includes(filter))
+                .map(b => `<tr><td>${b.id}</td><td class="bold">${b.title}</td><td>${b.stock}</td><td>${b.location}</td></tr>`)
+                .join('');
+        }
+
+        // --- IZPOSOJA MODULE (CORE) ---
+
+        function promptForCustomer() {
+            // Modal to select customer first
+            const html = `
+                <input type="text" id="cust-search-input" placeholder="Vpiši ime ali ID..." style="width:100%" onkeyup="filterCustomerSelection()">
+                <div id="cust-list" style="height:150px; overflow:auto; border:1px solid gray; margin-top:5px; background:white;"></div>
+            `;
+            
+            showCustomContentModal("Izberi stranko", html, () => {
+                // Cancel action
+                goToHome();
+            });
+            
+            filterCustomerSelection(); // Init list
+        }
+
+        function filterCustomerSelection() {
+            const input = document.getElementById('cust-search-input');
+            if(!input) return;
+            const val = input.value.toLowerCase();
+            const list = document.getElementById('cust-list');
+            
+            list.innerHTML = appData.customers
+                .filter(c => c.name.toLowerCase().includes(val) || c.id.includes(val))
+                .map(c => `<div style="padding:4px; cursor:pointer; border-bottom:1px dotted #ccc;" onclick="selectCustomer('${c.id}')">${c.id} - <b>${c.name}</b></div>`)
+                .join('');
+        }
+
+        function selectCustomer(id) {
+            activeCustomer = appData.customers.find(c => c.id === id);
+            closeModal();
+            loadIzposojaScreen();
+        }
+
+        function loadIzposojaScreen() {
+            showScreen('izposoja');
+            
+            // Fill Field 1
+            document.getElementById('izp-member-id').innerText = activeCustomer.id;
+            document.getElementById('izp-member-name').innerText = activeCustomer.name + ", " + activeCustomer.type;
+            document.getElementById('izp-member-debt').innerText = parseFloat(activeCustomer.debt).toFixed(4);
+            document.getElementById('izp-member-note').innerText = activeCustomer.note;
+
+            // Reset Field 3
+            document.getElementById('izp-book-input').value = "";
+            document.getElementById('izp-book-preview').innerHTML = "";
+            scannedBook = null;
+
+            renderLoansTable();
+        }
+
+        function renderLoansTable() {
+            const tbody = document.getElementById('izp-loans-body');
+            // Filter loans for this customer
+            const loans = appData.loans.filter(l => l.customerId === activeCustomer.id);
+            
+            tbody.innerHTML = loans.map((l, index) => {
+                const book = appData.books.find(b => b.id === l.bookId);
+                const isLate = new Date() > new Date(l.dateDue);
+                const deadlineColor = isLate ? "red" : "black";
+                
+                // Row coloring
+                let rowClass = "";
+                if (l.reserved) {
+                    // Check if available now
+                    rowClass = book.stock > 0 ? "row-green" : "row-red"; 
+                } else {
+                    rowClass = "row-yellow"; // Active loan
+                }
+
+                // Terjatev logic (Mockup for simplicity)
+                const ter = isLate ? "0,50" : "";
+
+                return `<tr class="${rowClass}">
+                    <td>${index + 1}.</td>
+                    <td class="bold">${book.id}</td>
+                    <td>
+                        <div class="bold">${book.title}</div>
+                        <div class="small">${book.author}, ${book.year}</div>
+                    </td>
+                    <td>${formatDate(l.dateOut)}<br>${formatTime(l.dateOut)}</td>
+                    <td style="color:${deadlineColor}">${l.reserved ? 'REZERVIRANO' : formatDate(l.dateDue) + '<br>' + formatTime(l.dateDue)}</td>
+                    <td>${ter}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Field 1 Actions
+        function editMemberData() {
+            showPrompt("Uredi ime", "Novo ime in priimek:", (val) => {
+                activeCustomer.name = val;
+                saveData(); loadIzposojaScreen();
+            });
+        }
+        function payDebt() {
+            showPrompt("Plačilo", "Vnesi znesek plačila:", (val) => {
+                activeCustomer.debt = Math.max(0, activeCustomer.debt - parseFloat(val));
+                saveData(); loadIzposojaScreen();
+            });
+        }
+        function editNote() {
+            showPrompt("Opomba", "Vnesi opombo:", (val) => {
+                activeCustomer.note = val;
+                saveData(); loadIzposojaScreen();
+            });
+        }
+
+        // Field 3 Actions (Book Input)
+        function checkBookInput(e) {
+            const val = e.target.value;
+            // Simulate scanner or enter
+            if (val.length >= 2) {
+                 const book = appData.books.find(b => b.id === val);
+                 const preview = document.getElementById('izp-book-preview');
+                 if (book) {
+                     scannedBook = book;
+                     preview.innerHTML = `<div class="bold">${book.title}</div>
+                                          <div class="small">${book.author} (Na voljo: <span class="bold">${book.stock}</span>)</div>`;
+                 } else {
+                     scannedBook = null;
+                     preview.innerHTML = "Knjiga ne obstaja.";
+                 }
+            }
+        }
+
+        // Buttons
+        function actionIzposodi() {
+            if (!scannedBook) return showModal("Napaka", "Skeniraj knjigo.");
+            if (scannedBook.stock <= 0) return showModal("Napaka", "Ni zaloge!");
+            
+            // Check if already rented
+            const existing = appData.loans.find(l => l.customerId === activeCustomer.id && l.bookId === scannedBook.id && !l.reserved);
+            if (existing) return showModal("Napaka", "Uporabnik že ima to knjigo.");
+
+            // Create Loan
+            const now = new Date();
+            const due = new Date();
+            due.setDate(now.getDate() + appData.settings.rentDays);
+
+            appData.loans.push({
+                customerId: activeCustomer.id,
+                bookId: scannedBook.id,
+                dateOut: now.toISOString(),
+                dateDue: due.toISOString(),
+                reserved: false
+            });
+            
+            // Decrease Stock
+            scannedBook.stock--;
+            updateBook(scannedBook);
+            saveData();
+            loadIzposojaScreen();
+        }
+
+        function actionVrni() {
+             if (!scannedBook) return showModal("Napaka", "Skeniraj knjigo za vračilo.");
+             const idx = appData.loans.findIndex(l => l.customerId === activeCustomer.id && l.bookId === scannedBook.id && !l.reserved);
+             
+             if (idx === -1) return showModal("Napaka", "Ta knjiga ni izposojena pri tej stranki.");
+
+             // Remove loan
+             appData.loans.splice(idx, 1);
+             scannedBook.stock++;
+             updateBook(scannedBook);
+             saveData();
+             loadIzposojaScreen();
+        }
+
+        function actionPodaljsaj() {
+            // Find active loan for scanned book, extend date
+            if (!scannedBook) return showModal("Napaka", "Skeniraj knjigo.");
+            const loan = appData.loans.find(l => l.customerId === activeCustomer.id && l.bookId === scannedBook.id && !l.reserved);
+            if (!loan) return;
+
+            // Simple logic: add default days again
+            const currentDue = new Date(loan.dateDue);
+            currentDue.setDate(currentDue.getDate() + appData.settings.rentDays);
+            loan.dateDue = currentDue.toISOString();
+            
+            saveData();
+            loadIzposojaScreen();
+        }
+
+        function actionRezerviraj() {
+            if (!scannedBook) return;
+            if (scannedBook.stock > 0) return showModal("Info", "Knjiga je na voljo, raje jo izposodi.");
+
+            appData.loans.push({
+                customerId: activeCustomer.id,
+                bookId: scannedBook.id,
+                dateOut: new Date().toISOString(),
+                dateDue: null, // No deadline for reservations
+                reserved: true
+            });
+            saveData();
+            loadIzposojaScreen();
+        }
+        
+        function actionZadrzi() { showModal("Info", "Funkcija 'Zadrži' ni implementirana v tej demo verziji."); }
+        function actionZagotovnica() { showModal("Info", "Funkcija 'Zagotovnica' ni implementirana."); }
+
+        // Helper to update book in array
+        function updateBook(bookObj) {
+            const idx = appData.books.findIndex(b => b.id === bookObj.id);
+            appData.books[idx] = bookObj;
+        }
+
+        // --- UTILS ---
+        function formatDate(isoStr) {
+            if(!isoStr) return "";
+            const d = new Date(isoStr);
+            return d.toLocaleDateString('sl-SI');
+        }
+        function formatTime(isoStr) {
+            if(!isoStr) return "";
+            const d = new Date(isoStr);
+            return d.toLocaleTimeString('sl-SI');
+        }
+
+        // --- MODAL SYSTEM ---
+        function showModal(title, text) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerText = text;
+            document.getElementById('modal-footer').innerHTML = `<button class="win-btn" onclick="closeModal()">OK</button>`;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function showPrompt(title, text, callback, isPassword = false) {
+            document.getElementById('modal-title').innerText = title;
+            const inputType = isPassword ? "password" : "text";
+            document.getElementById('modal-content').innerHTML = `
+                <p>${text}</p>
+                <input type="${inputType}" id="prompt-input" style="width:90%">
+            `;
+            
+            // Override footer button
+            const footer = document.getElementById('modal-footer');
+            footer.innerHTML = "";
+            
+            const btn = document.createElement("button");
+            btn.className = "win-btn";
+            btn.innerText = "Potrdi";
+            btn.onclick = () => {
+                const val = document.getElementById('prompt-input').value;
+                closeModal();
+                callback(val);
+            };
+            footer.appendChild(btn);
+            
+            document.getElementById('modal-overlay').style.display = 'flex';
+            document.getElementById('prompt-input').focus();
+        }
+
+        function showCustomContentModal(title, htmlContent, onCloseCallback) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerHTML = htmlContent;
+            document.getElementById('modal-footer').innerHTML = `<button class="win-btn" onclick="closeModal()">Zapri</button>`;
+            
+            // Hook close
+            const oldClose = window.closeModal;
+            window.closeModal = () => {
+                document.getElementById('modal-overlay').style.display = 'none';
+                window.closeModal = oldClose; // Restore
+                if(onCloseCallback) onCloseCallback();
+            };
+
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        // --- STARTUP ---
+        init();
+
+    </script>
+</body>
+</html>
