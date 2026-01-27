@@ -14,7 +14,7 @@
             --win-blue: #000080;
             --pastel-red: #ffcccb;
             --pastel-green: #ccffcc;
-            --pastel-yellow: #ffffcc; /* Uporabljeno za izbor */
+            --pastel-yellow: #ffffcc;
             --bg-teal: #008080;
         }
 
@@ -24,7 +24,7 @@
             margin: 0;
             padding: 0;
             height: 100vh;
-            overflow: hidden; /* Prepreči scrollanje cele strani */
+            overflow: hidden;
             user-select: none;
             display: flex;
             justify-content: center;
@@ -163,12 +163,14 @@
             padding: 4px;
             text-align: left;
             cursor: default;
+            vertical-align: top;
         }
         th {
             background: #e0e0e0;
             border-bottom: 2px solid #808080;
             position: sticky;
             top: 0;
+            z-index: 10;
         }
 
         /* --- IZPOSOJA SPECIFIKA --- */
@@ -252,10 +254,13 @@
             box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
+            background: var(--win-gray);
         }
         .modal-body {
             padding: 15px;
             background: var(--win-gray);
+            max-height: 400px;
+            overflow: auto;
         }
         .modal-form-row {
             margin-bottom: 10px;
@@ -281,6 +286,11 @@
         .bold { font-weight: bold; }
         .text-red { color: red; }
         .text-green { color: green; }
+        .clickable-link { 
+            color: blue; 
+            text-decoration: underline; 
+            cursor: pointer; 
+        }
 
     </style>
 </head>
@@ -375,7 +385,7 @@
             <div id="admin-screen" class="screen">
                 <div style="padding:10px; display:flex; gap:10px; border-bottom:2px groove white;">
                     <button class="win-btn" onclick="renderAdminSection('users')">Uporabniki</button>
-                    <button class="win-btn" onclick="renderAdminSection('settings')">Rok & Nastavitve</button>
+                    <button class="win-btn" onclick="renderAdminSection('settings')">Rok & Zamudnine</button>
                     <button class="win-btn" onclick="renderAdminSection('books')">Knjige</button>
                     <button class="win-btn" onclick="renderAdminSection('customers')">Stranke</button>
                     <button class="win-btn" onclick="renderAdminSection('warehouses')">Skladišča</button>
@@ -468,11 +478,16 @@
             ],
             customers: [
                 { id: "0100001", name: "John Smith", type: "zaposleni", note: "Brez posebnosti", debt: 0.00 },
-                { id: "0100002", name: "Janez Novak", type: "študent", note: "Dolguje knjigo", debt: 1.50 }
+                { id: "0100002", name: "Janez Novak", type: "študent", note: "Dolguje knjigo", debt: 1.50 },
+                { id: "0100003", name: "Tine Tolar", type: "študent", note: "", debt: 0.00 },
+                { id: "0100004", name: "Tinkara Kovač", type: "zaposleni", note: "", debt: 0.00 }
             ],
-            loans: [], // { bookId, customerId, dateOut, dateDue, isReserved }
+            loans: [], // { id, bookId, customerId, dateOut, dateDue, isReserved }
             warehouses: ["Skladišče A", "Skladišče B", "Arhiv"],
-            settings: { rentDays: 14, feePerMin: 0.50 }
+            settings: { 
+                loanMinutes: 10, // Rok v minutah
+                feePerMinute: 0.50 // Cena zamudnine na minuto
+            }
         };
 
         // Globalne spremenljivke
@@ -483,7 +498,7 @@
 
         // --- INICIALIZACIJA ---
         function init() {
-            const stored = localStorage.getItem('mknjiga_full_db');
+            const stored = localStorage.getItem('mknjiga_full_db_v2');
             if (stored) {
                 db = JSON.parse(stored);
             } else {
@@ -494,7 +509,7 @@
         }
 
         function saveDB() {
-            localStorage.setItem('mknjiga_full_db', JSON.stringify(db));
+            localStorage.setItem('mknjiga_full_db_v2', JSON.stringify(db));
         }
 
         function startClock() {
@@ -604,37 +619,6 @@
             document.getElementById('modal-overlay').style.display = 'flex';
         }
 
-        // Custom selector modal (za stranke)
-        function openCustomerSelectModal(callback) {
-            document.getElementById('modal-title').innerText = "Izberi stranko";
-            const html = `
-                <input type="text" id="cust-search" placeholder="Išči..." style="width:100%; margin-bottom:5px;" onkeyup="filterCustomersModal()">
-                <div id="cust-list" style="height:200px; overflow:auto; background:white; border:2px inset white;"></div>
-            `;
-            document.getElementById('modal-content').innerHTML = html;
-            document.getElementById('modal-footer').innerHTML = `<button class="win-btn" onclick="goToHome(); closeModal()">Prekliči</button>`;
-            
-            window.tempCustCallback = callback;
-            filterCustomersModal();
-            document.getElementById('modal-overlay').style.display = 'flex';
-        }
-
-        function filterCustomersModal() {
-            const val = document.getElementById('cust-search').value.toLowerCase();
-            const list = document.getElementById('cust-list');
-            list.innerHTML = db.customers
-                .filter(c => c.name.toLowerCase().includes(val) || c.id.includes(val))
-                .map(c => `<div style="padding:4px; border-bottom:1px dotted #ccc; cursor:pointer;" onclick="confirmCustomer('${c.id}')">
-                            <b>${c.id}</b> - ${c.name}
-                           </div>`)
-                .join('');
-        }
-
-        function confirmCustomer(id) {
-            closeModal();
-            if(window.tempCustCallback) window.tempCustCallback(id);
-        }
-
         // --- ADMIN MODULE ---
         function modulePodatki() {
             // Check Admin pass
@@ -674,6 +658,19 @@
                             <tr><th>ID</th><th>Ime</th><th>Tip</th><th>Akcija</th></tr>
                             ${db.customers.map(c => `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.type}</td><td><button onclick="adminDelCustomer('${c.id}')">Briši</button></td></tr>`).join('')}
                         </table>`;
+            } else if (section === 'settings') {
+                html = `<h3>Nastavitve Roka in Zamudnin</h3>
+                        <div class="modal-form-row">
+                            <label>Čas izposoje (v minutah):</label>
+                            <input type="number" id="adm-time" value="${db.settings.loanMinutes || 10}">
+                        </div>
+                        <div class="modal-form-row">
+                            <label>Cena zamudnine na minuto (€):</label>
+                            <input type="number" id="adm-fee" value="${db.settings.feePerMinute || 0.50}" step="0.01">
+                        </div>
+                        <br>
+                        <button class="win-btn" onclick="saveAdminSettings()">Shrani nastavitve</button>
+                        `;
             } else {
                 html = "<p>Izberite kategorijo zgoraj.</p>";
             }
@@ -681,6 +678,15 @@
         }
 
         // Admin Actions
+        function saveAdminSettings() {
+            const t = document.getElementById('adm-time').value;
+            const f = document.getElementById('adm-fee').value;
+            db.settings.loanMinutes = parseFloat(t);
+            db.settings.feePerMinute = parseFloat(f);
+            saveDB();
+            openAlert("Info", "Nastavitve shranjene.");
+        }
+
         function adminAddUser() {
             openFormModal("Dodaj zaposlenega", [
                 {id:'id', label:'Šifra zaposlenega:'},
@@ -750,8 +756,35 @@
             const tbody = document.querySelector("#stock-table tbody");
             tbody.innerHTML = db.books
                 .filter(b => b.title.toLowerCase().includes(filter) || b.author.toLowerCase().includes(filter) || b.id.includes(filter))
-                .map(b => `<tr><td>${b.id}</td><td class="bold">${b.title}</td><td>${b.author}</td><td>${b.stock}</td><td>${b.location}</td></tr>`)
+                .map(b => `<tr>
+                    <td>${b.id}</td>
+                    <td class="bold">${b.title}</td>
+                    <td>${b.author}</td>
+                    <td>
+                        <span class="clickable-link bold" onclick="showBorrowers('${b.id}')">${b.stock} / ${b.total}</span>
+                    </td>
+                    <td>${b.location}</td>
+                </tr>`)
                 .join('');
+        }
+
+        function showBorrowers(bookId) {
+            // Poišči kdo ima to knjigo
+            const borrowers = db.loans.filter(l => l.bookId === bookId && !l.isReserved);
+            
+            if (borrowers.length === 0) {
+                return openAlert("Info", "Knjiga trenutno ni izposojena nikomur.");
+            }
+
+            let html = `<b>Knjigo ${bookId} imajo izposojeno:</b><br><br>`;
+            borrowers.forEach(l => {
+                const c = db.customers.find(cu => cu.id === l.customerId);
+                if(c) {
+                    html += `• ${c.id} - ${c.name} (Do: ${new Date(l.dateDue).toLocaleString('sl-SI')})<br>`;
+                }
+            });
+
+            openAlert("Zaloga - Podrobnosti", html);
         }
 
         // --- PROFIL ---
@@ -773,13 +806,53 @@
         }
 
         // --- IZPOSOJA (CORE) ---
+        
+        // 1. Korak: Vnos/Iskanje stranke
         function moduleIzposojaInit() {
-            openCustomerSelectModal((custId) => {
-                activeCustomer = db.customers.find(c => c.id === custId);
-                loadIzposojaUI();
+            // Najprej zahtevaj vnos
+            openFormModal("Izbira člana", [{id:'search', label:'Vpiši šifro ali priimek člana:'}], (res) => {
+                const val = res.search.trim().toLowerCase();
+                if (!val) return goToHome();
+
+                // Išči ujemanja
+                const matches = db.customers.filter(c => c.id.toLowerCase() === val || c.name.toLowerCase().startsWith(val));
+
+                if (matches.length === 0) {
+                    openAlert("Napaka", "Stranka ni najdena.");
+                    goToHome();
+                } else if (matches.length === 1) {
+                    // Samo ena stranka - avtomatsko odpri
+                    activeCustomer = matches[0];
+                    loadIzposojaUI();
+                } else {
+                    // Več strank - ponudi izbiro
+                    openCustomerSelectResult(matches);
+                }
             });
         }
 
+        function openCustomerSelectResult(matches) {
+             document.getElementById('modal-title').innerText = "Izberi pravo stranko";
+             let html = `<div style="height:200px; overflow:auto; background:white; border:2px inset white;">`;
+             matches.forEach(c => {
+                 html += `<div style="padding:4px; border-bottom:1px dotted #ccc; cursor:pointer;" onclick="selectCustomerResult('${c.id}')">
+                            <b>${c.id}</b> - ${c.name}
+                           </div>`;
+             });
+             html += `</div>`;
+             
+             document.getElementById('modal-content').innerHTML = html;
+             document.getElementById('modal-footer').innerHTML = `<button class="win-btn" onclick="goToHome(); closeModal()">Prekliči</button>`;
+             document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function selectCustomerResult(id) {
+            closeModal();
+            activeCustomer = db.customers.find(c => c.id === id);
+            loadIzposojaUI();
+        }
+
+        // 2. Korak: UI Izposoje
         function loadIzposojaUI() {
             showScreen('izposoja');
             // Header
@@ -796,33 +869,48 @@
             renderLoanTable();
         }
 
+        // Render Datum/Ura Helper
+        function formatDateTime(isoStr) {
+            if(!isoStr) return "";
+            const d = new Date(isoStr);
+            return `${d.toLocaleDateString('sl-SI')}<br>${d.toLocaleTimeString('sl-SI')}`;
+        }
+
         function renderLoanTable() {
             const tbody = document.getElementById('izp-table-body');
-            // Najdi izposoje za to stranko
             const loans = db.loans.filter(l => l.customerId === activeCustomer.id);
             
             tbody.innerHTML = loans.map((l, idx) => {
                 const book = db.books.find(b => b.id === l.bookId);
-                if (!book) return ""; // Error check
+                if (!book) return ""; 
                 
                 const now = new Date();
                 const due = l.dateDue ? new Date(l.dateDue) : null;
                 const isLate = due && (now > due);
                 
-                // Style logic
-                // Če je selectedBookId enak temu l.bookId, potem class 'selected-row'
                 const isSelected = (selectedBookId === l.bookId);
                 let rowClass = isSelected ? "selected-row" : "";
                 
-                // Status styles (only if not selected to avoid color clash, or mix them)
                 if (!isSelected) {
-                    if (l.isReserved) rowClass = "status-reserved"; // Green bg
-                    else if (isLate) rowClass = "status-late"; // Red text
+                    if (l.isReserved) rowClass = "status-reserved"; 
+                    else if (isLate) rowClass = "status-late"; 
                 }
 
-                // Date logic
-                let dateOutStr = new Date(l.dateOut).toLocaleDateString('sl-SI');
-                let dateDueStr = l.isReserved ? "REZERVIRANO" : due.toLocaleDateString('sl-SI');
+                let dateOutStr = formatDateTime(l.dateOut);
+                let dateDueStr = l.isReserved ? "REZERVIRANO" : formatDateTime(l.dateDue);
+                
+                // Terjatev stolpec
+                let terjatevCell = "";
+                if (l.isReserved) {
+                    // Gumb za brisanje rezervacije
+                    terjatevCell = `<button class="win-btn" style="padding:0 5px; font-size:0.8em;" onclick="event.stopPropagation(); deleteReservation('${l.bookId}')">Briši</button>`;
+                } else if (isLate) {
+                    // Izračun zamudnine: minute zamude * cena
+                    const diffMs = now - due;
+                    const diffMins = Math.ceil(diffMs / 60000);
+                    const cost = (diffMins * db.settings.feePerMinute).toFixed(2);
+                    terjatevCell = `${cost} €`;
+                }
 
                 return `<tr class="${rowClass}" onclick="selectRow('${book.id}')">
                     <td>${idx + 1}.</td>
@@ -833,31 +921,36 @@
                     </td>
                     <td>${dateOutStr}</td>
                     <td>${dateDueStr}</td>
-                    <td>${isLate ? "0,50" : ""}</td>
+                    <td style="text-align:center;">${terjatevCell}</td>
                 </tr>`;
             }).join('');
+        }
+
+        function deleteReservation(bookId) {
+            const idx = db.loans.findIndex(l => l.customerId === activeCustomer.id && l.bookId === bookId && l.isReserved);
+            if (idx !== -1) {
+                db.loans.splice(idx, 1);
+                saveDB();
+                renderLoanTable();
+            }
         }
 
         // LOGIKA IZBIRA VRSTICE
         function selectRow(bookId) {
             selectedBookId = bookId;
             document.getElementById('izp-input-code').value = bookId;
-            
-            // Posodobi UI
             const book = db.books.find(b => b.id === bookId);
             updateBookInfoDisplay(book);
-            renderLoanTable(); // Ponovno izriši za barvanje vrstice
+            renderLoanTable();
         }
 
         // LOGIKA SKENIRANJA / VNOSA
         function checkBookInput() {
             const val = document.getElementById('izp-input-code').value;
-            // Če vpiše veljavno šifro
             const book = db.books.find(b => b.id === val);
             if (book) {
                 selectedBookId = book.id;
                 updateBookInfoDisplay(book);
-                // Ne prebarvamo tabele takoj, razen če je ta knjiga že v tabeli
                 renderLoanTable();
             } else {
                 selectedBookId = null;
@@ -880,16 +973,15 @@
             const book = db.books.find(b => b.id === selectedBookId);
             if (!book) return openAlert("Napaka", "Izberi ali vpiši šifro knjige.");
             
-            // Check availability
             if (book.stock <= 0) return openAlert("Napaka", "Ni zaloge!");
             
-            // Check double booking
             const existing = db.loans.find(l => l.customerId === activeCustomer.id && l.bookId === book.id && !l.isReserved);
             if (existing) return openAlert("Napaka", "Stranka že ima to knjigo.");
 
-            // Create Loan
+            // Create Loan (Minutes logic)
             const due = new Date();
-            due.setDate(due.getDate() + db.settings.rentDays);
+            const minutesToAdd = db.settings.loanMinutes || 10;
+            due.setMinutes(due.getMinutes() + minutesToAdd);
             
             db.loans.push({
                 customerId: activeCustomer.id,
@@ -914,7 +1006,6 @@
             const book = db.books.find(b => b.id === selectedBookId);
             if(book) book.stock++;
             
-            // Clear selection
             selectedBookId = null;
             document.getElementById('izp-input-code').value = "";
             
@@ -928,7 +1019,8 @@
             if (!loan) return openAlert("Napaka", "Ni aktivne izposoje za to knjigo.");
             
             const newDue = new Date(loan.dateDue);
-            newDue.setDate(newDue.getDate() + db.settings.rentDays);
+            const minutesToAdd = db.settings.loanMinutes || 10;
+            newDue.setMinutes(newDue.getMinutes() + minutesToAdd);
             loan.dateDue = newDue.toISOString();
             
             saveDB();
@@ -952,7 +1044,6 @@
             loadIzposojaUI();
         }
 
-        // Manjša urejanja stranke
         function editCustomerDetails() {
             openFormModal("Uredi stranko", [{id:'name', label:'Novo ime:', value:activeCustomer.name}], (res) => {
                 activeCustomer.name = res.name;
