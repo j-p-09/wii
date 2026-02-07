@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII shop – Pošta (Sinhronizirano)</title>
+    <style>
+        :root {
+            --wii-blue: #00aaff;
+            --wii-dark: #333;
+            --wii-light: #f4f4f4;
+            --wii-green: #2ecc71;
+            --wii-red: #e74c3c;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--wii-light);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1, h2, h3 { margin-bottom: 15px; color: var(--wii-dark); }
+        
+        .hidden { display: none !important; }
+
+        button {
+            background-color: var(--wii-blue);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+
+        input, select {
+            padding: 12px;
+            margin: 10px 0;
+            width: 100%;
+            box-sizing: border-box;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .card {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: left;
+            background: #fafafa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .status-tag {
+            font-weight: bold;
+            color: var(--wii-blue);
+            text-transform: uppercase;
+        }
+
+        hr { border: 0; border-top: 1px solid #eee; margin: 15px 0; }
+        
+        .role-badge {
+            background: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="app-title">WII SHOP 📦 POŠTA</h1>
+
+    <div id="login-section">
+        <h3>Prijava zaposlenega</h3>
+        <p style="font-size:0.9em; color:#666;">Uporabi kodo iz WII BLAGAJNE</p>
+        <input type="password" id="staff-pin" placeholder="Vnesite šifro (npr. 000)">
+        <button onclick="login()">Vstop</button>
+        <div id="login-error" style="color:red; margin-top:10px;" class="hidden">Napačna koda!</div>
+    </div>
+
+    <div id="view-selection" class="hidden">
+        <h3>Pozdravljen, <span id="user-name-display"></span>!</h3>
+        <p>Izberite način dela:</p>
+        <button onclick="showView('packing')">📦 PAKIRANJE</button>
+        <button onclick="showView('info')">ℹ️ INFORMIRANJE</button>
+        <button onclick="showView('postman')">🚚 POŠTAR</button>
+        <button onclick="showView('client')">👤 NAROČNIK</button>
+        <br><br>
+        <button onclick="logout()" style="background: var(--wii-dark)">Odjava</button>
+    </div>
+
+    <div id="packing-view" class="hidden">
+        <h2>📦 Pakiranje</h2>
+        <div id="packing-list"></div>
+        <button onclick="backToMenu()" style="background:#888">Nazaj</button>
+    </div>
+
+    <div id="info-view" class="hidden">
+        <h2>ℹ️ Informacije</h2>
+        <input type="text" id="search-id" placeholder="Vnesite šifro paketa">
+        <button onclick="searchPackage()">Išči</button>
+        <div id="info-result"></div>
+        <button onclick="backToMenu()" style="background:#888">Nazaj</button>
+    </div>
+
+    <div id="postman-view" class="hidden">
+        <h2>🚚 Moji paketi</h2>
+        <div id="postman-list"></div>
+        <button onclick="backToMenu()" style="background:#888">Nazaj</button>
+    </div>
+
+    <div id="client-view" class="hidden">
+        <h2>👤 Oddaja naročila</h2>
+        <input type="text" id="order-item" placeholder="Kaj naročate?">
+        <input type="number" id="order-price" placeholder="Odkupnina (€)">
+        <button onclick="createOrder()">Oddaj naročilo</button>
+        <button onclick="backToMenu()" style="background:#888">Nazaj</button>
+    </div>
+
+    <div id="edit-modal" class="hidden">
+        <div style="background:rgba(0,0,0,0.5); position:fixed; top:0; left:0; width:100%; height:100%;" onclick="closeModal()"></div>
+        <div style="background:white; padding:20px; border-radius:10px; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:400px; box-shadow:0 0 20px rgba(0,0,0,0.3);">
+            <div id="modal-content"></div>
+            <br>
+            <button onclick="closeModal()" style="background:#888; width:100%">Zapri</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= PODATKOVNA SINHRONIZACIJA ================= */
+    // Ta ključ mora biti enak kot v blagajni (Final.html)
+    const DB_KEY = 'wiiShopDBv5';
+    const PACKAGES_KEY = 'wii_paketi';
+
+    // Pridobi zaposlene direktno iz baze blagajne
+    function getEmployees() {
+        const db = JSON.parse(localStorage.getItem(DB_KEY));
+        if (db && db.employees) {
+            return db.employees;
+        }
+        return []; // Če ni baze, vrne prazno (ali pa fallback admina)
+    }
+
+    // Pridobi/Shrani pakete (ločena baza za pošto)
+    let paketi = JSON.parse(localStorage.getItem(PACKAGES_KEY)) || [];
+
+    function savePackages() {
+        localStorage.setItem(PACKAGES_KEY, JSON.stringify(paketi));
+    }
+
+    let trenutniUporabnik = null;
+
+    /* ================= LOGIKA PRIJAVE ================= */
+    function login() {
+        const pin = document.getElementById('staff-pin').value.trim();
+        const zaposleni = getEmployees();
+        
+        // Iščemo ujemanje kode (code) iz blagajne
+        const user = zaposleni.find(z => z.code === pin);
+
+        if (user) {
+            trenutniUporabnik = user;
+            document.getElementById('user-name-display').textContent = user.name;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('view-selection').classList.remove('hidden');
+            document.getElementById('login-error').classList.add('hidden');
+        } else {
+            document.getElementById('login-error').classList.remove('hidden');
+            // Fallback za prvi zagon, če blagajna še ni bila zagnana
+            if(pin === '000' && zaposleni.length === 0) {
+                alert("Baza blagajne ni najdena. Prosim, najprej zaženite 'WII SHOP BLAGAJNA', da se ustvarijo podatki.");
+            }
+        }
+    }
+
+    function logout() {
+        trenutniUporabnik = null;
+        document.getElementById('staff-pin').value = '';
+        backToMenu();
+        document.getElementById('view-selection').classList.add('hidden');
+        document.getElementById('login-section').classList.remove('hidden');
+    }
+
+    /* ================= NAVIGACIJA ================= */
+    function showView(view) {
+        document.getElementById('view-selection').classList.add('hidden');
+        document.getElementById(`${view}-view`).classList.remove('hidden');
+        
+        if(view === 'packing') renderPacking();
+        if(view === 'postman') renderPostman();
+    }
+
+    function backToMenu() {
+        ['packing', 'info', 'postman', 'client'].forEach(v => {
+            document.getElementById(`${v}-view`).classList.add('hidden');
+        });
+        document.getElementById('edit-modal').classList.add('hidden');
+        document.getElementById('view-selection').classList.remove('hidden');
+    }
+
+    /* ================= NAROČNIK (USTVARJANJE) ================= */
+    function createOrder() {
+        const item = document.getElementById('order-item').value;
+        const price = document.getElementById('order-price').value;
+
+        if(!item || !price) return alert("Izpolni vsa polja!");
+
+        const novPaket = {
+            id: Math.floor(1000 + Math.random() * 9000),
+            artikel: item,
+            cena: price,
+            status: "v pripravi",
+            pripravil: trenutniUporabnik.name, // Beležimo ime tistega, ki je vnesel
+            postar: "Ni dodeljen",
+            postarId: null, // Za natančno ujemanje
+            podpis: false,
+            prevzeto: false,
+            casNarocila: new Date().toLocaleString()
+        };
+
+        paketi.push(novPaket);
+        savePackages();
+        alert(`Naročilo oddano! Šifra paketa: ${novPaket.id}`);
+        document.getElementById('order-item').value = "";
+        document.getElementById('order-price').value = "";
+    }
+
+    /* ================= PAKIRANJE (DODELJEVANJE) ================= */
+    function renderPacking() {
+        const list = document.getElementById('packing-list');
+        list.innerHTML = "";
+        // Prikažemo vse pakete, ki še niso dostavljeni
+        const nespakirani = paketi.filter(p => p.status !== "dostavljen");
+
+        if(nespakirani.length === 0) list.innerHTML = "<p>Ni paketov v pripravi.</p>";
+
+        nespakirani.forEach(p => {
+            const card = document.createElement('div');
+            card.className = "card";
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between">
+                    <b>#${p.id}</b> <span>${p.cena} €</span>
+                </div>
+                <div style="margin:5px 0; font-size:1.1em">${p.artikel}</div>
+                <div style="font-size:0.9em; color:#666">
+                    Status: <span class="status-tag">${p.status}</span><br>
+                    Poštar: ${p.postar}
+                </div>
+                <button onclick="editPackage(${p.id})">Uredi / Dodeli</button>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function editPackage(id) {
+        const p = paketi.find(x => x.id === id);
+        const modal = document.getElementById('edit-modal');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+
+        // PRIDOBI ZAPOSLENE IZ SHARED DB ZA DROPDOWN
+        const zaposleni = getEmployees();
+        // Generiraj opcije - prikaži vse zaposlene, da lahko kateremukoli dodeliš
+        let options = `<option value="">-- izberi poštarja --</option>`;
+        zaposleni.forEach(z => {
+            const selected = p.postarId === z.id ? 'selected' : '';
+            options += `<option value="${z.id}" ${selected}>${z.name} (${z.role})</option>`;
+        });
+
+        content.innerHTML = `
+            <h3>Urejanje paketa #${p.id}</h3>
+            <label>Artikel:</label>
+            <input type="text" id="edit-item" value="${p.artikel}">
+            <label>Odkupnina:</label>
+            <input type="number" id="edit-price" value="${p.cena}">
+            <label>Dodeli poštarja:</label>
+            <select id="edit-postman-select">${options}</select>
+            <hr>
+            <button onclick="saveEdit(${p.id}, 'pripravljen')" style="background:var(--wii-green)">Označi PRIPRAVLJEN</button>
+            <button onclick="deletePackage(${p.id})" style="background:var(--wii-red)">Izbriši paket</button>
+        `;
+    }
+
+    function saveEdit(id, statusOverride) {
+        const p = paketi.find(x => x.id === id);
+        const zaposleni = getEmployees();
+        
+        p.artikel = document.getElementById('edit-item').value;
+        p.cena = document.getElementById('edit-price').value;
+        
+        const select = document.getElementById('edit-postman-select');
+        const selectedId = select.value;
+        
+        if(selectedId) {
+            const postarUser = zaposleni.find(z => z.id === selectedId);
+            if(postarUser) {
+                p.postar = postarUser.name;
+                p.postarId = postarUser.id;
+            }
+        } else {
+            p.postar = "Ni dodeljen";
+            p.postarId = null;
+        }
+
+        if(statusOverride && p.status === 'v pripravi') p.status = statusOverride;
+
+        savePackages();
+        closeModal();
+        renderPacking();
+    }
+
+    /* ================= INFORMIRANJE ================= */
+    function searchPackage() {
+        const id = document.getElementById('search-id').value;
+        const p = paketi.find(x => x.id == id);
+        const res = document.getElementById('info-result');
+
+        if(p) {
+            res.innerHTML = `
+                <div class="card">
+                    <h3>${p.artikel} (#${p.id})</h3>
+                    <p><b>Status:</b> <span class="status-tag">${p.status}</span></p>
+                    <p><b>Cena:</b> ${p.cena} €</p>
+                    <p><b>Naročil/Pripravil:</b> ${p.pripravil}</p>
+                    <p><b>Dodeljeni poštar:</b> ${p.postar}</p>
+                    <p><b>Čas naročila:</b> ${p.casNarocila}</p>
+                    <hr>
+                    <label>Hitra sprememba statusa:</label>
+                    <select onchange="updateStatus(${p.id}, this.value)" style="margin-bottom:0">
+                        <option value="">-- izberi --</option>
+                        <option value="v pripravi">v pripravi</option>
+                        <option value="pripravljen">pripravljen</option>
+                        <option value="v dostavi">v dostavi</option>
+                        <option value="dostavljen">dostavljen</option>
+                    </select>
+                </div>
+            `;
+        } else {
+            res.innerHTML = "<p style='color:red'>Paket s to šifro ne obstaja.</p>";
+        }
+    }
+
+    function updateStatus(id, newStatus) {
+        if(!newStatus) return;
+        const p = paketi.find(x => x.id == id);
+        p.status = newStatus;
+        savePackages();
+        alert("Status posodobljen!");
+        // Refresh če smo v iskanju
+        searchPackage();
+    }
+
+    /* ================= POŠTAR (DOSTAVA) ================= */
+    function renderPostman() {
+        const list = document.getElementById('postman-list');
+        list.innerHTML = "";
+        
+        // Pokaži pakete, dodeljene TRENUTNEMU uporabniku (preverjamo po ID ali Imenu)
+        // Uporabljamo ID za zanesljivost, če obstaja, sicer ime
+        const mojiPaketi = paketi.filter(p => {
+            const isMyId = p.postarId && p.postarId === trenutniUporabnik.id;
+            const isMyName = p.postar === trenutniUporabnik.name; 
+            return (isMyId || isMyName) && p.status !== "dostavljen";
+        });
+
+        if(mojiPaketi.length === 0) {
+            list.innerHTML = `<p>Pozdravljen <b>${trenutniUporabnik.name}</b>. Trenutno nimaš paketov za dostavo.</p>`;
+        }
+
+        mojiPaketi.forEach(p => {
+            const btnAction = p.status === 'v dostavi' 
+                ? `<button onclick="finishDelivery(${p.id})" style="background:var(--wii-green)">Zaključi dostavo</button>`
+                : `<button onclick="setInDelivery(${p.id})">Prevzemi v dostavo</button>`;
+
+            list.innerHTML += `
+                <div class="card">
+                    <b>#${p.id}</b> - ${p.artikel}<br>
+                    <small>Odkupnina: ${p.cena} €</small><br>
+                    Status: <span class="status-tag">${p.status}</span>
+                    <hr>
+                    ${btnAction}
+                </div>
+            `;
+        });
+    }
+
+    function setInDelivery(id) {
+        const p = paketi.find(x => x.id == id);
+        p.status = "v dostavi";
+        savePackages();
+        renderPostman();
+    }
+
+    function finishDelivery(id) {
+        const modal = document.getElementById('edit-modal');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+
+        content.innerHTML = `
+            <h3>Zaključek dostave #${id}</h3>
+            <p>Ali je stranka prevzela paket?</p>
+            <div style="text-align:left; margin-left:20px;">
+                <label style="display:block; margin:10px 0;">
+                    <input type="checkbox" id="check-podpis" style="width:auto;"> Stranka se je podpisala
+                </label>
+                <label style="display:block; margin:10px 0;">
+                    <input type="checkbox" id="check-prevzeto" style="width:auto;"> Paket je prevzet in plačan
+                </label>
+            </div>
+            <button onclick="confirmDelivery(${id})">Potrdi dostavo</button>
+        `;
+    }
+
+    function confirmDelivery(id) {
+        const podpis = document.getElementById('check-podpis').checked;
+        const prevzeto = document.getElementById('check-prevzeto').checked;
+
+        if(podpis && prevzeto) {
+            const p = paketi.find(x => x.id == id);
+            p.status = "dostavljen";
+            p.podpis = true;
+            p.prevzeto = true;
+            savePackages();
+            closeModal();
+            renderPostman();
+            alert("Paket uspešno dostavljen in arhiviran!");
+        } else {
+            alert("Za uspešno dostavo mora biti paket prevzet in podpisan!");
+        }
+    }
+
+    /* ================= POMOŽNO ================= */
+    function deletePackage(id) {
+        if(confirm("Res izbrišem ta paket?")) {
+            paketi = paketi.filter(p => p.id !== id);
+            savePackages();
+            closeModal();
+            renderPacking();
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('edit-modal').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>
