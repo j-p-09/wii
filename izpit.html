@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII PREIZKUS ZNANJA</title>
+    <style>
+        :root {
+            --bg-grey: #f0f0f0;
+            --header-grey: #e0e0e0;
+            --border-color: #ccc;
+            --wii-blue: #0099ff;
+            --wii-dark: #333;
+            --highlight: #ffffcc;
+            --nav-answered: #cceeff; /* Svetlo modra za odgovorjeno */
+            --nav-current: #000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            background-color: #888;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 95vh;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* --- LOGIN SCREEN --- */
+        .center-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            background: var(--bg-grey);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border: 1px solid #999;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.1);
+            width: 300px;
+        }
+
+        input { padding: 10px; font-size: 16px; margin: 10px 0; width: 100%; box-sizing: border-box; }
+        button { 
+            padding: 10px 20px; font-size: 16px; cursor: pointer; 
+            background: var(--header-grey); border: 1px solid #999; font-weight: bold;
+        }
+        button:hover { background: #d0d0d0; }
+
+        /* --- EXAM LAYOUT --- */
+        #exam-header {
+            height: 50px;
+            background: var(--header-grey);
+            border-bottom: 1px solid #999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
+        }
+
+        #exam-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #question-area {
+            flex: 3;
+            padding: 30px;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+            background: #fff;
+        }
+
+        #navigation-area {
+            flex: 1;
+            padding: 20px;
+            background: #f9f9f9;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
+        }
+
+        /* --- QUESTION STYLING --- */
+        .q-header {
+            background: #f0f4f8;
+            padding: 15px;
+            border-left: 5px solid var(--wii-blue);
+            margin-bottom: 20px;
+        }
+        .q-meta { font-size: 0.9em; color: #666; margin-bottom: 5px; display:flex; justify-content:space-between; }
+        .q-text { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; }
+        
+        /* SIMULACIJA SLIKE */
+        .img-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed #999;
+            margin: 15px 0;
+            color: #555;
+            font-style: italic;
+            flex-direction: column;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .option-row {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .option-row:hover { background: #f0f0f0; }
+        .option-row input { width: auto; margin-right: 10px; }
+
+        /* --- NAV GRID --- */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .nav-box {
+            height: 40px;
+            border: 1px solid #999;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+            background: white;
+        }
+        .nav-num { font-size: 10px; padding: 2px; }
+        .nav-status { flex: 1; }
+        
+        /* Statusi celic */
+        .nav-box.current { border: 2px solid #000; }
+        .nav-box.answered .nav-status { background-color: var(--nav-answered); border-top: 1px solid #ccc; }
+        .nav-box.flagged::after {
+            content: ''; position: absolute; top: 0; right: 0;
+            width: 0; height: 0;
+            border-style: solid; border-width: 0 10px 10px 0;
+            border-color: transparent red transparent transparent;
+        }
+
+        /* --- MANAGER TABLE --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+
+        /* --- RESULT SCREEN --- */
+        .result-summary {
+            background: #fdfdfd;
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .result-header { font-size: 1.5em; margin-bottom: 10px; }
+        .result-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 5px 0; }
+        
+        .review-item {
+            border: 1px solid #eee; margin-bottom: 10px; padding: 10px;
+        }
+        .review-item.correct { background: #eeffee; border-left: 5px solid green; }
+        .review-item.wrong { background: #ffeeee; border-left: 5px solid red; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    
+    <div id="view-login" class="center-screen">
+        <div class="login-box">
+            <h2>WII EXAM SYSTEM</h2>
+            <p>Vnesi osebno šifro</p>
+            <input type="password" id="login-code" placeholder="npr. 000">
+            <button onclick="handleLogin()">PRIJAVA</button>
+            <p id="login-error" style="color:red; display:none; margin-top:10px;">Napačna šifra!</p>
+        </div>
+    </div>
+
+    <div id="view-preflight" class="center-screen hidden">
+        <div class="login-box" style="width: 400px; text-align: left;">
+            <h3>Pozdravljeni!</h3>
+            <p><b>Ime in priimek:</b> <span id="pf-name"></span></p>
+            <p><b>Šifra:</b> <span id="pf-id"></span></p>
+            <p><b>Poskus št.:</b> <span id="pf-attempt"></span></p>
+            <hr>
+            <p>Izpit ima časovno omejitev <b>15 min</b>. Ste pripravljeni, da pričnete z reševanjem?</p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="startExam()" style="background: var(--wii-blue); color: white;">ZAČNI REŠEVANJE</button>
+                <button onclick="logout()">PREKLIČI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-manager" class="hidden" style="padding: 20px; overflow-y: auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>ADMINISTRACIJA - ZGODOVINA PREIZKUSOV</h2>
+            <button onclick="logout()">ODJAVA</button>
+        </div>
+        <table id="manager-table">
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Zaposleni (ID)</th>
+                    <th>Točke</th>
+                    <th>%</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="manager-table-body"></tbody>
+        </table>
+        <p style="margin-top:20px; color:#666;">Prikazani so vsi poskusi zaposlenih.</p>
+    </div>
+
+    <div id="view-exam" class="hidden" style="flex-direction: column; height: 100%;">
+        <div id="exam-header">
+            <span>WII PREIZKUS ZNANJA</span>
+            <span id="timer-display" style="font-family: monospace; font-size: 1.2em;">15:00</span>
+        </div>
+        <div id="exam-body">
+            <div id="question-area">
+                </div>
+            <div id="navigation-area">
+                <h3>Navigacija po testu</h3>
+                <div id="nav-grid" class="nav-grid">
+                    </div>
+                <div style="margin-top: auto;">
+                    <button onclick="confirmFinish()" style="width:100%; background: #333; color: white;">KONČAJ REŠEVANJE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-result" class="hidden" style="overflow-y: auto; padding: 20px;">
+        <div class="result-summary">
+            <h2 id="res-title">Rezultat</h2>
+            <p id="res-message" style="font-size: 1.2em; font-weight: bold;"></p>
+            
+            <div style="background: #eee; padding: 15px; margin-top: 10px; border: 1px solid #999;">
+                <div class="result-row"><span>Začetek reševanja:</span><span id="res-start"></span></div>
+                <div class="result-row"><span>Zaključek reševanja:</span><span id="res-end"></span></div>
+                <div class="result-row"><span>Porabljeni čas:</span><span id="res-time"></span></div>
+                <div class="result-row"><span>Točke:</span><span id="res-points"></span></div>
+                <div class="result-row" style="border:none; font-weight: bold; font-size: 1.2em;"><span>Odstotek:</span><span id="res-percent"></span></div>
+            </div>
+        </div>
+
+        <h3>Pregled odgovorov</h3>
+        <div id="review-list"></div>
+        <br>
+        <button onclick="logout()" style="width:100%; padding: 15px;">ZAKLJUČI IN ODJAVA</button>
+    </div>
+
+</div>
+
+<script>
+    /* ================= PODATKI (VPRAŠANJA) ================= */
+    // Bazirano na PDF: WII_Izpit_wprasanja.pdf
+    const questionPool = [
+        {
+            id: 1,
+            text: "Ali je blagajna na sliki prijavljena?",
+            points: 2.00,
+            type: 'single',
+            imgDesc: "Zaslon prikazuje '0.00 WII', 'SKUPAJ', spodaj gumb 'LOGIN' / 'PRIJAVA'.",
+            options: ["DA", "NE"],
+            correct: [1] // NE (ker je viden gumb za prijavo ali pa je 0.00 začetno stanje) - glede na PDF Q1 NE
+        },
+        {
+            id: 2,
+            text: "Kateri gumb na sliki moramo izbrati za prijavo blagajne?",
+            points: 2.00,
+            type: 'single',
+            imgDesc: "Zaslon z gumbi: LOGIN, VMESNO, SKYM, DOLOČI OPRAVILA, DOD., LOGOUT.",
+            options: ["LOGIN", "VMESNO", "SKYM", "DOLOČI OPRAVILA", "LOGOUT"],
+            correct: [0] // LOGIN
+        },
+        {
+            id: 3,
+            text: "Kaj vse moramo vpisati ob prijavi blagajne:",
+            points: 4.00,
+            type: 'multi',
+            imgDesc: "Ni slike (splošno znanje WII sistema).",
+            options: ["ID ZAPOSLENEGA", "KONČNI DEPOZIT", "STAROST", "ZAČETNI DEPOZIT", "IME IN PRIIMEK BLAGAJNIKA"],
+            correct: [0, 3] // ID + ZAČETNI DEPOZIT (standardno v WII POS)
+        },
+        {
+            id: 4,
+            text: "Kaj naredi gumb VMESNO?",
+            points: 3.00,
+            type: 'single',
+            imgDesc: "Gumb 'VMESNO' na vmesniku.",
+            options: ["Pokaže koliko denarja je dala zadnja stranka", "Pokaže koliko denarja je bilo v blagajni ob začetku dela", "Pokaže koliko denarja mora biti v blagajni ta trenutek"],
+            correct: [2] // Trenutno stanje
+        },
+        {
+            id: 5,
+            text: "Če manager pusti v trgovini manager kartico, da lahko prijavimo blagajno, ali lahko na manager meniju odprem dodaten meni z gumbom dodatno?",
+            points: 5.00,
+            type: 'single',
+            imgDesc: "Vprašanje o varnosti.",
+            options: ["DA, z kartico lahko počnem vse", "NE, z kartico lahko uporabljam samo gumbe na osnovnem meniju"],
+            correct: [1] // NE (Za dodatne funkcije rabiš PIN ali višje pravice)
+        },
+        {
+            id: 6,
+            text: "Ali je zaslon za stranke na sliki prižgan?",
+            points: 2.00,
+            type: 'single',
+            imgDesc: "Zaslon prikazuje sivo ozadje in napis 'WII DELIVERY LOGIN'.",
+            options: ["DA", "NE"],
+            correct: [0] // DA (ker nekaj kaže)
+        },
+        {
+            id: 7,
+            text: "Kako prižgemo zaslon za stranke, če je že odprt na drugem zaslonu?",
+            points: 2.00,
+            type: 'single',
+            imgDesc: "Kontekst prijave.",
+            options: ["Prijavimo blagajno", "Ugasnemo vse skupaj"],
+            correct: [0] // Ob prijavi se osveži
+        },
+        {
+            id: 8,
+            text: "Kaj moramo vnesti v belo polje na sliki?",
+            points: 3.00,
+            type: 'single',
+            imgDesc: "Ekran 'WII DELIVERY LOGIN' z belim vnosnim poljem.",
+            options: ["WII DELIVERY LOGIN", "Vnest ID zaposlenega", "Skeniramo svojo kartico", "Napišemo svojo strost", "PRIJAVA"],
+            correct: [1] // ID zaposlenega
+        },
+        {
+            id: 9,
+            text: "Ali je stranka na sliki že oddala naročilo?",
+            points: 3.00,
+            type: 'single',
+            imgDesc: "Chat okno. Stranka: 'Dober dan'. Input polje prazno.",
+            options: ["DA", "NE"],
+            correct: [1] // NE (samo pozdrav)
+        },
+        {
+            id: 10,
+            text: "Katere vse podatke moramo vpisati v to okno (ZAKLJUČEK NAROČILA)?",
+            points: 7.00,
+            type: 'multi',
+            imgDesc: "Okno 'ZAKLJUČEK NAROČILA'. Polja: Št. Računa, Znesek (WII), Način plačila (KARTICA).",
+            options: ["Številko računa", "Ime stranke", "Vsebino naročila", "Znesek računa", "Bančno kartico"],
+            correct: [0, 3, 4] // Št računa, Znesek, Kartica
+        }
+    ];
+
+    /* ================= STATE & SYSTEM ================= */
+    // Sync with cashier DB
+    const DB_KEY = 'wiiShopDBv5';
+    const EXAM_KEY = 'wiiExamResults';
+
+    let currentUser = null;
+    let examData = {
+        questions: [], // shuffled
+        answers: {}, // { qIndex: [selectedOptionIndices] }
+        flags: {},   // { qIndex: boolean }
+        startTime: null,
+        endTime: null,
+        timer: 15 * 60,
+        interval: null,
+        currentIndex: 0
+    };
+
+    function getDB() {
+        return JSON.parse(localStorage.getItem(DB_KEY)) || { employees: [] };
+    }
+
+    function getExamResults() {
+        return JSON.parse(localStorage.getItem(EXAM_KEY)) || [];
+    }
+
+    function saveExamResult(result) {
+        const results = getExamResults();
+        results.push(result);
+        localStorage.setItem(EXAM_KEY, JSON.stringify(results));
+    }
+
+    /* ================= LOGIN & FLOW ================= */
+    function handleLogin() {
+        const code = document.getElementById('login-code').value.trim();
+        const db = getDB();
+        
+        // 1. MANAGER LOGIN
+        if(code === '000') {
+            currentUser = { name: "MANAGER", role: "MANAGER", id: "000" };
+            showView('manager');
+            renderManagerTable();
+            return;
+        }
+
+        // 2. EMPLOYEE LOGIN
+        const user = db.employees.find(e => e.code === code);
+        if(user) {
+            currentUser = user;
+            showView('preflight');
+            preparePreflight();
+        } else {
+            // Fallback for demo if no DB exists
+            if(code === '1111') { // Demo user
+                currentUser = { name: "DEMO USER", id: "1111", role: "ZAPOSLENI" };
+                showView('preflight');
+                preparePreflight();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+    }
+
+    function preparePreflight() {
+        document.getElementById('pf-name').innerText = currentUser.name;
+        document.getElementById('pf-id').innerText = currentUser.id;
+        
+        const history = getExamResults().filter(r => r.userId === currentUser.id);
+        document.getElementById('pf-attempt').innerText = history.length + 1;
+    }
+
+    function logout() {
+        clearInterval(examData.interval);
+        currentUser = null;
+        document.getElementById('login-code').value = "";
+        document.getElementById('login-error').style.display = 'none';
+        showView('login');
+    }
+
+    function showView(viewName) {
+        ['login', 'preflight', 'manager', 'exam', 'result'].forEach(v => {
+            document.getElementById(`view-${v}`).classList.add('hidden');
+        });
+        document.getElementById(`view-${viewName}`).classList.remove('hidden');
+    }
+
+    /* ================= EXAM LOGIC ================= */
+    function startExam() {
+        // Shuffle questions
+        examData.questions = [...questionPool].sort(() => Math.random() - 0.5);
+        examData.answers = {};
+        examData.flags = {};
+        examData.startTime = new Date();
+        examData.timer = 15 * 60; // 15 min
+        examData.currentIndex = 0;
+
+        showView('exam');
+        renderNavGrid();
+        loadQuestion(0);
+        
+        // Start Timer
+        updateTimerDisplay();
+        examData.interval = setInterval(() => {
+            examData.timer--;
+            updateTimerDisplay();
+            if(examData.timer <= 0) {
+                finishExam(true); // Force finish
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(examData.timer / 60);
+        const s = examData.timer % 60;
+        document.getElementById('timer-display').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+        if(examData.timer < 60) document.getElementById('timer-display').style.color = "red";
+    }
+
+    function renderNavGrid() {
+        const grid = document.getElementById('nav-grid');
+        grid.innerHTML = "";
+        examData.questions.forEach((q, idx) => {
+            const box = document.createElement('div');
+            box.className = `nav-box`;
+            if(idx === examData.currentIndex) box.classList.add('current');
+            if(examData.answers[idx] && examData.answers[idx].length > 0) box.classList.add('answered');
+            if(examData.flags[idx]) box.classList.add('flagged');
+
+            box.onclick = () => loadQuestion(idx);
+
+            box.innerHTML = `
+                <div class="nav-num">${idx + 1}</div>
+                <div class="nav-status"></div>
+            `;
+            grid.appendChild(box);
+        });
+    }
+
+    function loadQuestion(index) {
+        examData.currentIndex = index;
+        const q = examData.questions[index];
+        const area = document.getElementById('question-area');
+        
+        // Generate options HTML
+        let optionsHtml = "";
+        q.options.forEach((opt, optIdx) => {
+            const isChecked = (examData.answers[index] || []).includes(optIdx) ? "checked" : "";
+            const inputType = q.type === 'multi' ? 'checkbox' : 'radio';
+            // Note: name attribute for radio must be unique per question instance
+            optionsHtml += `
+                <label class="option-row">
+                    <input type="${inputType}" name="q_opt" value="${optIdx}" ${isChecked} onchange="handleAnswer(${index}, ${optIdx}, '${q.type}')">
+                    <span>${opt}</span>
+                </label>
+            `;
+        });
+
+        area.innerHTML = `
+            <div class="q-header">
+                <div class="q-meta">
+                    <span>Vprašanje ${index + 1}</span>
+                    <span>Točk: ${q.points.toFixed(2)}</span>
+                </div>
+                <div class="q-text">${q.text}</div>
+                <label style="cursor:pointer; font-size:0.9em;">
+                    <input type="checkbox" ${examData.flags[index] ? 'checked' : ''} onchange="toggleFlag(${index})">
+                    Označi vprašanje (flag)
+                </label>
+            </div>
+            
+            <div class="img-placeholder">
+                <div style="font-weight:bold; margin-bottom:5px;">SLIKA:</div>
+                ${q.imgDesc}
+            </div>
+
+            <div style="margin-top: 20px;">
+                <p style="font-weight:bold;">${q.type === 'multi' ? 'Pravilna sta dva ali več odgovorov:' : 'Pravilen je en odgovor:'}</p>
+                ${optionsHtml}
+            </div>
+            
+            <div style="margin-top: 30px; display:flex; justify-content:space-between;">
+                <button onclick="navStep(-1)" ${index===0?'disabled':''}>&laquo; Nazaj</button>
+                <button onclick="navStep(1)" ${index===9?'disabled':''}>Naprej &raquo;</button>
+            </div>
+        `;
+        renderNavGrid(); // Update border for current
+    }
+
+    function handleAnswer(qIdx, optIdx, type) {
+        if (!examData.answers[qIdx]) examData.answers[qIdx] = [];
+        
+        if (type === 'single') {
+            examData.answers[qIdx] = [optIdx];
+        } else {
+            // Multi: toggle
+            const arr = examData.answers[qIdx];
+            if (arr.includes(optIdx)) {
+                examData.answers[qIdx] = arr.filter(i => i !== optIdx);
+            } else {
+                arr.push(optIdx);
+            }
+        }
+        renderNavGrid();
+    }
+
+    function toggleFlag(qIdx) {
+        examData.flags[qIdx] = !examData.flags[qIdx];
+        renderNavGrid();
+    }
+
+    function navStep(dir) {
+        const newIdx = examData.currentIndex + dir;
+        if(newIdx >= 0 && newIdx < 10) loadQuestion(newIdx);
+    }
+
+    function confirmFinish() {
+        const answered = Object.keys(examData.answers).length;
+        if(confirm(`Ste prepričani, da želite zaključiti? Odgovorili ste na ${answered} od 10 vprašanj.`)) {
+            finishExam(false);
+        }
+    }
+
+    /* ================= SCORING & RESULT ================= */
+    function finishExam(forced) {
+        clearInterval(examData.interval);
+        examData.endTime = new Date();
+        
+        let totalPoints = 0;
+        let earnedPoints = 0;
+
+        examData.questions.forEach((q, idx) => {
+            totalPoints += q.points;
+            
+            const userAns = (examData.answers[idx] || []).sort().join(',');
+            const correctAns = q.correct.sort().join(',');
+            
+            // All or nothing logic
+            if (userAns === correctAns) {
+                earnedPoints += q.points;
+                q.isCorrect = true;
+            } else {
+                q.isCorrect = false;
+            }
+            q.userSelection = examData.answers[idx] || [];
+        });
+
+        const percent = (earnedPoints / totalPoints) * 100;
+        const passed = percent > 88;
+
+        // Save Result
+        const resultRecord = {
+            userId: currentUser.id,
+            userName: currentUser.name,
+            date: new Date().toISOString(),
+            score: earnedPoints.toFixed(2),
+            max: totalPoints.toFixed(2),
+            percent: percent.toFixed(2),
+            passed: passed
+        };
+        saveExamResult(resultRecord);
+
+        renderResultView(resultRecord, examData.questions);
+        showView('result');
+    }
+
+    function renderResultView(res, questions) {
+        const start = examData.startTime;
+        const end = examData.endTime;
+        const diffMs = end - start;
+        const min = Math.floor(diffMs / 60000);
+        const sec = Math.floor((diffMs % 60000) / 1000);
+
+        document.getElementById('res-start').innerText = start.toLocaleString();
+        document.getElementById('res-end').innerText = end.toLocaleString();
+        document.getElementById('res-time').innerText = `${min} min ${sec} s`;
+        document.getElementById('res-points').innerText = `${res.score} / ${res.max}`;
+        document.getElementById('res-percent').innerText = `${res.percent} %`;
+
+        const title = document.getElementById('res-title');
+        const msg = document.getElementById('res-message');
+        
+        if(res.passed) {
+            title.innerText = "REZULTAT: OPRAVIL";
+            title.style.color = "green";
+            msg.innerText = `Čestitke! Osvojili ste ${res.percent}%, kar pomeni, da ste izpit OPRAVILI!`;
+        } else {
+            title.innerText = "REZULTAT: NI OPRAVIL";
+            title.style.color = "red";
+            msg.innerText = `Žal vam je tokrat spodletelo. Dosegli ste ${res.percent}%, kar je manj kot 88%.`;
+        }
+
+        // Detailed Review
+        const list = document.getElementById('review-list');
+        list.innerHTML = "";
+        questions.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = `review-item ${q.isCorrect ? 'correct' : 'wrong'}`;
+            
+            let userAnsText = q.userSelection.map(i => q.options[i]).join(', ') || "/";
+            let correctAnsText = q.correct.map(i => q.options[i]).join(', ');
+
+            div.innerHTML = `
+                <div style="font-weight:bold;">${idx+1}. ${q.text}</div>
+                <div style="font-size:0.9em; margin-top:5px;">
+                    Vaš odgovor: <b>${userAnsText}</b> <br>
+                    Pravilen odgovor: <b>${correctAnsText}</b>
+                </div>
+                <div style="text-align:right; font-weight:bold;">
+                    ${q.isCorrect ? q.points.toFixed(2) : '0.00'} / ${q.points.toFixed(2)} točk
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    /* ================= MANAGER TABLE ================= */
+    function renderManagerTable() {
+        const data = getExamResults().reverse(); // Newest first
+        const tbody = document.getElementById('manager-table-body');
+        tbody.innerHTML = "";
+
+        if(data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Ni podatkov</td></tr>";
+            return;
+        }
+
+        data.forEach(r => {
+            const tr = document.createElement('tr');
+            const dateObj = new Date(r.date);
+            tr.innerHTML = `
+                <td>${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString()}</td>
+                <td>${r.userName} (${r.userId})</td>
+                <td>${r.score} / ${r.max}</td>
+                <td>${r.percent}%</td>
+                <td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OPRAVIL' : 'NI OPRAVIL'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+</script>
+</body>
+</html>
