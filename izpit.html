@@ -3,112 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII PREIZKUS ZNANJA - SYSTEM V3 (Slike & Sync)</title>
+    <title>WII PREIZKUS ZNANJA - SISTEM</title>
     <style>
         :root {
             --bg-grey: #f0f0f0;
             --header-grey: #e0e0e0;
+            --border-color: #ccc;
             --wii-blue: #0099ff;
             --wii-dark: #333;
+            --highlight: #ffffcc;
             --nav-answered: #cceeff;
-            --danger: #ff4444;
-            --success: #00C851;
+            --nav-current: #000;
         }
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0; background-color: #888; height: 100vh;
-            display: flex; justify-content: center; align-items: center; overflow: hidden;
+            margin: 0;
+            background-color: #888;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
 
         #app-container {
-            width: 100%; max-width: 1200px; height: 95vh; background: #fff;
-            display: flex; flex-direction: column; border: 2px solid #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 95vh;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
         }
 
-        /* --- UTILS --- */
-        .hidden { display: none !important; }
-        button { cursor: pointer; }
-        input, select { padding: 8px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-        
-        /* --- LOGIN --- */
+        /* --- LOGIN SCREEN --- */
         .center-screen {
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            height: 100%; text-align: center; background: var(--bg-grey);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            background: var(--bg-grey);
+            width: 100%;
         }
+
         .login-box {
-            background: white; padding: 40px; border: 1px solid #999;
-            box-shadow: 5px 5px 0 rgba(0,0,0,0.1); width: 320px;
+            background: white;
+            padding: 40px;
+            border: 1px solid #999;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.1);
+            width: 300px;
         }
 
-        /* --- EXAM UI --- */
+        input[type="text"], input[type="password"], input[type="number"] { 
+            padding: 10px; font-size: 16px; margin: 10px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc;
+        }
+        button { 
+            padding: 10px 20px; font-size: 16px; cursor: pointer; 
+            background: var(--header-grey); border: 1px solid #999; font-weight: bold; margin: 5px;
+        }
+        button:hover { background: #d0d0d0; }
+        button.primary { background: var(--wii-blue); color: white; border-color: #0077cc; }
+        button.danger { background: #ffcccc; border-color: red; color: red; }
+        button.success { background: #ccffcc; border-color: green; color: green; }
+
+        /* --- EXAM LAYOUT --- */
         #exam-header {
-            height: 50px; background: var(--header-grey); border-bottom: 1px solid #999;
-            display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-weight: bold;
+            height: 50px;
+            background: var(--header-grey);
+            border-bottom: 1px solid #999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
         }
-        #progress-container { width: 100%; height: 8px; background: #eee; border-bottom: 1px solid #ccc; }
-        #progress-bar { height: 100%; width: 0%; background: var(--wii-blue); transition: width 0.3s; }
-        
-        #exam-body { display: flex; flex: 1; overflow: hidden; }
-        #question-area { flex: 3; padding: 30px; overflow-y: auto; border-right: 1px solid #ccc; }
-        #navigation-area { flex: 1; padding: 20px; background: #f9f9f9; display: flex; flex-direction: column; max-width: 300px; }
 
-        .q-header { background: #f0f4f8; padding: 15px; border-left: 5px solid var(--wii-blue); margin-bottom: 20px; }
-        
-        /* SLIKA NA TESTU */
-        .exam-image-container {
-            text-align: center; margin: 15px 0; border: 1px solid #ddd; padding: 10px; background: #fafafa;
+        #exam-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
         }
-        .exam-image { max-width: 100%; max-height: 300px; height: auto; display: block; margin: 0 auto; }
 
-        .option-row { padding: 10px; margin: 5px 0; border: 1px solid #eee; cursor: pointer; display: flex; align-items: center; }
+        #question-area {
+            flex: 3;
+            padding: 30px;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+            background: #fff;
+        }
+
+        #navigation-area {
+            flex: 1;
+            padding: 20px;
+            background: #f9f9f9;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
+        }
+
+        /* --- QUESTION STYLING --- */
+        .q-header {
+            background: #f0f4f8;
+            padding: 15px;
+            border-left: 5px solid var(--wii-blue);
+            margin-bottom: 20px;
+        }
+        .q-meta { font-size: 0.9em; color: #666; margin-bottom: 5px; display:flex; justify-content:space-between; }
+        .q-text { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; }
+        
+        /* SLIKA / MEDIA */
+        .img-placeholder {
+            width: 100%;
+            max-height: 400px;
+            background: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed #999;
+            margin: 15px 0;
+            color: #555;
+            flex-direction: column;
+            padding: 10px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .real-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .option-row {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
         .option-row:hover { background: #f0f0f0; }
+        .option-row input { width: auto; margin-right: 10px; }
 
-        .nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
+        /* --- NAV GRID --- */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
         .nav-box {
-            height: 40px; border: 1px solid #999; display: flex; flex-direction: column; 
-            cursor: pointer; position: relative; background: white;
+            height: 40px;
+            border: 1px solid #999;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+            background: white;
         }
+        .nav-num { font-size: 10px; padding: 2px; }
+        .nav-status { flex: 1; }
+        
         .nav-box.current { border: 2px solid #000; }
-        .nav-box.answered .nav-status { background: var(--nav-answered); flex: 1; border-top: 1px solid #ccc; }
+        .nav-box.answered .nav-status { background-color: var(--nav-answered); border-top: 1px solid #ccc; }
         .nav-box.flagged::after {
-            content: ''; position: absolute; top: 0; right: 0; border-style: solid; 
-            border-width: 0 10px 10px 0; border-color: transparent red transparent transparent;
+            content: ''; position: absolute; top: 0; right: 0;
+            width: 0; height: 0;
+            border-style: solid; border-width: 0 10px 10px 0;
+            border-color: transparent red transparent transparent;
         }
-        .nav-num { font-size: 10px; padding: 2px; } .nav-status { flex: 1; }
 
-        /* --- MANAGER --- */
-        .manager-header { background: #333; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .manager-tabs { background: #eee; padding: 10px 20px; border-bottom: 1px solid #ccc; display: flex; gap: 10px; }
-        .tab-btn { padding: 8px 15px; border: 1px solid #999; background: white; font-weight: bold; }
-        .tab-btn.active { background: var(--wii-blue); color: white; border-color: var(--wii-dark); }
+        /* --- MANAGER VIEW --- */
+        #view-manager { display: flex; flex-direction: column; height: 100%; }
+        .manager-nav { background: #333; padding: 10px; display: flex; gap: 10px; }
+        .manager-nav button { background: #555; border: none; color: white; margin: 0; }
+        .manager-nav button.active { background: var(--wii-blue); }
         .manager-content { padding: 20px; overflow-y: auto; flex: 1; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         th { background: #eee; }
-        .pass { color: green; font-weight: bold; } .fail { color: red; font-weight: bold; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        tr.clickable:hover { background-color: #eef; cursor: pointer; }
 
-        /* --- MODAL --- */
+        /* --- EDITOR STYLES --- */
+        .q-list-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .q-list-item.disabled { opacity: 0.6; background: #eee; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; color: white; }
+        .badge.multi { background: orange; }
+        .badge.single { background: var(--wii-blue); }
+        
         .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100;
         }
-        .modal-box {
-            background: white; width: 90%; max-width: 800px; max-height: 90%;
-            display: flex; flex-direction: column; border: 2px solid #333; box-shadow: 0 0 20px #000;
+        .modal-content {
+            background: white; padding: 20px; width: 80%; max-height: 90%; overflow-y: auto; border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        .modal-header { background: #eee; padding: 15px; border-bottom: 1px solid #ccc; font-weight: bold; display: flex; justify-content: space-between; }
-        .modal-body { padding: 20px; overflow-y: auto; }
-        .modal-footer { padding: 15px; border-top: 1px solid #ccc; text-align: right; background: #f9f9f9; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .opt-row { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
 
-        .form-label { display: block; font-weight: bold; margin-bottom: 5px; margin-top: 10px; }
-        .opt-item { display: flex; gap: 10px; margin-bottom: 5px; align-items: center; }
-        .btn-green { background: var(--success); color: white; border: none; padding: 8px 15px; }
-        .btn-red { background: var(--danger); color: white; border: none; padding: 5px 10px; }
-        
-        .preview-img { max-width: 200px; max-height: 150px; border: 1px solid #ccc; margin-top: 5px; display: block; }
+        /* --- RESULT SCREEN --- */
+        .result-summary {
+            background: #fdfdfd;
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .result-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 5px 0; }
+        .review-item { border: 1px solid #eee; margin-bottom: 10px; padding: 10px; }
+        .review-item.correct { background: #eeffee; border-left: 5px solid green; }
+        .review-item.wrong { background: #ffeeee; border-left: 5px solid red; }
+        .review-item.partial { background: #fffde7; border-left: 5px solid orange; }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -118,11 +235,10 @@
     <div id="view-login" class="center-screen">
         <div class="login-box">
             <h2>WII EXAM SYSTEM</h2>
-            <p>Sinhronizacija z: <b>wiiShopDBv5</b></p>
-            <p style="font-size:0.9em; color:#666;">Vnesi osebno šifro ali 000 za Manager</p>
-            <input type="password" id="login-code" placeholder="Šifra zaposlenega">
-            <button onclick="handleLogin()" style="margin-top:10px; width:100%; padding:10px; background:#333; color:white;">PRIJAVA</button>
-            <p id="login-error" style="color:red; display:none; margin-top:10px;"></p>
+            <p>Vnesi osebno šifro</p>
+            <input type="password" id="login-code" placeholder="npr. 000 (admin) ali 1111">
+            <button onclick="handleLogin()">PRIJAVA</button>
+            <p id="login-error" style="color:red; display:none; margin-top:10px;">Napačna šifra!</p>
         </div>
     </div>
 
@@ -133,10 +249,62 @@
             <p><b>Šifra:</b> <span id="pf-id"></span></p>
             <p><b>Poskus št.:</b> <span id="pf-attempt"></span></p>
             <hr>
-            <p>Izpit vsebuje <b id="pf-qcount"></b> vprašanj. Čas: <b id="pf-time"></b> min.</p>
+            <p>Izpit vsebuje <b id="pf-qcount">10</b> vprašanj.</p>
+            <p>Časovna omejitev: <b id="pf-time">15 min</b>.</p>
             <div style="text-align: center; margin-top: 20px;">
-                <button onclick="startExam()" style="background: var(--wii-blue); color: white; padding: 10px 20px; border:none;">ZAČNI REŠEVANJE</button>
-                <button onclick="logout()" style="padding: 10px 20px;">PREKLIČI</button>
+                <button class="primary" onclick="startExam()">ZAČNI REŠEVANJE</button>
+                <button onclick="logout()">PREKLIČI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-manager" class="hidden">
+        <div class="manager-nav">
+            <button onclick="setManagerTab('history')" id="tab-btn-history" class="active">ZGODOVINA</button>
+            <button onclick="setManagerTab('questions')" id="tab-btn-questions">BAZA VPRAŠANJ</button>
+            <button onclick="setManagerTab('settings')" id="tab-btn-settings">NASTAVITVE</button>
+            <div style="flex:1"></div>
+            <button onclick="logout()" style="background:#cc0000;">ODJAVA</button>
+        </div>
+
+        <div id="mgr-tab-history" class="manager-content">
+            <h3>Zgodovina preizkusov</h3>
+            <p style="color:#666; font-size:0.9em;">Klikni na vrstico za podroben ogled testa.</p>
+            <table id="manager-table">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Zaposleni</th>
+                        <th>Točke</th>
+                        <th>%</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="manager-table-body"></tbody>
+            </table>
+        </div>
+
+        <div id="mgr-tab-questions" class="manager-content hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3>Baza vprašanj</h3>
+                <button class="success" onclick="openQuestionEditor()">+ DODAJ NOVO VPRAŠANJE</button>
+            </div>
+            <div id="questions-list"></div>
+        </div>
+
+        <div id="mgr-tab-settings" class="manager-content hidden">
+            <h3>Konfiguracija izpita</h3>
+            <div class="login-box" style="width: 100%; text-align: left;">
+                <label>Število vprašanj na poli:</label>
+                <input type="number" id="cfg-qcount" min="1" max="100">
+                <p style="font-size:0.8em; color:#666;">Privzeto: 10. Če je omogočenih vprašanj manj, bodo uporabljena vsa.</p>
+                <br>
+                <p><b>Predviden čas:</b> <span id="cfg-calc-time">15 min</span> (1.5 min na vprašanje)</p>
+                <button class="primary" onclick="saveSettings()">SHRANI NASTAVITVE</button>
+            </div>
+            <div style="margin-top:20px; border-top:1px solid #ccc; padding-top:10px;">
+                <h4>Ponastavitev baze</h4>
+                <button class="danger" onclick="resetDatabase()">PONASTAVI VSA VPRAŠANJA NA PRIVZETO</button>
             </div>
         </div>
     </div>
@@ -146,600 +314,852 @@
             <span>WII PREIZKUS ZNANJA</span>
             <span id="timer-display" style="font-family: monospace; font-size: 1.2em;">00:00</span>
         </div>
-        <div id="progress-container"><div id="progress-bar"></div></div>
         <div id="exam-body">
             <div id="question-area"></div>
             <div id="navigation-area">
                 <h3>Navigacija</h3>
                 <div id="nav-grid" class="nav-grid"></div>
                 <div style="margin-top: auto;">
-                    <button onclick="confirmFinish()" style="width:100%; background: #333; color: white; padding: 15px;">KONČAJ REŠEVANJE</button>
+                    <button onclick="confirmFinish()" style="width:100%; background: #333; color: white;">KONČAJ REŠEVANJE</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="view-result" class="hidden" style="overflow-y: auto; padding: 20px;">
-        <div class="result-summary" style="background:#f9f9f9; padding:20px; border:1px solid #ccc;">
+        <div class="result-summary">
             <h2 id="res-title">Rezultat</h2>
             <p id="res-message" style="font-size: 1.2em; font-weight: bold;"></p>
-            <div>Točke: <span id="res-points"></span> | Odstotek: <span id="res-percent"></span></div>
+            
+            <div style="background: #eee; padding: 15px; margin-top: 10px; border: 1px solid #999;">
+                <div class="result-row"><span>Uporabnik:</span><span id="res-user"></span></div>
+                <div class="result-row"><span>Datum:</span><span id="res-date"></span></div>
+                <div class="result-row"><span>Točke:</span><span id="res-points"></span></div>
+                <div class="result-row" style="border:none; font-weight: bold; font-size: 1.2em;"><span>Odstotek:</span><span id="res-percent"></span></div>
+            </div>
         </div>
-        <h3>Pregled odgovorov</h3>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Pregled odgovorov</h3>
+            <button id="btn-print-preview" onclick="togglePrintPreview()" class="primary">PDF / PREDOGLED (CSZ)</button>
+        </div>
         <div id="review-list"></div>
         <br>
-        <button onclick="logout()" style="width:100%; padding: 15px;">ZAKLJUČI IN ODJAVA</button>
-    </div>
-
-    <div id="view-manager" class="hidden" style="flex-direction: column; height: 100%;">
-        <div class="manager-header">
-            <span>ADMINISTRACIJA (000)</span>
-            <button onclick="logout()" style="font-size: 0.8em; padding: 5px 10px; color:black;">ODJAVA</button>
-        </div>
-        <div class="manager-tabs">
-            <button class="tab-btn active" onclick="switchManagerTab('results')">Rezultati</button>
-            <button class="tab-btn" onclick="switchManagerTab('questions')">Baza Vprašanj</button>
-            <button class="tab-btn" onclick="switchManagerTab('settings')">Nastavitve</button>
-        </div>
-        
-        <div id="tab-results" class="manager-content">
-            <h3>Zgodovina testov</h3>
-            <table id="manager-table">
-                <thead><tr><th>Datum</th><th>Zaposleni</th><th>Točke</th><th>%</th><th>Status</th><th>Akcija</th></tr></thead>
-                <tbody id="manager-table-body"></tbody>
-            </table>
-        </div>
-
-        <div id="tab-questions" class="manager-content hidden">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <h3>Urejanje vprašanj</h3>
-                <button class="btn-green" onclick="openEditor(null)">+ Novo vprašanje</button>
-            </div>
-            <table id="questions-table">
-                <thead><tr><th>ID</th><th>Slika</th><th>Vprašanje</th><th>Tip</th><th>Status</th><th>Akcije</th></tr></thead>
-                <tbody id="questions-table-body"></tbody>
-            </table>
-        </div>
-
-        <div id="tab-settings" class="manager-content hidden">
-            <h3>Nastavitve</h3>
-            <div style="border:1px solid #ccc; padding:20px; width:300px;">
-                <label class="form-label">Št. vprašanj na izpitu:</label>
-                <input type="number" id="set-q-count" min="1">
-                <p>Čas (avto): <b id="calc-time"></b> min</p>
-                <button class="btn-green" onclick="saveSettings()" style="width:100%; margin-top:10px;">SHRANI</button>
-                <span id="settings-msg" style="color:green; display:none;">Shranjeno!</span>
-            </div>
-        </div>
+        <button id="btn-result-close" onclick="closeResultView()" style="width:100%; padding: 15px;">ZAPRI / ODJAVA</button>
     </div>
 
     <div id="modal-editor" class="modal-overlay hidden">
-        <div class="modal-box">
-            <div class="modal-header">
-                <span id="editor-title">Urejanje</span>
-                <button onclick="closeModal('modal-editor')">X</button>
+        <div class="modal-content">
+            <h3 id="editor-title">Urejanje vprašanja</h3>
+            
+            <div class="form-group">
+                <label>Besedilo vprašanja:</label>
+                <input type="text" id="ed-text">
             </div>
-            <div class="modal-body">
-                <input type="hidden" id="edit-id">
-                
-                <label class="form-label">Besedilo vprašanja:</label>
-                <input type="text" id="edit-text" placeholder="Vpiši vprašanje...">
 
-                <div style="background:#f0f8ff; padding:10px; margin-top:10px; border:1px solid #bde;">
-                    <label class="form-label" style="margin-top:0;">Slika (neobvezno):</label>
-                    <input type="file" id="edit-img-file" accept="image/*" onchange="previewImage()">
-                    <input type="hidden" id="edit-img-data"> <div id="img-preview-container" style="margin-top:5px;">
-                        <img id="edit-img-preview" class="preview-img hidden">
-                        <button id="btn-remove-img" class="btn-red hidden" style="margin-top:5px;" onclick="removeImage()">Odstrani sliko</button>
-                    </div>
-                    <small style="color:#666;">Nasvet: Uporabi manjše slike (jpg/png) za hitrejše delovanje.</small>
+            <div class="form-group" style="display:flex; gap:20px;">
+                <div style="flex:1">
+                    <label>Točke:</label>
+                    <input type="number" id="ed-points" step="0.5" value="1">
                 </div>
-
-                <div style="display:flex; gap: 20px; margin-top:10px;">
-                    <div style="flex:1">
-                        <label class="form-label">Točke:</label>
-                        <input type="number" id="edit-points" value="1" step="0.5">
-                    </div>
-                    <div style="flex:1">
-                        <label class="form-label">Tip:</label>
-                        <select id="edit-type" onchange="togglePartialOption()">
-                            <option value="single">En odgovor (Radio)</option>
-                            <option value="multi">Več odgovorov (Checkbox)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="div-partial" class="hidden" style="margin-top:10px; background:#eef; padding:5px;">
-                    <label><input type="checkbox" id="edit-partial"> <b>Dovoli delne točke?</b></label>
-                </div>
-
-                <div style="margin-top:15px; border-top:1px solid #ccc; padding-top:10px;">
-                    <label class="form-label">Odgovori (Označi pravilne):</label>
-                    <div id="edit-options-list"></div>
-                    <button onclick="addEditorOption()" style="margin-top:5px;">+ Dodaj odgovor</button>
-                </div>
-
-                <div style="margin-top:15px;">
-                    <label class="form-label">Status:</label>
-                    <select id="edit-active">
-                        <option value="true">Aktivno</option>
-                        <option value="false">Neaktivno</option>
+                <div style="flex:1">
+                    <label>Tip:</label>
+                    <select id="ed-type" onchange="updateEditorType()" style="width:100%; padding:10px;">
+                        <option value="single">En pravilen odgovor</option>
+                        <option value="multi">Več pravilnih odgovorov</option>
                     </select>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button onclick="saveQuestion()" class="btn-green">SHRANI VPRAŠANJE</button>
-            </div>
-        </div>
-    </div>
 
-    <div id="modal-review" class="modal-overlay hidden">
-        <div class="modal-box" style="height: 95%;">
-            <div class="modal-header">
-                <span>PREGLED IZPITA (Korektura csz)</span>
-                <button onclick="closeModal('modal-review')">X</button>
+            <div class="form-group" id="div-partial" style="display:none; background:#ffffe0; padding:10px; border:1px solid #e0e000;">
+                <label style="display:flex; align-items:center;">
+                    <input type="checkbox" id="ed-partial"> Dovoli delno točkovanje
+                </label>
+                <small>Če je vklopljeno, kandidat dobi točke sorazmerno s pravilnimi odgovori. (Napačni odgovori odštevajo).</small>
             </div>
-            <div class="modal-body" id="review-content"></div>
+
+            <div class="form-group">
+                <label>Slika (Opcijsko):</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="file" id="ed-img-input" accept="image/png, image/jpeg">
+                    <button onclick="clearEditorImage()" style="font-size:0.8em; padding:5px;">Odstrani sliko</button>
+                </div>
+                <div id="ed-img-preview" class="img-placeholder" style="height:100px; margin-top:5px;">Ni slike</div>
+            </div>
+
+            <div class="form-group">
+                <label>Odgovori (Označi pravilne):</label>
+                <div id="ed-options-list"></div>
+                <button onclick="addEditorOption()">+ Dodaj odgovor</button>
+            </div>
+
+            <div class="form-group">
+                <label style="display:flex; align-items:center; font-size:1.1em;">
+                    <input type="checkbox" id="ed-enabled" checked> Vprašanje je OMOGOČENO (Aktivno na testih)
+                </label>
+            </div>
+
+            <div style="margin-top:20px; text-align:right;">
+                <button class="danger" onclick="closeEditor()">Prekliči</button>
+                <button class="primary" onclick="saveQuestion()">SHRANI VPRAŠANJE</button>
+            </div>
         </div>
     </div>
 
 </div>
 
 <script>
-    /* ================= SYSTEM CONFIG ================= */
-    const DB_KEY_EMPLOYEES = 'wiiShopDBv5'; // External Sync
-    const QUESTIONS_KEY = 'wiiQuestions_v3';
-    const RESULTS_KEY = 'wiiExamResults_v3';
-    const SETTINGS_KEY = 'wiiSettings_v3';
+    /* ================= DATA MODEL ================= */
+    const DB_KEY = 'wiiShopDBv6';
+    const EXAM_KEY = 'wiiExamResults';
+    const QUESTIONS_KEY = 'wiiQuestionPool';
+    const CONFIG_KEY = 'wiiConfig';
 
-    // Seeding dummy data if wiiShopDBv5 doesn't exist (for testing)
-    if (!localStorage.getItem(DB_KEY_EMPLOYEES)) {
-        console.log("Creating dummy employee DB...");
-        const dummyDB = {
-            employees: [
-                { id: "101", name: "Janez Novak", code: "101" },
-                { id: "102", name: "Maja Kos", code: "102" }
-            ]
-        };
-        localStorage.setItem(DB_KEY_EMPLOYEES, JSON.stringify(dummyDB));
-    }
-
-    // Default Questions
-    const initialPool = [
-        { id: 1, text: "Ali je blagajna na sliki prijavljena?", points: 2, type: 'single', active: true, options: ["DA", "NE"], correct: [1] },
-        { id: 2, text: "Kaj moramo vpisati ob prijavi?", points: 4, type: 'multi', partialCredit: true, active: true, options: ["ID", "Znesek", "Datum", "Depozit"], correct: [0, 3] }
+    // Default Question Pool (seeding)
+    const initialQuestions = [
+        {
+            id: 1, text: "Ali je blagajna na sliki prijavljena?", points: 2.00, type: 'single',
+            imgDesc: "Zaslon prikazuje '0.00 WII', 'SKUPAJ', spodaj gumb 'LOGIN'.", imgData: null,
+            options: ["DA", "NE"], correct: [1], enabled: true, partial: false
+        },
+        {
+            id: 2, text: "Kateri gumb na sliki moramo izbrati za prijavo blagajne?", points: 2.00, type: 'single',
+            imgDesc: "Zaslon z gumbi: LOGIN, VMESNO, SKYM, DOLOČI OPRAVILA, DOD., LOGOUT.", imgData: null,
+            options: ["LOGIN", "VMESNO", "SKYM", "DOLOČI OPRAVILA", "LOGOUT"], correct: [0], enabled: true, partial: false
+        },
+        {
+            id: 3, text: "Kaj vse moramo vpisati ob prijavi blagajne:", points: 4.00, type: 'multi',
+            imgDesc: "Ni slike.", imgData: null,
+            options: ["ID ZAPOSLENEGA", "KONČNI DEPOZIT", "STAROST", "ZAČETNI DEPOZIT", "IME IN PRIIMEK BLAGAJNIKA"], correct: [0, 3], enabled: true, partial: true
+        },
+        {
+            id: 4, text: "Kaj naredi gumb VMESNO?", points: 3.00, type: 'single',
+            imgDesc: "Gumb 'VMESNO'.", imgData: null,
+            options: ["Pokaže koliko denarja je dala zadnja stranka", "Pokaže stanje ob začetku", "Pokaže koliko denarja mora biti v blagajni ta trenutek"], correct: [2], enabled: true, partial: false
+        },
+        {
+            id: 5, text: "Če manager pusti manager kartico, ali lahko odprem meni z gumbom dodatno?", points: 5.00, type: 'single',
+            imgDesc: "Varnostno vprašanje.", imgData: null,
+            options: ["DA, s kartico lahko počnem vse", "NE, s kartico lahko uporabljam samo osnovne gumbe"], correct: [1], enabled: true, partial: false
+        },
+        {
+            id: 6, text: "Ali je zaslon za stranke na sliki prižgan?", points: 2.00, type: 'single',
+            imgDesc: "Sivo ozadje 'WII DELIVERY LOGIN'.", imgData: null,
+            options: ["DA", "NE"], correct: [0], enabled: true, partial: false
+        },
+        {
+            id: 7, text: "Kako prižgemo zaslon za stranke, če je že odprt na drugem zaslonu?", points: 2.00, type: 'single',
+            imgDesc: "Kontekst prijave.", imgData: null,
+            options: ["Prijavimo blagajno", "Ugasnemo vse skupaj"], correct: [0], enabled: true, partial: false
+        },
+        {
+            id: 8, text: "Kaj moramo vnesti v belo polje na sliki?", points: 3.00, type: 'single',
+            imgDesc: "Ekran 'WII DELIVERY LOGIN' z belim vnosnim poljem.", imgData: null,
+            options: ["WII DELIVERY LOGIN", "Vnest ID zaposlenega", "Skeniramo kartico", "Napišemo svojo strost", "PRIJAVA"], correct: [1], enabled: true, partial: false
+        },
+        {
+            id: 9, text: "Ali je stranka na sliki že oddala naročilo?", points: 3.00, type: 'single',
+            imgDesc: "Chat okno. Stranka: 'Dober dan'.", imgData: null,
+            options: ["DA", "NE"], correct: [1], enabled: true, partial: false
+        },
+        {
+            id: 10, text: "Katere podatke vpišemo v ZAKLJUČEK NAROČILA?", points: 7.00, type: 'multi',
+            imgDesc: "Polja: Št. Računa, Znesek, Način plačila.", imgData: null,
+            options: ["Številko računa", "Ime stranke", "Vsebino naročila", "Znesek računa", "Bančno kartico"], correct: [0, 3, 4], enabled: true, partial: true
+        }
     ];
 
     let currentUser = null;
-    let examData = { questions: [], answers: {}, flags: {}, timer: 0, interval: null, currentIndex: 0 };
+    let viewingResult = null; // For manager reviewing a past test
+    
+    // Runtime Exam State
+    let examState = {
+        questions: [],
+        answers: {}, // { qIndex: [optIndex, optIndex] }
+        flags: {},
+        startTime: null,
+        endTime: null,
+        timer: 0,
+        interval: null,
+        currentIndex: 0
+    };
 
-    /* ================= DATA HELPERS ================= */
-    function getEmployeesDB() { return JSON.parse(localStorage.getItem(DB_KEY_EMPLOYEES)) || { employees: [] }; }
-    function getQuestions() { 
-        const q = localStorage.getItem(QUESTIONS_KEY);
-        return q ? JSON.parse(q) : initialPool;
-    }
-    function saveQuestions(data) { localStorage.setItem(QUESTIONS_KEY, JSON.stringify(data)); }
-    function getResults() { return JSON.parse(localStorage.getItem(RESULTS_KEY)) || []; }
-    function saveResult(res) { 
-        const r = getResults(); r.push(res); localStorage.setItem(RESULTS_KEY, JSON.stringify(r)); 
-    }
-    function getSettings() { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { qCount: 10 }; }
-    function saveSettingsDB(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+    // Editor State
+    let currentEditId = null; // null = new
+    let tempImgData = null;
 
-    /* ================= LOGIN (SYNC LOGIC) ================= */
+    /* ================= STORAGE HELPERS ================= */
+    function getQuestions() {
+        const stored = localStorage.getItem(QUESTIONS_KEY);
+        return stored ? JSON.parse(stored) : initialQuestions;
+    }
+
+    function saveQuestions(list) {
+        localStorage.setItem(QUESTIONS_KEY, JSON.stringify(list));
+    }
+
+    function getConfig() {
+        const stored = localStorage.getItem(CONFIG_KEY);
+        return stored ? JSON.parse(stored) : { questionCount: 10 };
+    }
+
+    function saveConfig(cfg) {
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+    }
+
+    function getResults() {
+        return JSON.parse(localStorage.getItem(EXAM_KEY)) || [];
+    }
+
+    function resetDatabase() {
+        if(confirm("Ali ste prepričani? To bo izbrisalo vsa dodana vprašanja in povrnilo prvotnih 10.")) {
+            saveQuestions(initialQuestions);
+            loadQuestionsList();
+            alert("Baza ponastavljena.");
+        }
+    }
+
+    /* ================= LOGIN & NAVIGATION ================= */
     function handleLogin() {
         const code = document.getElementById('login-code').value.trim();
-        const errorMsg = document.getElementById('login-error');
-        errorMsg.style.display = 'none';
-
-        // 1. MANAGER
-        if (code === '000') {
+        
+        if(code === '000') {
             currentUser = { name: "MANAGER", role: "MANAGER", id: "000" };
             showView('manager');
-            switchManagerTab('results');
+            setManagerTab('history');
             return;
         }
 
-        // 2. EMPLOYEE SYNC
-        const db = getEmployeesDB();
-        const employee = db.employees.find(e => e.code === code || e.id === code);
+        // Simple User Check
+        let users = JSON.parse(localStorage.getItem(DB_KEY)) || { employees: [] };
+        let user = users.employees ? users.employees.find(e => e.code === code) : null;
+        
+        if(!user && code === '1111') user = { name: "JANEZ NOVAK", id: "1111", role: "ZAPOSLENI" };
 
-        if (employee) {
-            currentUser = employee;
+        if(user) {
+            currentUser = user;
             showView('preflight');
             preparePreflight();
         } else {
-            errorMsg.innerText = "Napačna šifra ali uporabnik ne obstaja v wiiShopDBv5!";
-            errorMsg.style.display = 'block';
+            document.getElementById('login-error').style.display = 'block';
         }
-    }
-
-    function preparePreflight() {
-        document.getElementById('pf-name').innerText = currentUser.name;
-        document.getElementById('pf-id').innerText = currentUser.id;
-        const attempts = getResults().filter(r => r.userId == currentUser.id).length;
-        document.getElementById('pf-attempt').innerText = attempts + 1;
-        
-        const sets = getSettings();
-        document.getElementById('pf-qcount').innerText = sets.qCount;
-        document.getElementById('pf-time').innerText = Math.ceil(sets.qCount * 1.5);
     }
 
     function logout() {
-        clearInterval(examData.interval);
+        clearInterval(examState.interval);
         currentUser = null;
+        viewingResult = null;
         document.getElementById('login-code').value = "";
+        document.getElementById('login-error').style.display = 'none';
         showView('login');
     }
 
-    function showView(name) {
-        document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-        document.getElementById(`view-${name}`).classList.remove('hidden');
+    function showView(viewName) {
+        ['login', 'preflight', 'manager', 'exam', 'result'].forEach(v => {
+            document.getElementById(`view-${v}`).classList.add('hidden');
+        });
+        document.getElementById(`view-${viewName}`).classList.remove('hidden');
     }
 
-    /* ================= EXAM LOGIC ================= */
-    function startExam() {
-        const sets = getSettings();
-        const all = getQuestions().filter(q => q.active);
+    /* ================= STUDENT: PREFLIGHT & EXAM ================= */
+    function preparePreflight() {
+        const cfg = getConfig();
+        document.getElementById('pf-name').innerText = currentUser.name;
+        document.getElementById('pf-id').innerText = currentUser.id;
         
-        // Randomize
-        examData.questions = [...all].sort(() => Math.random() - 0.5).slice(0, sets.qCount);
-        examData.answers = {};
-        examData.flags = {};
-        examData.timer = Math.ceil(examData.questions.length * 1.5 * 60);
-        examData.currentIndex = 0;
+        const history = getResults().filter(r => r.userId === currentUser.id);
+        document.getElementById('pf-attempt').innerText = history.length + 1;
+        
+        // Calculate dynamic time
+        const qCount = cfg.questionCount;
+        const timeMin = Math.ceil(qCount * 1.5);
+        
+        document.getElementById('pf-qcount').innerText = qCount;
+        document.getElementById('pf-time').innerText = `${timeMin} min`;
+    }
+
+    function startExam() {
+        const cfg = getConfig();
+        const allQuestions = getQuestions();
+        const enabledQuestions = allQuestions.filter(q => q.enabled);
+
+        // Shuffle and slice
+        let selected = enabledQuestions.sort(() => Math.random() - 0.5);
+        if (selected.length > cfg.questionCount) {
+            selected = selected.slice(0, cfg.questionCount);
+        }
+
+        if (selected.length === 0) {
+            alert("Napaka: Ni omogočenih vprašanj!");
+            return;
+        }
+
+        // Setup State
+        examState.questions = JSON.parse(JSON.stringify(selected)); // Deep copy
+        examState.answers = {};
+        examState.flags = {};
+        examState.startTime = new Date();
+        examState.currentIndex = 0;
+        
+        // Time: 1.5 min per question => 90 sec
+        examState.timer = examState.questions.length * 90;
 
         showView('exam');
         renderNavGrid();
-        loadQuestion(0);
+        loadExamQuestion(0);
         
-        examData.interval = setInterval(() => {
-            examData.timer--;
-            const m = Math.floor(examData.timer / 60);
-            const s = examData.timer % 60;
-            document.getElementById('timer-display').innerText = `${m}:${s.toString().padStart(2,'0')}`;
-            if(examData.timer <= 0) finishExam();
+        updateTimerDisplay();
+        examState.interval = setInterval(() => {
+            examState.timer--;
+            updateTimerDisplay();
+            if(examState.timer <= 0) finishExam(true);
         }, 1000);
     }
 
-    function loadQuestion(idx) {
-        examData.currentIndex = idx;
-        const q = examData.questions[idx];
+    function updateTimerDisplay() {
+        const m = Math.floor(examState.timer / 60);
+        const s = examState.timer % 60;
+        document.getElementById('timer-display').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+        document.getElementById('timer-display').style.color = examState.timer < 60 ? "red" : "black";
+    }
+
+    function renderNavGrid() {
+        const grid = document.getElementById('nav-grid');
+        grid.innerHTML = "";
+        examState.questions.forEach((q, idx) => {
+            const box = document.createElement('div');
+            box.className = `nav-box`;
+            if(idx === examState.currentIndex) box.classList.add('current');
+            if(examState.answers[idx] && examState.answers[idx].length > 0) box.classList.add('answered');
+            if(examState.flags[idx]) box.classList.add('flagged');
+            box.onclick = () => loadExamQuestion(idx);
+            box.innerHTML = `<div class="nav-num">${idx + 1}</div><div class="nav-status"></div>`;
+            grid.appendChild(box);
+        });
+    }
+
+    function loadExamQuestion(index) {
+        examState.currentIndex = index;
+        const q = examState.questions[index];
         const area = document.getElementById('question-area');
         
-        // Image logic
-        let imgHtml = '';
-        if (q.imgData) {
-            imgHtml = `<div class="exam-image-container"><img src="${q.imgData}" class="exam-image"></div>`;
-        }
-
-        let opts = '';
-        q.options.forEach((o, i) => {
-            const checked = (examData.answers[idx] || []).includes(i) ? 'checked' : '';
-            const type = q.type === 'multi' ? 'checkbox' : 'radio';
-            opts += `
+        let optionsHtml = "";
+        q.options.forEach((opt, optIdx) => {
+            const isChecked = (examState.answers[index] || []).includes(optIdx) ? "checked" : "";
+            const inputType = q.type === 'multi' ? 'checkbox' : 'radio';
+            optionsHtml += `
                 <label class="option-row">
-                    <input type="${type}" name="q_opt" value="${i}" ${checked} onchange="handleAnswer(${idx}, ${i}, '${q.type}')">
-                    <span>${o}</span>
+                    <input type="${inputType}" name="q_opt_${index}" value="${optIdx}" ${isChecked} onchange="handleAnswer(${index}, ${optIdx}, '${q.type}')">
+                    <span>${opt}</span>
                 </label>`;
         });
 
+        // Image Logic: DataURL > Description
+        let imgContent = `<div class="img-placeholder"><div style="font-weight:bold;">SLIKA:</div>${q.imgDesc || 'Brez opisa'}</div>`;
+        if (q.imgData) {
+            imgContent = `<div class="img-placeholder" style="background:white; border:none;"><img src="${q.imgData}" class="real-image"></div>`;
+        }
+
         area.innerHTML = `
             <div class="q-header">
-                <div style="display:flex; justify-content:space-between; font-size:0.9em;">
-                    <span>Vprašanje ${idx+1}/${examData.questions.length}</span>
-                    <span>Točk: ${q.points}</span>
-                </div>
-                <div style="font-size:1.3em; font-weight:bold; margin-top:10px;">${q.text}</div>
-                <label style="cursor:pointer; margin-top:5px; display:block;">
-                    <input type="checkbox" ${examData.flags[idx]?'checked':''} onchange="toggleFlag(${idx})"> Označi (Flag)
-                </label>
+                <div class="q-meta"><span>Vprašanje ${index + 1} / ${examState.questions.length}</span><span>Točk: ${q.points}</span></div>
+                <div class="q-text">${q.text}</div>
+                <label style="cursor:pointer; font-size:0.9em;"><input type="checkbox" ${examState.flags[index]?'checked':''} onchange="toggleFlag(${index})"> Označi (flag)</label>
             </div>
-            ${imgHtml}
-            <div>${opts}</div>
-            <div style="margin-top:20px; display:flex; justify-content:space-between;">
-                <button onclick="navStep(-1)" ${idx===0?'disabled':''}>&laquo; Nazaj</button>
-                <button onclick="navStep(1)" ${idx===examData.questions.length-1?'disabled':''}>Naprej &raquo;</button>
+            ${imgContent}
+            <div style="margin-top:20px;">
+                <p style="font-weight:bold;">${q.type==='multi'?'Pravilnih je lahko več odgovorov:':'Izberi en odgovor:'}</p>
+                ${optionsHtml}
+            </div>
+            <div style="margin-top:30px; display:flex; justify-content:space-between;">
+                <button onclick="navStep(-1)" ${index===0?'disabled':''}>&laquo; Nazaj</button>
+                <button onclick="navStep(1)" ${index===examState.questions.length-1?'disabled':''}>Naprej &raquo;</button>
             </div>
         `;
         renderNavGrid();
     }
 
     function handleAnswer(qIdx, optIdx, type) {
-        if (!examData.answers[qIdx]) examData.answers[qIdx] = [];
+        if (!examState.answers[qIdx]) examState.answers[qIdx] = [];
         if (type === 'single') {
-            examData.answers[qIdx] = [optIdx];
+            examState.answers[qIdx] = [optIdx];
         } else {
-            const arr = examData.answers[qIdx];
-            if (arr.includes(optIdx)) examData.answers[qIdx] = arr.filter(x => x !== optIdx);
+            const arr = examState.answers[qIdx];
+            if (arr.includes(optIdx)) examState.answers[qIdx] = arr.filter(i => i !== optIdx);
             else arr.push(optIdx);
         }
-        // Progress bar
-        const pct = (Object.keys(examData.answers).filter(k=>examData.answers[k].length>0).length / examData.questions.length) * 100;
-        document.getElementById('progress-bar').style.width = pct + '%';
         renderNavGrid();
     }
 
-    function navStep(d) { loadQuestion(examData.currentIndex + d); }
-    function toggleFlag(i) { examData.flags[i] = !examData.flags[i]; renderNavGrid(); }
+    function toggleFlag(i) { examState.flags[i] = !examState.flags[i]; renderNavGrid(); }
+    function navStep(d) { loadExamQuestion(examState.currentIndex + d); }
     
-    function renderNavGrid() {
-        const g = document.getElementById('nav-grid'); g.innerHTML = '';
-        examData.questions.forEach((q, i) => {
-            const d = document.createElement('div');
-            d.className = `nav-box ${i===examData.currentIndex?'current':''} ${(examData.answers[i]&&examData.answers[i].length)?'answered':''} ${examData.flags[i]?'flagged':''}`;
-            d.onclick = () => loadQuestion(i);
-            d.innerHTML = `<div class="nav-num">${i+1}</div><div class="nav-status"></div>`;
-            g.appendChild(d);
-        });
+    function confirmFinish() {
+        if(confirm("Želite zaključiti reševanje?")) finishExam(false);
     }
 
-    function confirmFinish() { if(confirm("Zaključim reševanje?")) finishExam(); }
+    /* ================= SCORING LOGIC ================= */
+    function finishExam(forced) {
+        clearInterval(examState.interval);
+        examState.endTime = new Date();
 
-    function finishExam() {
-        clearInterval(examData.interval);
-        let earned = 0, total = 0;
+        let totalPoints = 0;
+        let earnedPoints = 0;
         
-        examData.questions.forEach((q, i) => {
-            total += parseFloat(q.points);
-            const userAns = examData.answers[i] || [];
-            let pts = 0;
+        // Prepare data for saving
+        const questionsResult = examState.questions.map((q, idx) => {
+            totalPoints += parseFloat(q.points);
+            const userSelection = examState.answers[idx] || [];
             
-            if (q.type === 'single') {
-                if (userAns.length === 1 && userAns[0] === q.correct[0]) pts = q.points;
-            } else {
-                if (q.partialCredit) {
-                    const hasWrong = userAns.some(a => !q.correct.includes(a));
-                    if (!hasWrong && userAns.length > 0) {
-                        pts = (userAns.length / q.correct.length) * q.points;
-                    }
-                } else {
-                    const u = userAns.sort().join(',');
-                    const c = q.correct.sort().join(',');
-                    if (u === c) pts = q.points;
-                }
+            // Calc Score
+            let qScore = 0;
+            let isCorrect = false;
+            let isPartial = false;
+
+            // Sort logic for comparison
+            const userSorted = [...userSelection].sort().join(',');
+            const correctSorted = [...q.correct].sort().join(',');
+
+            if (userSorted === correctSorted) {
+                // Full match
+                qScore = parseFloat(q.points);
+                isCorrect = true;
+            } else if (q.type === 'multi' && q.partial) {
+                // PARTIAL LOGIC
+                // Logic: (CorrectSelected - IncorrectSelected) / TotalCorrectOptions * Points
+                let correctHits = 0;
+                let wrongHits = 0;
+                
+                userSelection.forEach(sel => {
+                    if(q.correct.includes(sel)) correctHits++;
+                    else wrongHits++;
+                });
+
+                const totalCorrectOptions = q.correct.length;
+                let netScore = (correctHits - wrongHits);
+                if (netScore < 0) netScore = 0;
+
+                qScore = (netScore / totalCorrectOptions) * parseFloat(q.points);
+                if (qScore > 0) isPartial = true;
             }
-            earned += pts;
-            q.resDetails = { userAns, earned };
+
+            earnedPoints += qScore;
+
+            return {
+                id: q.id,
+                text: q.text,
+                pointsMax: parseFloat(q.points),
+                pointsEarned: qScore,
+                options: q.options,
+                userSelection: userSelection,
+                correctSelection: q.correct,
+                isCorrect: isCorrect,
+                isPartial: isPartial
+            };
         });
 
-        const percent = (earned / total) * 100;
-        const passed = percent >= 88;
-        
-        const res = {
+        const percent = (earnedPoints / totalPoints) * 100;
+        const passed = percent > 88;
+
+        const resultRecord = {
             id: Date.now(),
-            userId: currentUser.id, userName: currentUser.name, date: new Date().toLocaleString(),
-            score: earned.toFixed(2), max: total.toFixed(2), percent: percent.toFixed(2), passed,
-            qSnap: examData.questions
+            userId: currentUser.id,
+            userName: currentUser.name,
+            date: new Date().toISOString(),
+            score: earnedPoints.toFixed(2),
+            max: totalPoints.toFixed(2),
+            percent: percent.toFixed(2),
+            passed: passed,
+            details: questionsResult
         };
-        saveResult(res);
 
-        // Render User Result
-        const title = document.getElementById('res-title');
-        title.innerText = passed ? "OPRAVIL" : "NI OPRAVIL";
-        title.style.color = passed ? "green" : "red";
-        document.getElementById('res-points').innerText = `${res.score} / ${res.max}`;
-        document.getElementById('res-percent').innerText = `${res.percent}%`;
-        
-        const list = document.getElementById('review-list'); list.innerHTML = '';
-        res.qSnap.forEach((q, i) => {
-            list.innerHTML += `<div style="border-bottom:1px solid #ccc; padding:10px;"><b>${i+1}. ${q.text}</b> <span style="float:right;">${q.resDetails.earned} / ${q.points} t</span></div>`;
-        });
+        let history = getResults();
+        history.push(resultRecord);
+        localStorage.setItem(EXAM_KEY, JSON.stringify(history));
+
+        // Show result
+        viewingResult = resultRecord;
+        showResultView();
+    }
+
+    /* ================= RESULT VIEW ================= */
+    function showResultView() {
         showView('result');
-    }
-
-    /* ================= MANAGER ================= */
-    function switchManagerTab(t) {
-        document.querySelectorAll('.manager-content').forEach(e => e.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
-        document.getElementById(`tab-${t}`).classList.remove('hidden');
-        document.querySelector(`button[onclick="switchManagerTab('${t}')"]`).classList.add('active');
-        if(t==='results') renderResults();
-        if(t==='questions') renderQuestions();
-        if(t==='settings') {
-            const s = getSettings();
-            document.getElementById('set-q-count').value = s.qCount;
-            document.getElementById('set-q-count').oninput = () => document.getElementById('calc-time').innerText = Math.ceil(document.getElementById('set-q-count').value * 1.5);
-            document.getElementById('set-q-count').oninput();
-        }
-    }
-
-    function renderResults() {
-        const tb = document.getElementById('manager-table-body'); tb.innerHTML = '';
-        getResults().reverse().forEach(r => {
-            tb.innerHTML += `<tr>
-                <td>${r.date}</td><td>${r.userName} (${r.userId})</td>
-                <td>${r.score}/${r.max}</td><td>${r.percent}%</td>
-                <td class="${r.passed?'pass':'fail'}">${r.passed?'DA':'NE'}</td>
-                <td><button onclick="openReview(${r.id})">Pregled</button></td>
-            </tr>`;
-        });
-    }
-
-    function renderQuestions() {
-        const tb = document.getElementById('questions-table-body'); tb.innerHTML = '';
-        getQuestions().forEach(q => {
-            tb.innerHTML += `<tr style="opacity:${q.active?1:0.5}">
-                <td>${q.id}</td>
-                <td>${q.imgData ? '📷' : ''}</td>
-                <td>${q.text.substring(0,30)}...</td>
-                <td>${q.type}</td><td>${q.active?'Aktiven':'X'}</td>
-                <td><button onclick="openEditor(${q.id})">Uredi</button> <button class="btn-red" onclick="delQ(${q.id})">Briši</button></td>
-            </tr>`;
-        });
-    }
-
-    function delQ(id) {
-        if(confirm("Brišem?")) { saveQuestions(getQuestions().filter(q=>q.id!==id)); renderQuestions(); }
-    }
-
-    function saveSettings() {
-        saveSettingsDB({ qCount: parseInt(document.getElementById('set-q-count').value) });
-        document.getElementById('settings-msg').style.display = 'inline';
-    }
-
-    /* ================= EDITOR & IMAGES ================= */
-    let editId = null;
-
-    function openEditor(id) {
-        editId = id;
-        document.getElementById('modal-editor').classList.remove('hidden');
-        const list = document.getElementById('edit-options-list'); list.innerHTML = '';
+        const r = viewingResult;
         
-        // Reset Inputs
-        document.getElementById('edit-text').value = '';
-        document.getElementById('edit-points').value = 1;
-        document.getElementById('edit-type').value = 'single';
-        document.getElementById('edit-active').value = 'true';
-        document.getElementById('edit-partial').checked = false;
+        // Populate header
+        document.getElementById('res-user').innerText = r.userName;
+        document.getElementById('res-date').innerText = new Date(r.date).toLocaleString();
+        document.getElementById('res-points').innerText = `${r.score} / ${r.max}`;
+        document.getElementById('res-percent').innerText = `${r.percent}%`;
         
-        // Image Reset
-        document.getElementById('edit-img-file').value = '';
-        document.getElementById('edit-img-data').value = '';
-        document.getElementById('edit-img-preview').classList.add('hidden');
-        document.getElementById('btn-remove-img').classList.add('hidden');
+        const title = document.getElementById('res-title');
+        const msg = document.getElementById('res-message');
+        const btnClose = document.getElementById('btn-result-close');
 
-        if (id) {
-            const q = getQuestions().find(x => x.id === id);
-            document.getElementById('edit-text').value = q.text;
-            document.getElementById('edit-points').value = q.points;
-            document.getElementById('edit-type').value = q.type;
-            document.getElementById('edit-active').value = q.active.toString();
-            document.getElementById('edit-partial').checked = q.partialCredit || false;
-            
-            // Image Load
-            if (q.imgData) {
-                document.getElementById('edit-img-data').value = q.imgData;
-                document.getElementById('edit-img-preview').src = q.imgData;
-                document.getElementById('edit-img-preview').classList.remove('hidden');
-                document.getElementById('btn-remove-img').classList.remove('hidden');
-            }
-
-            q.options.forEach((o, i) => addEditorOption(o, q.correct.includes(i)));
+        if(currentUser.role === 'MANAGER') {
+            btnClose.innerText = "NAZAJ NA LISTO";
+            btnClose.onclick = () => showView('manager');
         } else {
-            addEditorOption(); addEditorOption();
+            btnClose.innerText = "ZAKLJUČI IN ODJAVA";
+            btnClose.onclick = logout;
         }
-        togglePartialOption();
+
+        if(r.passed) {
+            title.innerText = "OPRAVIL"; title.style.color = "green";
+            msg.innerText = "Čestitke! Test je uspešno opravljen.";
+        } else {
+            title.innerText = "NI OPRAVIL"; title.style.color = "red";
+            msg.innerText = "Žal rezultat ni zadosten (min 88%).";
+        }
+
+        renderReviewList(false); // Default view
     }
 
-    // IMAGE HANDLERS
-    function previewImage() {
-        const file = document.getElementById('edit-img-file').files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('edit-img-preview').src = e.target.result;
-                document.getElementById('edit-img-preview').classList.remove('hidden');
-                document.getElementById('btn-remove-img').classList.remove('hidden');
-                document.getElementById('edit-img-data').value = e.target.result; // Temp store
+    function renderReviewList(isPrintMode) {
+        const list = document.getElementById('review-list');
+        list.innerHTML = "";
+        const r = viewingResult;
+
+        r.details.forEach((q, idx) => {
+            const div = document.createElement('div');
+            
+            // Class calculation
+            let cssClass = 'wrong';
+            if(q.isCorrect) cssClass = 'correct';
+            else if(q.isPartial) cssClass = 'partial';
+            
+            div.className = `review-item ${cssClass}`;
+
+            // Text processing for preview mode
+            let qText = q.text;
+            let optTexts = [...q.options];
+            if(isPrintMode) {
+                qText = sanitizeCSZ(qText);
+                optTexts = optTexts.map(o => sanitizeCSZ(o));
             }
-            reader.readAsDataURL(file);
-        }
-    }
 
-    function removeImage() {
-        document.getElementById('edit-img-file').value = '';
-        document.getElementById('edit-img-data').value = '';
-        document.getElementById('edit-img-preview').classList.add('hidden');
-        document.getElementById('btn-remove-img').classList.add('hidden');
-    }
+            let userTxt = q.userSelection.map(i => optTexts[i]).join(', ') || "/";
+            let corrTxt = q.correctSelection.map(i => optTexts[i]).join(', ');
 
-    function addEditorOption(txt='', isC=false) {
-        const div = document.createElement('div');
-        div.className = 'opt-item';
-        div.innerHTML = `<input type="checkbox" class="opt-correct" ${isC?'checked':''}> <input type="text" class="opt-text" value="${txt}"> <button class="btn-red" onclick="this.parentElement.remove()">X</button>`;
-        document.getElementById('edit-options-list').appendChild(div);
-    }
-
-    function togglePartialOption() {
-        const t = document.getElementById('edit-type').value;
-        document.getElementById('div-partial').className = t === 'multi' ? '' : 'hidden';
-    }
-
-    function saveQuestion() {
-        const txt = document.getElementById('edit-text').value;
-        if(!txt) return alert("Vnesi vprašanje");
-
-        const opts = [], correct = [];
-        document.querySelectorAll('#edit-options-list .opt-item').forEach((el, i) => {
-            const val = el.querySelector('.opt-text').value;
-            if(val) { opts.push(val); if(el.querySelector('.opt-correct').checked) correct.push(i); }
+            div.innerHTML = `
+                <div style="font-weight:bold;">${idx+1}. ${qText}</div>
+                <div style="font-size:0.9em; margin-top:5px;">
+                    Vaš odgovor: <b>${userTxt}</b> <br>
+                    Pravilen odgovor: <b>${corrTxt}</b>
+                </div>
+                <div style="text-align:right; font-weight:bold;">
+                    ${q.pointsEarned.toFixed(2)} / ${q.pointsMax.toFixed(2)} točk
+                </div>
+            `;
+            list.appendChild(div);
         });
-
-        if(opts.length < 2) return alert("Vsaj 2 odgovora!");
-        if(correct.length === 0) return alert("Vsaj 1 pravilen!");
-
-        const newQ = {
-            id: editId || Date.now(),
-            text: txt,
-            points: parseFloat(document.getElementById('edit-points').value),
-            type: document.getElementById('edit-type').value,
-            partialCredit: document.getElementById('edit-partial').checked,
-            active: document.getElementById('edit-active').value === 'true',
-            imgData: document.getElementById('edit-img-data').value, // Base64 string
-            options: opts, correct: correct
-        };
-
-        const list = getQuestions();
-        if(editId) { const idx = list.findIndex(x=>x.id===editId); list[idx] = newQ; } 
-        else { list.push(newQ); }
-        
-        saveQuestions(list);
-        closeModal('modal-editor');
-        renderQuestions();
     }
 
-    /* ================= REVIEW (SANITIZED) ================= */
-    function sanitize(str) {
-        if(!str) return "";
-        return str.toString()
+    // Funkcija za zamenjavo šumnikov (Preview mode)
+    function sanitizeCSZ(str) {
+        return str
             .replace(/č/g, 'c').replace(/Č/g, 'C')
             .replace(/š/g, 's').replace(/Š/g, 'S')
             .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
     }
 
-    function openReview(id) {
-        const r = getResults().find(x => x.id === id);
-        if(!r) return;
-        
-        const c = document.getElementById('review-content');
-        c.innerHTML = `
-            <div style="border-bottom:2px solid #000; margin-bottom:10px;">
-                <h3>KANDIDAT: ${sanitize(r.userName)} (${r.userId})</h3>
-                <p>Tocke: ${r.score}/${r.max} (${r.percent}%)</p>
-            </div>
-        `;
-
-        r.qSnap.forEach((q, i) => {
-            const uPts = q.resDetails.earned;
-            let oHtml = '';
-            
-            q.options.forEach((o, oid) => {
-                const sOpt = sanitize(o);
-                const isUser = q.resDetails.userAns.includes(oid);
-                const isCorr = q.correct.includes(oid);
-                let sty = ''; let mk = '[ ]';
-                
-                if(isUser) mk = '[X]';
-                if(isCorr) sty = 'color:green; font-weight:bold;';
-                if(isUser && !isCorr) sty = 'color:red; text-decoration:line-through;';
-                
-                oHtml += `<div style="${sty}">${mk} ${sOpt}</div>`;
-            });
-
-            c.innerHTML += `
-                <div style="background:${uPts>0?'#eaffea':'#ffeaea'}; padding:10px; margin-bottom:10px; border:1px solid #ccc;">
-                    <b>${i+1}. ${sanitize(q.text)}</b>
-                    ${q.imgData ? `<br><img src="${q.imgData}" style="max-height:100px; margin:5px;">` : ''}
-                    <div style="margin-left:15px; font-size:0.9em;">${oHtml}</div>
-                    <div style="text-align:right;">${uPts}/${q.points} t</div>
-                </div>`;
-        });
-        document.getElementById('modal-review').classList.remove('hidden');
+    let isPrintPreview = false;
+    function togglePrintPreview() {
+        isPrintPreview = !isPrintPreview;
+        const btn = document.getElementById('btn-print-preview');
+        btn.innerText = isPrintPreview ? "NAZAJ NA NORMALNI POGLED" : "PDF / PREDOGLED (CSZ)";
+        renderReviewList(isPrintPreview);
+    }
+    
+    function closeResultView() {
+        if(currentUser && currentUser.role === 'MANAGER') {
+            showView('manager');
+        } else {
+            logout();
+        }
     }
 
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    /* ================= MANAGER LOGIC ================= */
+    function setManagerTab(tab) {
+        ['history', 'questions', 'settings'].forEach(t => {
+            document.getElementById(`mgr-tab-${t}`).classList.add('hidden');
+            document.getElementById(`tab-btn-${t}`).classList.remove('active');
+        });
+        document.getElementById(`mgr-tab-${tab}`).classList.remove('hidden');
+        document.getElementById(`tab-btn-${tab}`).classList.add('active');
+
+        if(tab === 'history') loadHistoryTable();
+        if(tab === 'questions') loadQuestionsList();
+        if(tab === 'settings') loadSettings();
+    }
+
+    // HISTORY
+    function loadHistoryTable() {
+        const data = getResults().reverse();
+        const tbody = document.getElementById('manager-table-body');
+        tbody.innerHTML = "";
+        
+        if(data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5' align='center'>Ni podatkov</td></tr>"; return;
+        }
+
+        data.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = "clickable";
+            tr.onclick = () => { viewingResult = r; showResultView(); }; // View details
+            const d = new Date(r.date);
+            tr.innerHTML = `
+                <td>${d.toLocaleDateString()} ${d.toLocaleTimeString()}</td>
+                <td>${r.userName} (${r.userId})</td>
+                <td>${r.score}</td>
+                <td>${r.percent}%</td>
+                <td class="${r.passed?'pass':'fail'}">${r.passed?'OPRAVIL':'NI OPRAVIL'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // QUESTIONS CRUD
+    function loadQuestionsList() {
+        const list = document.getElementById('questions-list');
+        list.innerHTML = "";
+        const qs = getQuestions();
+
+        qs.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = `q-list-item ${q.enabled ? '' : 'disabled'}`;
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <div style="font-weight:bold; font-size:1.1em;">
+                        ${q.text.substring(0, 60)}${q.text.length>60?'...':''}
+                    </div>
+                    <div>
+                        <span class="badge ${q.type}">${q.type==='single'?'EN':'VEČ'}</span>
+                        <span class="badge" style="background:#777">${q.points} t</span>
+                        ${q.imgData ? '<span class="badge" style="background:#333">SLIKA</span>' : ''}
+                        ${q.partial ? '<span class="badge" style="background:purple">DELNO</span>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="toggleQuestionStatus(${q.id})" style="font-size:0.8em;">${q.enabled?'ONEMOGOČI':'OMOGOČI'}</button>
+                    <button class="primary" onclick="editQuestion(${q.id})" style="font-size:0.8em;">UREDI</button>
+                    <button class="danger" onclick="deleteQuestion(${q.id})" style="font-size:0.8em;">X</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function toggleQuestionStatus(id) {
+        let qs = getQuestions();
+        const q = qs.find(x => x.id === id);
+        if(q) { q.enabled = !q.enabled; saveQuestions(qs); loadQuestionsList(); }
+    }
+
+    function deleteQuestion(id) {
+        if(confirm("Brišem vprašanje?")) {
+            let qs = getQuestions().filter(x => x.id !== id);
+            saveQuestions(qs);
+            loadQuestionsList();
+        }
+    }
+
+    // --- EDITOR ---
+    function openQuestionEditor(qId = null) {
+        currentEditId = qId;
+        const modal = document.getElementById('modal-editor');
+        modal.classList.remove('hidden');
+
+        if(qId) {
+            // Edit Mode
+            document.getElementById('editor-title').innerText = "Urejanje vprašanja";
+            const q = getQuestions().find(x => x.id === qId);
+            document.getElementById('ed-text').value = q.text;
+            document.getElementById('ed-points').value = q.points;
+            document.getElementById('ed-type').value = q.type;
+            document.getElementById('ed-partial').checked = !!q.partial;
+            document.getElementById('ed-enabled').checked = q.enabled;
+            tempImgData = q.imgData;
+            
+            updateImgPreview();
+            renderEditorOptions(q.options, q.correct);
+        } else {
+            // New Mode
+            document.getElementById('editor-title').innerText = "Novo vprašanje";
+            document.getElementById('ed-text').value = "";
+            document.getElementById('ed-points').value = 1;
+            document.getElementById('ed-type').value = "single";
+            document.getElementById('ed-partial').checked = false;
+            document.getElementById('ed-enabled').checked = true;
+            tempImgData = null;
+            updateImgPreview();
+            renderEditorOptions(["Odgovor A", "Odgovor B"], [0]); // Default 2 options
+        }
+        updateEditorType();
+    }
+
+    function renderEditorOptions(options, correctIndices) {
+        const container = document.getElementById('ed-options-list');
+        container.innerHTML = "";
+        const type = document.getElementById('ed-type').value;
+
+        options.forEach((optText, idx) => {
+            const row = document.createElement('div');
+            row.className = "opt-row";
+            const isChecked = correctIndices.includes(idx) ? "checked" : "";
+            const inputType = type === 'multi' ? 'checkbox' : 'radio';
+            
+            row.innerHTML = `
+                <input type="${inputType}" name="ed_correct" value="${idx}" ${isChecked}>
+                <input type="text" class="ed-opt-text" value="${optText}" style="flex:1;">
+                <button class="danger" onclick="removeEditorOption(this)" style="padding:2px 8px;">X</button>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function addEditorOption() {
+        const container = document.getElementById('ed-options-list');
+        const row = document.createElement('div');
+        const type = document.getElementById('ed-type').value;
+        row.className = "opt-row";
+        
+        // Count existing to assign new value index (visual mostly)
+        const idx = container.children.length;
+        
+        row.innerHTML = `
+            <input type="${type==='multi'?'checkbox':'radio'}" name="ed_correct" value="${idx}">
+            <input type="text" class="ed-opt-text" value="Nov odgovor" style="flex:1;">
+            <button class="danger" onclick="removeEditorOption(this)" style="padding:2px 8px;">X</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeEditorOption(btn) {
+        btn.parentElement.remove();
+        // Re-index inputs not strictly necessary for saving logic as we read by DOM order
+    }
+
+    function updateEditorType() {
+        const type = document.getElementById('ed-type').value;
+        const partialDiv = document.getElementById('div-partial');
+        
+        partialDiv.style.display = (type === 'multi') ? 'block' : 'none';
+        
+        // Update input types in list without losing text
+        const container = document.getElementById('ed-options-list');
+        const inputs = container.querySelectorAll('input[name="ed_correct"]');
+        inputs.forEach(inp => {
+            inp.type = (type === 'multi') ? 'checkbox' : 'radio';
+        });
+    }
+
+    // Image Handling
+    const fileInput = document.getElementById('ed-img-input');
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempImgData = e.target.result;
+                updateImgPreview();
+            };
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+
+    function clearEditorImage() {
+        tempImgData = null;
+        document.getElementById('ed-img-input').value = "";
+        updateImgPreview();
+    }
+
+    function updateImgPreview() {
+        const div = document.getElementById('ed-img-preview');
+        if(tempImgData) {
+            div.innerHTML = `<img src="${tempImgData}" class="real-image">`;
+            div.style.background = "white";
+            div.style.border = "none";
+        } else {
+            div.innerHTML = "Ni slike";
+            div.style.background = "#ddd";
+            div.style.border = "2px dashed #999";
+        }
+    }
+
+    function closeEditor() {
+        document.getElementById('modal-editor').classList.add('hidden');
+    }
+
+    function saveQuestion() {
+        const text = document.getElementById('ed-text').value.trim();
+        if(!text) return alert("Vnesi besedilo vprašanja!");
+
+        const points = parseFloat(document.getElementById('ed-points').value);
+        const type = document.getElementById('ed-type').value;
+        const partial = document.getElementById('ed-partial').checked;
+        const enabled = document.getElementById('ed-enabled').checked;
+
+        // Gather Options
+        const container = document.getElementById('ed-options-list');
+        const rows = container.querySelectorAll('.opt-row');
+        let options = [];
+        let correct = [];
+
+        rows.forEach((row, idx) => {
+            const txt = row.querySelector('.ed-opt-text').value.trim();
+            const checked = row.querySelector('input[name="ed_correct"]').checked;
+            options.push(txt);
+            if(checked) correct.push(idx);
+        });
+
+        if(options.length < 2) return alert("Vprašanje mora imeti vsaj 2 odgovora!");
+        if(correct.length === 0) return alert("Označi vsaj en pravilen odgovor!");
+
+        const qs = getQuestions();
+        
+        const newQ = {
+            id: currentEditId ? currentEditId : Date.now(), // Unique ID
+            text, points, type,
+            imgData: tempImgData,
+            imgDesc: tempImgData ? "Uporabniška slika" : "Ni slike",
+            options, correct, enabled, partial
+        };
+
+        if(currentEditId) {
+            const idx = qs.findIndex(q => q.id === currentEditId);
+            qs[idx] = newQ;
+        } else {
+            qs.push(newQ);
+        }
+
+        saveQuestions(qs);
+        closeEditor();
+        loadQuestionsList();
+    }
+
+    // SETTINGS
+    function loadSettings() {
+        const cfg = getConfig();
+        const inp = document.getElementById('cfg-qcount');
+        inp.value = cfg.questionCount;
+        
+        // Update calc time immediately
+        updateCalcTime(cfg.questionCount);
+        inp.oninput = (e) => updateCalcTime(e.target.value);
+    }
+
+    function updateCalcTime(val) {
+        document.getElementById('cfg-calc-time').innerText = `${Math.ceil(val * 1.5)} min`;
+    }
+
+    function saveSettings() {
+        const val = parseInt(document.getElementById('cfg-qcount').value);
+        if(val < 1) return alert("Najmanj 1 vprašanje.");
+        saveConfig({ questionCount: val });
+        alert("Nastavitve shranjene.");
+    }
+
 </script>
 </body>
 </html>
