@@ -236,7 +236,7 @@
         <div class="login-box">
             <h2>WII EXAM SYSTEM</h2>
             <p>Vnesi osebno šifro</p>
-            <input type="password" id="login-code" placeholder="npr. 000 (admin) ali 1111">
+            <input type="password" id="login-code" placeholder="npr. tvoja PIN koda">
             <button onclick="handleLogin()">PRIJAVA</button>
             <p id="login-error" style="color:red; display:none; margin-top:10px;">Napačna šifra!</p>
         </div>
@@ -410,7 +410,8 @@
 
 <script>
     /* ================= DATA MODEL ================= */
-    const DB_KEY = 'wiiShopDBv6';
+    // POPRAVEK: Uporabljamo isto bazo kot blagajna!
+    const DB_KEY = 'wiiShopDBv5'; // Sinhronizacija z Blagajno
     const EXAM_KEY = 'wiiExamResults';
     const QUESTIONS_KEY = 'wiiQuestionPool';
     const CONFIG_KEY = 'wiiConfig';
@@ -530,11 +531,16 @@
             return;
         }
 
-        // Simple User Check
+        // SYNC: Bere iz obstoječe blagajne
         let users = JSON.parse(localStorage.getItem(DB_KEY)) || { employees: [] };
-        let user = users.employees ? users.employees.find(e => e.code === code) : null;
+        let user = null;
         
-        if(!user && code === '1111') user = { name: "JANEZ NOVAK", id: "1111", role: "ZAPOSLENI" };
+        if (users.employees) {
+            user = users.employees.find(e => e.code === code);
+        }
+        
+        // Demo fallback, če ni baze
+        if(!user && code === '1111') user = { name: "JANEZ NOVAK (DEMO)", id: "1111", role: "ZAPOSLENI" };
 
         if(user) {
             currentUser = user;
@@ -565,7 +571,7 @@
     function preparePreflight() {
         const cfg = getConfig();
         document.getElementById('pf-name').innerText = currentUser.name;
-        document.getElementById('pf-id').innerText = currentUser.id;
+        document.getElementById('pf-id').innerText = currentUser.id; // Lahko je ID ali Code
         
         const history = getResults().filter(r => r.userId === currentUser.id);
         document.getElementById('pf-attempt').innerText = history.length + 1;
