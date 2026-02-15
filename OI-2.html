@@ -3,759 +3,794 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domače Olimpijske Igre 2026</title>
+    <title>Olimpijske Igre 2026 - Uradni Rezultati</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            --accent: #00d2ff;
-            --accent-gradient: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            /* Barvna paleta - Temna & Neon */
+            --bg-deep: #050505;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-hover: rgba(255, 255, 255, 0.15);
+            --accent: #00f2ff;
+            --accent-glow: 0 0 15px rgba(0, 242, 255, 0.5);
+            --text: #ffffff;
+            --text-dim: #888;
             --gold: #FFD700;
             --silver: #C0C0C0;
             --bronze: #CD7F32;
-            --text-main: #ffffff;
-            --text-muted: #a0a0a0;
-            --bg-dark: #0f172a;
+            --danger: #ff4757;
+            --success: #2ed573;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-
-        body {
-            background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            color: var(--text-main);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-bottom: 100px;
-        }
-
-        /* --- BACKGROUND ANIMATION --- */
-        .bg-particles {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        }
-
-        /* --- NAVIGATION --- */
-        .nav-container {
-            position: fixed;
-            bottom: 30px; /* Modern mobile-style bottom nav, or top if preferred */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: 90%;
-            max-width: 600px;
-        }
-
-        .glass-nav {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 50px;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            box-shadow: var(--glass-shadow);
-        }
-
-        .nav-item {
-            color: var(--text-muted);
-            text-decoration: none;
-            padding: 10px 15px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-        }
-
-        .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
         
-        .nav-item.active {
-            background: var(--accent-gradient);
-            color: white;
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 120px;
+            overflow-x: hidden;
         }
 
-        .nav-item:hover:not(.active) { color: white; background: rgba(255,255,255,0.1); }
-
-        /* --- SECTIONS --- */
-        .section {
-            display: none;
-            padding: 40px 20px;
-            max-width: 1000px;
-            margin: 0 auto;
-            animation: fadeIn 0.6s ease-out;
+        /* Ozadje - animirani gradient */
+        .background-fx {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+            background: radial-gradient(circle at 15% 50%, rgba(0, 40, 100, 0.4), transparent 40%),
+                        radial-gradient(circle at 85% 30%, rgba(60, 0, 80, 0.3), transparent 40%);
         }
 
+        /* --- UI ELEMENTI --- */
+        h1, h2, h3 { 
+            font-family: 'Rajdhani', sans-serif; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            text-align: center;
+        }
+        h1 { margin: 30px 0; font-size: 2.5rem; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        
+        .section { 
+            display: none; 
+            padding: 20px; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .section.active { display: block; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        h1, h2 { text-align: center; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
-        h1 { font-weight: 800; background: -webkit-linear-gradient(#fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        /* --- GLASS CARDS & TABLES --- */
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
+        /* --- GLASS KARTICE --- */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: var(--glass-shadow);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
         }
 
+        /* --- TABELE --- */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; padding: 15px; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid var(--glass-border); }
-        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
+        th { 
+            text-align: left; padding: 12px; 
+            color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; 
+            border-bottom: 1px solid var(--glass-border); 
+        }
+        td { padding: 15px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 1rem; }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(255,255,255,0.05); }
-
-        .flag-icon { font-size: 1.5rem; margin-right: 10px; vertical-align: middle; }
-        .medal-icon { margin-right: 5px; }
-        .gold { color: var(--gold); }
-        .silver { color: var(--silver); }
-        .bronze { color: var(--bronze); }
-
-        /* --- TABS --- */
-        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .tab-btn {
-            background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
-            padding: 8px 20px; border-radius: 20px; cursor: pointer; transition: 0.3s;
-        }
-        .tab-btn.active { background: white; color: black; border-color: white; }
-
-        /* --- FORMS & INPUTS --- */
-        input, select, button.action-btn {
-            width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px;
-            border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: white;
-            font-size: 1rem;
-        }
-        input:focus, select:focus { outline: none; border-color: var(--accent); }
-        button.action-btn {
-            background: var(--accent-gradient); border: none; font-weight: bold; cursor: pointer; transition: transform 0.2s;
-        }
-        button.action-btn:hover { transform: scale(1.02); }
-        button.delete-btn { background: #ff4757; margin-top: 5px; }
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        /* --- ADMIN SPECIFIC --- */
-        .admin-nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
-        .admin-nav button { flex: 1; min-width: 120px; }
+        .flag-img {
+            width: 32px; height: 24px; object-fit: cover; border-radius: 4px;
+            vertical-align: middle; margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .rank-badge {
+            display: inline-block; width: 30px; height: 30px; line-height: 30px;
+            text-align: center; border-radius: 50%; background: rgba(255,255,255,0.1);
+            font-weight: bold; font-family: 'Rajdhani';
+        }
+        .rank-1 { background: var(--gold); color: black; box-shadow: 0 0 10px var(--gold); }
+        .rank-2 { background: var(--silver); color: black; }
+        .rank-3 { background: var(--bronze); color: black; }
+
+        /* --- FORMS --- */
+        input, select, button {
+            width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 8px;
+            border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: white;
+            font-size: 1rem; transition: 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: var(--accent-glow); }
         
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-item span { display: none; } /* Hide text on mobile nav */
-            .nav-item i { font-size: 1.5rem; }
-            .form-grid { grid-template-columns: 1fr; }
+        .btn-primary {
+            background: var(--accent); color: black; font-weight: 700; text-transform: uppercase; border: none; cursor: pointer;
+        }
+        .btn-primary:hover { background: white; box-shadow: 0 0 20px white; }
+        
+        .btn-danger { background: var(--danger); border: none; color: white; cursor: pointer; font-weight: bold; }
+        .btn-sm { width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0 2px; }
+
+        .form-row { display: flex; gap: 10px; }
+        .form-row > * { flex: 1; }
+
+        /* --- NAVIGATION --- */
+        .nav-bar {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px;
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            display: flex; justify-content: space-around;
+            padding: 10px 5px; z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        
+        .nav-item {
+            color: var(--text-dim); text-decoration: none;
+            display: flex; flex-direction: column; align-items: center;
+            font-size: 0.75rem; transition: 0.3s; padding: 8px 15px; border-radius: 20px;
+        }
+        .nav-item i { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-item.active { color: var(--accent); background: rgba(0, 242, 255, 0.1); }
+        .nav-item:hover { color: white; }
+
+        /* --- ADMIN TABS --- */
+        .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+        .tab-pill {
+            background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            border: 1px solid transparent; transition: 0.3s;
+        }
+        .tab-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0, 242, 255, 0.05); }
+
+        /* Helper za urejanje */
+        .edit-mode-indicator { 
+            display: none; background: var(--accent); color: black; 
+            padding: 5px; text-align: center; border-radius: 4px; margin-bottom: 10px; font-weight: bold; 
         }
     </style>
 </head>
 <body>
 
-    <div class="bg-particles"></div>
+    <div class="background-fx"></div>
 
     <div id="section-medals" class="section active">
-        <h1><i class="fas fa-medal"></i> Medalje</h1>
-        <div class="glass-card">
+        <h1><i class="fas fa-trophy"></i> Medalje</h1>
+        <div class="glass-panel">
             <table>
                 <thead>
                     <tr>
+                        <th style="width:50px">#</th>
                         <th>Država</th>
-                        <th style="text-align:center;"><i class="fas fa-trophy"></i> Skupaj</th>
-                        <th style="text-align:center;"><i class="fas fa-medal gold"></i></th>
-                        <th style="text-align:center;"><i class="fas fa-medal silver"></i></th>
-                        <th style="text-align:center;"><i class="fas fa-medal bronze"></i></th>
+                        <th class="text-center"><i class="fas fa-medal" style="color:var(--gold)"></i></th>
+                        <th class="text-center"><i class="fas fa-medal" style="color:var(--silver)"></i></th>
+                        <th class="text-center"><i class="fas fa-medal" style="color:var(--bronze)"></i></th>
                     </tr>
                 </thead>
-                <tbody id="medals-table-body">
+                <tbody id="medals-body">
                     </tbody>
             </table>
         </div>
     </div>
 
     <div id="section-categories" class="section">
-        <h1>Rezultati po kategorijah</h1>
-        <div class="glass-card" style="text-align: center;">
-            <select id="public-category-select" onchange="renderPublicCategoryResults()">
-                <option value="">-- Izberi kategorijo --</option>
+        <h1>Rezultati</h1>
+        <div class="glass-panel" style="text-align:center;">
+            <select id="public-cat-select" onchange="renderPublicCategory()">
+                <option value="">-- Izberi disciplino --</option>
             </select>
         </div>
-        <div id="category-results-container" class="glass-card" style="display:none;">
-            <h2 id="cat-res-title"></h2>
+        <div id="cat-results-box" class="glass-panel" style="display:none;">
+            <h2 id="cat-title" style="color:var(--accent); margin-bottom:15px;"></h2>
             <table>
                 <thead>
                     <tr>
                         <th>Mesto</th>
-                        <th>Tekmovalec (Država)</th>
+                        <th>Država</th>
                         <th>Rezultat</th>
                         <th>Točke</th>
                     </tr>
                 </thead>
-                <tbody id="cat-res-body"></tbody>
+                <tbody id="cat-body"></tbody>
             </table>
+            <p style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:20px;">
+                * Imena tekmovalcev so na voljo v podrobnem poročilu sodnikov.
+            </p>
         </div>
     </div>
 
     <div id="section-total" class="section">
         <h1>Skupni Seštevek</h1>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="renderTotalScore('all', this)">Skupno</button>
-            <button class="tab-btn" onclick="renderTotalScore('inner', this)">Notranje</button>
-            <button class="tab-btn" onclick="renderTotalScore('outer', this)">Zunanje</button>
+        <div class="admin-tabs" style="justify-content: center;">
+            <div class="tab-pill active" onclick="renderTotalScore('all', this)">Vse</div>
+            <div class="tab-pill" onclick="renderTotalScore('inner', this)">Notranje</div>
+            <div class="tab-pill" onclick="renderTotalScore('outer', this)">Zunanje</div>
         </div>
-        <div class="glass-card">
+        <div class="glass-panel">
             <table>
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Država</th>
-                        <th>Točke</th>
+                        <th style="text-align:right;">Točke</th>
                     </tr>
                 </thead>
-                <tbody id="total-score-body"></tbody>
+                <tbody id="total-body"></tbody>
             </table>
         </div>
     </div>
 
     <div id="section-login" class="section">
-        <h1>Admin Prijava</h1>
-        <div class="glass-card" style="max-width: 400px; margin: 0 auto;">
-            <input type="password" id="admin-pass" placeholder="Vpiši geslo (admin)">
-            <button class="action-btn" onclick="checkLogin()">Prijavi se</button>
+        <h1>Admin</h1>
+        <div class="glass-panel" style="max-width: 400px; margin: 0 auto;">
+            <p style="text-align:center; margin-bottom:20px; color:var(--text-dim);">Dostop samo za sodnike in organizatorje.</p>
+            <input type="password" id="admin-pass" placeholder="Geslo">
+            <button class="btn-primary" onclick="login()">Vstopi</button>
         </div>
     </div>
 
     <div id="section-admin" class="section">
-        <h1><i class="fas fa-user-shield"></i> Nadzorna Plošča</h1>
-        <button class="tab-btn" style="margin-bottom:20px; background:rgba(255,0,0,0.2)" onclick="logout()">Odjava</button>
+        <h1><i class="fas fa-cogs"></i> Nadzorna Plošča</h1>
         
-        <div class="admin-nav">
-            <button class="tab-btn active" onclick="showAdminTab('adm-cats', this)">Kategorije</button>
-            <button class="tab-btn" onclick="showAdminTab('adm-res', this)">Vpis Rezultatov</button>
-            <button class="tab-btn" onclick="showAdminTab('adm-plan', this)">Načrtovanje</button>
-            <button class="tab-btn" onclick="showAdminTab('adm-comp', this)">Tekmovalci</button>
+        <div class="admin-tabs">
+            <div class="tab-pill active" onclick="admTab('adm-cats', this)">Kategorije</div>
+            <div class="tab-pill" onclick="admTab('adm-res', this)">Rezultati</div>
+            <div class="tab-pill" onclick="admTab('adm-countries', this)">Države</div>
+            <div class="tab-pill" onclick="admTab('adm-people', this)">Tekmovalci</div>
+            <div class="tab-pill" style="border-color:var(--danger); color:var(--danger)" onclick="logout()">Odjava</div>
         </div>
 
-        <div id="adm-cats" class="admin-tab">
-            <div class="glass-card">
-                <h3>Nova Kategorija</h3>
-                <div class="form-grid">
-                    <input type="text" id="cat-name" placeholder="Ime (npr. Met sekire)">
+        <div id="adm-cats" class="adm-content">
+            <div class="glass-panel">
+                <h3>Nova / Uredi Kategorijo</h3>
+                <div id="edit-cat-indicator" class="edit-mode-indicator">UREJANJE</div>
+                <input type="hidden" id="cat-id">
+                <div class="form-row">
+                    <input type="text" id="cat-name" placeholder="Ime (npr. Lokostrelstvo)">
                     <select id="cat-type"><option value="inner">Notranje</option><option value="outer">Zunanje</option></select>
-                    <input type="text" id="cat-unit" placeholder="Enota (m, s, kos)">
+                </div>
+                <div class="form-row">
+                    <input type="text" id="cat-unit" placeholder="Enota (m, s, točke)">
                     <select id="cat-sort">
-                        <option value="desc">Več je bolje (Daljava/Točke)</option>
+                        <option value="desc">Več je bolje</option>
                         <option value="asc">Manj je bolje (Čas)</option>
                     </select>
-                    <input type="number" id="cat-series" placeholder="Št. serij" value="1">
-                    <input type="number" id="cat-attempts" placeholder="Poskusov na serijo" value="1">
                 </div>
-                <button class="action-btn" onclick="addCategory()">Dodaj Kategorijo</button>
+                <button class="btn-primary" id="btn-save-cat" onclick="saveCategory()">Dodaj Kategorijo</button>
+                <button class="btn-danger" id="btn-cancel-cat" style="display:none; margin-top:5px;" onclick="resetCatForm()">Prekliči</button>
             </div>
-            <div class="glass-card">
-                <h3>Seznam Kategorij</h3>
-                <ul id="admin-cat-list" style="list-style:none; padding-left:0;"></ul>
+            <div class="glass-panel">
+                <ul id="list-cats" style="list-style:none;"></ul>
             </div>
         </div>
 
-        <div id="adm-res" class="admin-tab" style="display:none;">
-            <div class="glass-card">
-                <h3>Vpis rezultata</h3>
-                <select id="res-cat-select" onchange="setupResultForm()"></select>
+        <div id="adm-res" class="adm-content" style="display:none;">
+            <div class="glass-panel">
+                <h3>Vpis Rezultatov</h3>
+                <select id="res-cat-select" onchange="setupResForm()"></select>
                 <input type="date" id="res-date">
+                <div id="res-form-area" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <div id="adm-countries" class="adm-content" style="display:none;">
+            <div class="glass-panel">
+                <h3>Uredi Države</h3>
+                <div id="edit-country-indicator" class="edit-mode-indicator">UREJANJE</div>
+                <input type="hidden" id="country-id">
+                <div class="form-row">
+                    <input type="text" id="country-name" placeholder="Ime Države (Slovenija)">
+                    <input type="text" id="country-code" placeholder="Koda (si, hr, it, de...) - 2 črki" maxlength="2">
+                </div>
+                <button class="btn-primary" id="btn-save-country" onclick="saveCountry()">Shrani Državo</button>
+                <button class="btn-danger" id="btn-cancel-country" style="display:none; margin-top:5px;" onclick="resetCountryForm()">Prekliči</button>
+            </div>
+            <div class="glass-panel">
+                <ul id="list-countries" style="list-style:none;"></ul>
+            </div>
+        </div>
+
+        <div id="adm-people" class="adm-content" style="display:none;">
+            <div class="glass-panel">
+                <h3>Uredi Tekmovalce</h3>
+                <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">Če oseba tekmuje za dve državi, ustvari dva vnosa (enega za vsako).</p>
                 
-                <div id="result-input-area" style="margin-top:20px;">
-                    </div>
-            </div>
-        </div>
-
-        <div id="adm-plan" class="admin-tab" style="display:none;">
-             <div class="glass-card">
-                <h3>Koledar</h3>
-                <p style="color:#aaa; font-size:0.9rem;">Tukaj lahko pregledaš, kaj je planirano.</p>
-                <div id="schedule-list"></div>
-             </div>
-        </div>
-
-        <div id="adm-comp" class="admin-tab" style="display:none;">
-            <div class="glass-card">
-                <h3>Dodaj Državo</h3>
-                <div class="form-grid">
-                    <input type="text" id="country-name" placeholder="Ime države">
-                    <input type="text" id="country-flag" placeholder="Zastava (Emoji) 🇸🇮">
-                </div>
-                <button class="action-btn" onclick="addCountry()">Shrani Državo</button>
-            </div>
-
-            <div class="glass-card">
-                <h3>Dodaj Tekmovalca</h3>
-                <div class="form-grid">
+                <div id="edit-comp-indicator" class="edit-mode-indicator">UREJANJE</div>
+                <input type="hidden" id="comp-id">
+                
+                <div class="form-row">
                     <input type="text" id="comp-name" placeholder="Ime in Priimek">
-                    <select id="comp-country"></select>
+                    <select id="comp-country-select"></select>
                 </div>
-                <button class="action-btn" onclick="addCompetitor()">Shrani Tekmovalca</button>
+                <button class="btn-primary" id="btn-save-comp" onclick="saveCompetitor()">Shrani Tekmovalca</button>
+                <button class="btn-danger" id="btn-cancel-comp" style="display:none; margin-top:5px;" onclick="resetCompForm()">Prekliči</button>
             </div>
-            
-            <div class="glass-card">
-                <h3>Seznam</h3>
-                <div id="competitor-list"></div>
+            <div class="glass-panel">
+                <div id="list-competitors"></div>
             </div>
         </div>
     </div>
 
-    <div class="nav-container">
-        <nav class="glass-nav">
-            <a onclick="navigate('section-medals', this)" class="nav-item active">
-                <i class="fas fa-award"></i>
-                <span>Medalje</span>
-            </a>
-            <a onclick="navigate('section-categories', this)" class="nav-item">
-                <i class="fas fa-running"></i>
-                <span>Kategorije</span>
-            </a>
-            <a onclick="navigate('section-total', this)" class="nav-item">
-                <i class="fas fa-chart-line"></i>
-                <span>Seštevek</span>
-            </a>
-            <a onclick="navigate('section-login', this)" class="nav-item">
-                <i class="fas fa-lock"></i>
-                <span>Prijava</span>
-            </a>
-        </nav>
-    </div>
+    <nav class="nav-bar">
+        <a onclick="nav('section-medals', this)" class="nav-item active"><i class="fas fa-medal"></i><span>Medalje</span></a>
+        <a onclick="nav('section-categories', this)" class="nav-item"><i class="fas fa-list"></i><span>Kategorije</span></a>
+        <a onclick="nav('section-total', this)" class="nav-item"><i class="fas fa-chart-bar"></i><span>Seštevek</span></a>
+        <a onclick="nav('section-login', this)" class="nav-item"><i class="fas fa-user-lock"></i><span>Admin</span></a>
+    </nav>
 
     <script>
-        // --- DATA STRUCTURE & LOCAL STORAGE ---
-        const defaultData = {
+        // --- DATA ---
+        const defaultDB = {
             countries: [
-                { id: 'c1', name: 'Slovenija', flag: '🇸🇮' },
-                { id: 'c2', name: 'Hrvaška', flag: '🇭🇷' },
-                { id: 'c3', name: 'Italija', flag: '🇮🇹' }
+                { id: 'c1', name: 'Slovenija', code: 'si' },
+                { id: 'c2', name: 'Hrvaška', code: 'hr' },
+                { id: 'c3', name: 'Nemčija', code: 'de' }
             ],
             competitors: [
                 { id: 'p1', name: 'Janez Novak', countryId: 'c1' },
-                { id: 'p2', name: 'Luka Dončič', countryId: 'c1' },
-                { id: 'p3', name: 'Ante Perić', countryId: 'c2' }
+                { id: 'p2', name: 'Hans Muller', countryId: 'c3' }
             ],
-            categories: [
-                { id: 'kat1', name: 'Met Sekire', type: 'outer', unit: 'm', sort: 'desc', series: 2, attempts: 4 }
-            ],
-            results: [] // { id, categoryId, date, entries: [{ competitorId, value (number), isDNF: bool }] }
+            categories: [],
+            results: []
         };
 
-        let db = JSON.parse(localStorage.getItem('olympicsDB')) || defaultData;
+        let db = JSON.parse(localStorage.getItem('oly26_db')) || defaultDB;
 
         function saveDB() {
-            localStorage.setItem('olympicsDB', JSON.stringify(db));
-            refreshAll();
+            localStorage.setItem('oly26_db', JSON.stringify(db));
+            refresh();
         }
 
-        // --- NAVIGATION LOGIC ---
-        function navigate(sectionId, element) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
+        // --- NAVIGATION ---
+        function nav(id, el) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            if(el) {
+                document.querySelectorAll('.nav-bar .nav-item').forEach(n => n.classList.remove('active'));
+                el.classList.add('active');
+            }
 
-            // Update Nav UI
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(element) element.classList.add('active');
-
-            // Special checks
-            if (sectionId === 'section-login' && isLoggedIn) {
+            if(id === 'section-login' && isLoggedIn) {
                 document.getElementById('section-login').classList.remove('active');
                 document.getElementById('section-admin').classList.add('active');
             }
         }
 
-        function showAdminTab(tabId, btn) {
-            document.querySelectorAll('.admin-tab').forEach(el => el.style.display = 'none');
-            document.getElementById(tabId).style.display = 'block';
-            document.querySelectorAll('.admin-nav .tab-btn').forEach(el => el.classList.remove('active'));
-            btn.classList.add('active');
+        function admTab(id, el) {
+            document.querySelectorAll('.adm-content').forEach(c => c.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            document.querySelectorAll('.admin-tabs .tab-pill').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
         }
 
-        // --- AUTH ---
+        // --- LOGIN ---
         let isLoggedIn = false;
-        function checkLogin() {
-            const pass = document.getElementById('admin-pass').value;
-            if (pass === 'ADMIN' || pass === 'admin') {
+        function login() {
+            if(document.getElementById('admin-pass').value === 'admin') {
                 isLoggedIn = true;
-                navigate('section-admin');
-                renderAdminSelects();
-                renderAdminLists();
-            } else {
-                alert('Napačno geslo!');
-            }
+                nav('section-login'); // Will redirect to admin
+                refreshAdmin();
+            } else { alert('Napačno geslo!'); }
         }
         function logout() {
             isLoggedIn = false;
             document.getElementById('admin-pass').value = '';
-            navigate('section-medals', document.querySelector('.nav-item'));
+            nav('section-medals', document.querySelector('.nav-item'));
         }
 
-        // --- CORE LOGIC: POINTS & RANKING ---
-        function calculatePoints(rank) {
-            if (rank === 1) return 100;
-            if (rank === 2) return 80;
-            if (rank === 3) return 60;
-            if (rank === 4) return 40;
-            if (rank === 5) return 35;
-            // Formula: 35 - ((rank - 5) * 0.02)
-            let pts = 35 - ((rank - 5) * 0.02);
-            return pts > 0 ? pts : 0; // Prevent negative points
+        // --- CORE LOGIC ---
+        function getFlagUrl(code) {
+            if(!code) return '';
+            return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
         }
 
-        function getCategoryResults(catId) {
-            // Get all result entries for this category
-            // Note: Simplification - we take the latest result entry block for a category if multiple exist, or merge them.
-            // For this logic, we assume one "Event" per category per DB.
-            const evt = db.results.find(r => r.categoryId === catId);
-            if (!evt) return [];
+        function calcPoints(rank) {
+            if(rank === 1) return 100;
+            if(rank === 2) return 80;
+            if(rank === 3) return 60;
+            if(rank === 4) return 40;
+            if(rank === 5) return 35;
+            let p = 35 - ((rank - 5) * 0.02);
+            return p > 0 ? p : 0;
+        }
 
+        function getCatResults(catId) {
+            const rData = db.results.find(r => r.categoryId === catId);
+            if(!rData) return [];
+            
             const cat = db.categories.find(c => c.id === catId);
-            let entries = [...evt.entries];
+            let entries = [...rData.entries];
 
-            // Filter out full DQs (if implemented) or handle DNF logic
-            // Sorting
-            entries.sort((a, b) => {
-                if (a.isDNF && !b.isDNF) return 1; // DNF goes last
-                if (!a.isDNF && b.isDNF) return -1;
-                if (a.isDNF && b.isDNF) return 0;
-
+            // Sort
+            entries.sort((a,b) => {
+                if(a.isDNF) return 1; if(b.isDNF) return -1;
                 return cat.sort === 'desc' ? b.value - a.value : a.value - b.value;
             });
 
-            // Assign Ranks & Points
-            return entries.map((entry, index) => {
-                const rank = entry.isDNF ? null : index + 1;
-                const points = entry.isDNF ? 0 : calculatePoints(rank);
-                const competitor = db.competitors.find(c => c.id === entry.competitorId);
-                const country = db.countries.find(c => c.id === competitor.countryId);
-                
-                return { ...entry, rank, points, competitor, country };
+            return entries.map((e, idx) => {
+                const rank = e.isDNF ? null : idx + 1;
+                const pts = e.isDNF ? 0 : calcPoints(rank);
+                const comp = db.competitors.find(x => x.id === e.competitorId);
+                const country = comp ? db.countries.find(x => x.id === comp.countryId) : null;
+                return { ...e, rank, pts, comp, country };
             });
         }
 
-        // --- RENDERERS (PUBLIC) ---
-
+        // --- RENDERING PUBLIC ---
         function renderMedals() {
-            const countryStats = {};
-            
-            // Init stats
-            db.countries.forEach(c => {
-                countryStats[c.id] = { ...c, gold: 0, silver: 0, bronze: 0, total: 0 };
-            });
+            const stats = {};
+            db.countries.forEach(c => stats[c.id] = { ...c, g:0, s:0, b:0 });
 
             db.categories.forEach(cat => {
-                const results = getCategoryResults(cat.id);
-                if(results.length > 0 && results[0].rank === 1) countryStats[results[0].country.id].gold++;
-                if(results.length > 1 && results[1].rank === 2) countryStats[results[1].country.id].silver++;
-                if(results.length > 2 && results[2].rank === 3) countryStats[results[2].country.id].bronze++;
+                const res = getCatResults(cat.id);
+                if(res[0] && res[0].rank===1 && res[0].country) stats[res[0].country.id].g++;
+                if(res[1] && res[1].rank===2 && res[1].country) stats[res[1].country.id].s++;
+                if(res[2] && res[2].rank===3 && res[2].country) stats[res[2].country.id].b++;
             });
 
-            // Convert to array and sort by Gold > Silver > Bronze
-            const sorted = Object.values(countryStats).sort((a, b) => {
-                if (b.gold !== a.gold) return b.gold - a.gold;
-                if (b.silver !== a.silver) return b.silver - a.silver;
-                return b.bronze - a.bronze;
-            });
-
-            const tbody = document.getElementById('medals-table-body');
+            const sorted = Object.values(stats).sort((a,b) => (b.g - a.g) || (b.s - a.s) || (b.b - a.b));
+            
+            const tbody = document.getElementById('medals-body');
             tbody.innerHTML = '';
-            sorted.forEach(s => {
-                const totalMedals = s.gold + s.silver + s.bronze;
+            sorted.forEach((s, i) => {
+                if((s.g+s.s+s.b) === 0 && i > 5) return; // Hide empty if too many
                 tbody.innerHTML += `
                     <tr>
-                        <td><span class="flag-icon">${s.flag}</span> <strong>${s.name}</strong></td>
-                        <td style="text-align:center; font-weight:bold;">${totalMedals}</td>
-                        <td style="text-align:center;" class="gold">${s.gold}</td>
-                        <td style="text-align:center;" class="silver">${s.silver}</td>
-                        <td style="text-align:center;" class="bronze">${s.bronze}</td>
-                    </tr>
-                `;
+                        <td>${i+1}.</td>
+                        <td style="font-weight:600; font-size:1.1rem;">
+                            <img src="${getFlagUrl(s.code)}" class="flag-img"> ${s.name}
+                        </td>
+                        <td style="text-align:center; color:var(--gold); font-weight:bold;">${s.g}</td>
+                        <td style="text-align:center; color:var(--silver); font-weight:bold;">${s.s}</td>
+                        <td style="text-align:center; color:var(--bronze); font-weight:bold;">${s.b}</td>
+                    </tr>`;
             });
         }
 
-        function renderPublicCategoryResults() {
-            const select = document.getElementById('public-category-select');
-            const catId = select.value;
-            const container = document.getElementById('category-results-container');
-            const tbody = document.getElementById('cat-res-body');
-
-            if (!catId) {
-                container.style.display = 'none';
-                return;
-            }
-
-            const results = getCategoryResults(catId);
-            const cat = db.categories.find(c => c.id === catId);
+        function renderPublicCategory() {
+            const cid = document.getElementById('public-cat-select').value;
+            const box = document.getElementById('cat-results-box');
+            if(!cid) { box.style.display = 'none'; return; }
             
-            document.getElementById('cat-res-title').innerText = cat.name;
-            container.style.display = 'block';
+            box.style.display = 'block';
+            const cat = db.categories.find(c => c.id === cid);
+            document.getElementById('cat-title').innerText = cat.name;
+            
+            const res = getCatResults(cid);
+            const tbody = document.getElementById('cat-body');
             tbody.innerHTML = '';
+            
+            if(res.length === 0) { tbody.innerHTML = '<tr><td colspan="4" align="center">Ni rezultatov.</td></tr>'; return; }
 
-            if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Ni še rezultatov.</td></tr>';
-                return;
-            }
-
-            results.forEach(r => {
+            res.forEach(r => {
+                const badge = r.rank <= 3 && r.rank ? `rank-${r.rank}` : '';
                 tbody.innerHTML += `
                     <tr>
-                        <td style="font-weight:bold; font-size:1.2rem; color: var(--accent);">${r.rank ? r.rank + '.' : 'DNF'}</td>
-                        <td>${r.competitor.name} (${r.country.flag})</td>
-                        <td>${r.isDNF ? 'DNF' : r.value + ' ' + cat.unit}</td>
-                        <td>${r.points.toFixed(2)}</td>
-                    </tr>
-                `;
+                        <td><span class="rank-badge ${badge}">${r.rank||'-'}</span></td>
+                        <td>
+                            <div style="font-weight:bold; font-size:1.1rem;">
+                                <img src="${getFlagUrl(r.country.code)}" class="flag-img"> ${r.country.name}
+                            </div>
+                            <div style="font-size:0.85rem; color:var(--text-dim); margin-top:2px;">${r.comp.name}</div>
+                        </td>
+                        <td style="font-family:'Rajdhani'; font-size:1.2rem; color:var(--accent);">
+                            ${r.isDNF ? 'DNF' : r.value + ' ' + cat.unit}
+                        </td>
+                        <td>${r.pts.toFixed(2)}</td>
+                    </tr>`;
             });
         }
 
-        function renderTotalScore(filter, btn) {
-            // filter: 'all', 'inner', 'outer'
-            
-            // Handle UI tabs
+        function renderTotalScore(type, btn) {
             if(btn) {
-                document.querySelectorAll('#section-total .tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#section-total .tab-pill').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
             }
 
             const scores = {};
-            db.countries.forEach(c => scores[c.id] = { ...c, points: 0 });
+            db.countries.forEach(c => scores[c.id] = { ...c, total: 0 });
 
             db.categories.forEach(cat => {
-                if (filter !== 'all' && cat.type !== filter) return; // Skip if type mismatch
-
-                const results = getCategoryResults(cat.id);
-                results.forEach(r => {
-                    if (scores[r.country.id]) {
-                        scores[r.country.id].points += r.points;
-                    }
+                if(type !== 'all' && cat.type !== type) return;
+                const res = getCatResults(cat.id);
+                res.forEach(r => {
+                    if(r.country) scores[r.country.id].total += r.pts;
                 });
             });
 
-            const sorted = Object.values(scores).sort((a, b) => b.points - a.points);
-            const tbody = document.getElementById('total-score-body');
+            const sorted = Object.values(scores).sort((a,b) => b.total - a.total);
+            const tbody = document.getElementById('total-body');
             tbody.innerHTML = '';
-
-            sorted.forEach((s, idx) => {
+            sorted.forEach((s, i) => {
+                if(s.total === 0) return;
                 tbody.innerHTML += `
                     <tr>
-                        <td>${idx + 1}.</td>
-                        <td><span class="flag-icon">${s.flag}</span> ${s.name}</td>
-                        <td style="font-weight:bold; color:var(--accent); font-size:1.1rem;">${s.points.toFixed(2)}</td>
-                    </tr>
-                `;
+                        <td style="width:50px; font-weight:bold;">${i+1}.</td>
+                        <td><img src="${getFlagUrl(s.code)}" class="flag-img"> <span style="font-size:1.1rem; font-weight:bold;">${s.name}</span></td>
+                        <td style="text-align:right; font-family:'Rajdhani'; font-size:1.3rem; color:var(--accent);">${s.total.toFixed(2)}</td>
+                    </tr>`;
             });
         }
 
-        // --- ADMIN FUNCTIONS ---
+        // --- ADMIN MANAGERS ---
+        
+        // 1. COUNTRIES CRUD
+        function saveCountry() {
+            const id = document.getElementById('country-id').value;
+            const name = document.getElementById('country-name').value;
+            const code = document.getElementById('country-code').value.toLowerCase();
+            if(!name || code.length !== 2) return alert("Ime in 2-črkovna koda sta obvezna!");
 
-        function addCategory() {
+            if(id) {
+                // UPDATE
+                const idx = db.countries.findIndex(c => c.id === id);
+                db.countries[idx] = { id, name, code };
+            } else {
+                // CREATE
+                db.countries.push({ id: 'c'+Date.now(), name, code });
+            }
+            saveDB(); resetCountryForm();
+        }
+
+        function editCountry(id) {
+            const c = db.countries.find(x => x.id === id);
+            document.getElementById('country-id').value = c.id;
+            document.getElementById('country-name').value = c.name;
+            document.getElementById('country-code').value = c.code;
+            
+            document.getElementById('btn-save-country').innerText = "Posodobi";
+            document.getElementById('btn-cancel-country').style.display = 'block';
+            document.getElementById('edit-country-indicator').style.display = 'block';
+        }
+
+        function deleteCountry(id) {
+            // Check usage
+            const hasComp = db.competitors.some(p => p.countryId === id);
+            if(hasComp) return alert("Najprej izbriši tekmovalce te države!");
+            if(confirm("Izbrišem državo?")) {
+                db.countries = db.countries.filter(c => c.id !== id);
+                saveDB();
+            }
+        }
+
+        function resetCountryForm() {
+            document.getElementById('country-id').value = '';
+            document.getElementById('country-name').value = '';
+            document.getElementById('country-code').value = '';
+            document.getElementById('btn-save-country').innerText = "Shrani Državo";
+            document.getElementById('btn-cancel-country').style.display = 'none';
+            document.getElementById('edit-country-indicator').style.display = 'none';
+        }
+
+        // 2. COMPETITORS CRUD
+        function saveCompetitor() {
+            const id = document.getElementById('comp-id').value;
+            const name = document.getElementById('comp-name').value;
+            const cId = document.getElementById('comp-country-select').value;
+            
+            if(!name || !cId) return alert("Podatki manjkajo!");
+
+            if(id) {
+                const idx = db.competitors.findIndex(p => p.id === id);
+                db.competitors[idx] = { id, name, countryId: cId };
+            } else {
+                db.competitors.push({ id: 'p'+Date.now(), name, countryId: cId });
+            }
+            saveDB(); resetCompForm();
+        }
+
+        function editCompetitor(id) {
+            const p = db.competitors.find(x => x.id === id);
+            document.getElementById('comp-id').value = p.id;
+            document.getElementById('comp-name').value = p.name;
+            document.getElementById('comp-country-select').value = p.countryId;
+
+            document.getElementById('btn-save-comp').innerText = "Posodobi";
+            document.getElementById('btn-cancel-comp').style.display = 'block';
+            document.getElementById('edit-comp-indicator').style.display = 'block';
+        }
+
+        function deleteCompetitor(id) {
+            if(confirm("Izbrišem tekmovalca? (Rezultati bodo ostali, a brez imena)")) {
+                db.competitors = db.competitors.filter(p => p.id !== id);
+                saveDB();
+            }
+        }
+
+        function resetCompForm() {
+            document.getElementById('comp-id').value = '';
+            document.getElementById('comp-name').value = '';
+            document.getElementById('btn-save-comp').innerText = "Shrani Tekmovalca";
+            document.getElementById('btn-cancel-comp').style.display = 'none';
+            document.getElementById('edit-comp-indicator').style.display = 'none';
+        }
+
+        // 3. CATEGORIES CRUD
+        function saveCategory() {
+            const id = document.getElementById('cat-id').value;
             const name = document.getElementById('cat-name').value;
             const type = document.getElementById('cat-type').value;
             const unit = document.getElementById('cat-unit').value;
             const sort = document.getElementById('cat-sort').value;
-            const series = parseInt(document.getElementById('cat-series').value);
-            const attempts = parseInt(document.getElementById('cat-attempts').value);
-
-            if(!name) return alert("Vnesi ime!");
-
-            db.categories.push({
-                id: 'cat' + Date.now(),
-                name, type, unit, sort, series, attempts
-            });
-            saveDB();
-            renderAdminLists();
-            alert("Kategorija dodana!");
-            // Clear inputs...
+            
+            if(!name) return alert("Ime obvezno!");
+            
+            const obj = { name, type, unit, sort };
+            if(id) {
+                const idx = db.categories.findIndex(c => c.id === id);
+                db.categories[idx] = { ...db.categories[idx], ...obj };
+            } else {
+                db.categories.push({ id: 'k'+Date.now(), ...obj });
+            }
+            saveDB(); resetCatForm();
         }
 
-        function addCountry() {
-            const name = document.getElementById('country-name').value;
-            const flag = document.getElementById('country-flag').value;
-            if(!name) return;
-            db.countries.push({ id: 'c'+Date.now(), name, flag });
-            saveDB();
-            renderAdminSelects();
-        }
+        function editCat(id) {
+            const c = db.categories.find(x => x.id === id);
+            document.getElementById('cat-id').value = c.id;
+            document.getElementById('cat-name').value = c.name;
+            document.getElementById('cat-type').value = c.type;
+            document.getElementById('cat-unit').value = c.unit;
+            document.getElementById('cat-sort').value = c.sort;
 
-        function addCompetitor() {
-            const name = document.getElementById('comp-name').value;
-            const cId = document.getElementById('comp-country').value;
-            if(!name || !cId) return;
-            db.competitors.push({ id: 'p'+Date.now(), name, countryId: cId });
-            saveDB();
-            renderAdminLists();
-        }
-
-        function renderAdminSelects() {
-            // Country select for Competitor
-            const cSelect = document.getElementById('comp-country');
-            cSelect.innerHTML = '';
-            db.countries.forEach(c => {
-                cSelect.innerHTML += `<option value="${c.id}">${c.flag} ${c.name}</option>`;
-            });
-
-            // Category select for Results
-            const catSelect = document.getElementById('res-cat-select');
-            catSelect.innerHTML = '<option value="">Izberi kategorijo za vpis</option>';
-            db.categories.forEach(c => {
-                catSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            });
-
-            // Public Category Select
-            const pubCatSelect = document.getElementById('public-category-select');
-            const currentVal = pubCatSelect.value;
-            pubCatSelect.innerHTML = '<option value="">-- Izberi kategorijo --</option>';
-            db.categories.forEach(c => {
-                pubCatSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            });
-            pubCatSelect.value = currentVal;
-        }
-
-        function renderAdminLists() {
-            // Cat List
-            const clist = document.getElementById('admin-cat-list');
-            clist.innerHTML = '';
-            db.categories.forEach(c => {
-                clist.innerHTML += `<li style="margin-bottom:5px; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;">${c.name} (${c.type}) <button class="delete-btn" style="width:auto; float:right; padding:5px 10px; margin:0;" onclick="deleteCat('${c.id}')">X</button></li>`;
-            });
-
-            // Competitor list
-            const plist = document.getElementById('competitor-list');
-            plist.innerHTML = '';
-            db.competitors.forEach(p => {
-                const c = db.countries.find(x => x.id === p.countryId);
-                plist.innerHTML += `<div style="padding:5px; border-bottom:1px solid #333;">${p.name} (${c.flag})</div>`;
-            });
-
-            // Schedule (Simple view of results already entered)
-            const slist = document.getElementById('schedule-list');
-            slist.innerHTML = '';
-            db.results.forEach(r => {
-                const c = db.categories.find(x => x.id === r.categoryId);
-                slist.innerHTML += `<div style="padding:10px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:5px;">${r.date} - ${c ? c.name : 'Unknown'}</div>`;
-            });
+            document.getElementById('btn-save-cat').innerText = "Posodobi";
+            document.getElementById('btn-cancel-cat').style.display = 'block';
+            document.getElementById('edit-cat-indicator').style.display = 'block';
         }
 
         function deleteCat(id) {
-            if(confirm('Brišem kategorijo in vse njene rezultate?')) {
+            if(confirm("Izbris kategorije briše tudi vse njene rezultate!")) {
                 db.categories = db.categories.filter(c => c.id !== id);
                 db.results = db.results.filter(r => r.categoryId !== id);
                 saveDB();
             }
         }
 
-        // --- DYNAMIC RESULT ENTRY FORM ---
-        function setupResultForm() {
-            const catId = document.getElementById('res-cat-select').value;
-            const area = document.getElementById('result-input-area');
+        function resetCatForm() {
+            document.getElementById('cat-id').value = '';
+            document.getElementById('cat-name').value = '';
+            document.getElementById('btn-save-cat').innerText = "Dodaj Kategorijo";
+            document.getElementById('btn-cancel-cat').style.display = 'none';
+            document.getElementById('edit-cat-indicator').style.display = 'none';
+        }
+
+        // 4. RESULTS ENTRY
+        function setupResForm() {
+            const cid = document.getElementById('res-cat-select').value;
+            const area = document.getElementById('res-form-area');
             area.innerHTML = '';
-            
-            if(!catId) return;
-            const cat = db.categories.find(c => c.id === catId);
+            if(!cid) return;
 
-            // Check if results already exist to pre-fill
-            const existing = db.results.find(r => r.categoryId === catId);
-            if(existing && existing.date) document.getElementById('res-date').value = existing.date;
+            const cat = db.categories.find(c => c.id === cid);
+            const existing = db.results.find(r => r.categoryId === cid);
+            if(existing) document.getElementById('res-date').value = existing.date;
 
-            let html = `<p style="margin-bottom:10px; color:#aaa;">Vpiši najboljši rezultat. Za DNF obkljukaj.</p>`;
-            
+            let html = '';
             db.competitors.forEach(p => {
-                // Find existing value if any
-                let val = '';
-                let isDNF = false;
+                const country = db.countries.find(c => c.id === p.countryId);
+                let val = '', dnf = false;
                 if(existing) {
-                    const entry = existing.entries.find(e => e.competitorId === p.id);
-                    if(entry) {
-                        val = entry.value;
-                        isDNF = entry.isDNF;
-                    }
+                    const e = existing.entries.find(x => x.competitorId === p.id);
+                    if(e) { val = e.value; dnf = e.isDNF; }
                 }
 
                 html += `
-                <div class="glass-card" style="padding:15px; display:flex; align-items:center; gap:10px;">
-                    <div style="flex:1;"><strong>${p.name}</strong></div>
+                <div class="glass-panel" style="padding:10px; display:flex; align-items:center; gap:10px;">
                     <div style="flex:1;">
-                        <input type="number" step="0.01" class="res-val" data-id="${p.id}" placeholder="Rezultat (${cat.unit})" value="${val}">
+                        <span style="font-size:0.8rem; color:var(--text-dim);">${country.name}</span><br>
+                        <strong>${p.name}</strong>
                     </div>
-                    <div style="width:80px; text-align:center;">
-                        <label style="font-size:0.8rem;">DNF <input type="checkbox" class="res-dnf" data-id="${p.id}" ${isDNF ? 'checked' : ''}></label>
+                    <div style="flex:1;">
+                        <input type="number" step="0.01" class="r-val" data-pid="${p.id}" value="${val}" placeholder="${cat.unit}">
+                    </div>
+                    <div style="width:60px; text-align:center;">
+                        <small>DNF</small><br>
+                        <input type="checkbox" class="r-dnf" data-pid="${p.id}" ${dnf?'checked':''}>
                     </div>
                 </div>`;
             });
-
-            html += `<button class="action-btn" onclick="saveResults('${catId}')">SHRANI REZULTATE</button>`;
+            html += `<button class="btn-primary" onclick="submitResults('${cid}')">SHRANI</button>`;
             area.innerHTML = html;
         }
 
-        function saveResults(catId) {
+        function submitResults(cid) {
             const date = document.getElementById('res-date').value;
-            if(!date) return alert("Izberi datum!");
-
-            const entries = [];
-            const valInputs = document.querySelectorAll('.res-val');
+            if(!date) return alert("Datum!");
             
-            valInputs.forEach(input => {
-                const compId = input.getAttribute('data-id');
-                const val = parseFloat(input.value);
-                const dnfCheck = document.querySelector(`.res-dnf[data-id="${compId}"]`).checked;
-
-                if (!isNaN(val) || dnfCheck) {
-                    entries.push({
-                        competitorId: compId,
-                        value: isNaN(val) ? 0 : val,
-                        isDNF: dnfCheck
-                    });
+            const entries = [];
+            document.querySelectorAll('.r-val').forEach(inp => {
+                const pid = inp.getAttribute('data-pid');
+                const val = parseFloat(inp.value);
+                const isDNF = document.querySelector(`.r-dnf[data-pid="${pid}"]`).checked;
+                
+                if(!isNaN(val) || isDNF) {
+                    entries.push({ competitorId: pid, value: isNaN(val)?0:val, isDNF });
                 }
             });
 
-            // Update or push
-            const existingIdx = db.results.findIndex(r => r.categoryId === catId);
-            const resObj = { categoryId: catId, date, entries };
-
-            if(existingIdx >= 0) {
-                db.results[existingIdx] = resObj;
-            } else {
-                db.results.push(resObj);
-            }
-
-            saveDB();
-            alert("Rezultati shranjeni!");
+            const idx = db.results.findIndex(r => r.categoryId === cid);
+            const obj = { categoryId: cid, date, entries };
+            if(idx >= 0) db.results[idx] = obj;
+            else db.results.push(obj);
+            
+            saveDB(); alert("Shranjeno!");
         }
 
-        function refreshAll() {
+        // --- RENDER ADMIN LISTS ---
+        function refreshAdmin() {
+            // Selects
+            const countryOpts = db.countries.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            document.getElementById('comp-country-select').innerHTML = countryOpts;
+            
+            const catOpts = `<option value="">-- Izberi --</option>` + db.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            document.getElementById('res-cat-select').innerHTML = catOpts;
+
+            // Lists
+            // 1. Cats
+            const clist = document.getElementById('list-cats');
+            clist.innerHTML = db.categories.map(c => `
+                <li style="display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(255,255,255,0.05); padding:8px;">
+                    <span>${c.name}</span>
+                    <div>
+                        <button class="btn-sm btn-primary" onclick="editCat('${c.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-sm btn-danger" onclick="deleteCat('${c.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </li>`).join('');
+
+            // 2. Countries
+            const colist = document.getElementById('list-countries');
+            colist.innerHTML = db.countries.map(c => `
+                <li style="display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(255,255,255,0.05); padding:8px;">
+                    <span><img src="${getFlagUrl(c.code)}" width="20"> ${c.name}</span>
+                    <div>
+                        <button class="btn-sm btn-primary" onclick="editCountry('${c.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-sm btn-danger" onclick="deleteCountry('${c.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </li>`).join('');
+
+            // 3. Competitors
+            const plist = document.getElementById('list-competitors');
+            plist.innerHTML = db.competitors.map(p => {
+                const c = db.countries.find(x => x.id === p.countryId);
+                return `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(255,255,255,0.05); padding:8px;">
+                    <span>${p.name} <small style="color:#888">(${c.name})</small></span>
+                    <div>
+                        <button class="btn-sm btn-primary" onclick="editCompetitor('${p.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-sm btn-danger" onclick="deleteCompetitor('${p.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function refresh() {
             renderMedals();
-            renderTotalScore('all', document.querySelector('#section-total .tabs .tab-btn')); // default view
-            renderAdminLists();
-            renderAdminSelects();
+            renderTotalScore('all', document.querySelector('#section-total .tab-pill'));
+            // Refresh selects needed for public view
+            const pubSel = document.getElementById('public-cat-select');
+            const oldVal = pubSel.value;
+            pubSel.innerHTML = `<option value="">-- Izberi disciplino --</option>` + db.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            pubSel.value = oldVal;
+            
+            if(isLoggedIn) refreshAdmin();
         }
 
-        // --- INIT ---
+        // Init
         window.onload = function() {
-            refreshAll();
-            // Pre-select today's date
+            refresh();
             document.getElementById('res-date').valueAsDate = new Date();
-        };
+        }
 
     </script>
 </body>
