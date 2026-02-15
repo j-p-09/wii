@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domače Olimpijske Igre</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --primary: #fbbf24; /* Zlata */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(220, 38, 38, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(251, 191, 36, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- GLAVNI MENI (Glassmorphism) --- */
+        nav {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            box-shadow: var(--glass-shadow);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        /* Olimpijska črta na vrhu menija */
+        nav::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #0081C8 20%, #FCB131 20% 40%, #000000 40% 60%, #00A651 60% 80%, #EE334E 80%);
+        }
+
+        nav button {
+            background: transparent; border: none; color: var(--text-main);
+            font-size: 14px; font-weight: 600; padding: 10px 20px;
+            border-radius: 30px; cursor: pointer; transition: all 0.3s ease;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        nav button:hover, nav button.active {
+            background: var(--glass-bg);
+            color: var(--primary);
+            box-shadow: inset 0 0 10px rgba(251, 191, 36, 0.1);
+        }
+
+        /* --- VSEBINA IN ANIMACIJE --- */
+        .container {
+            max-width: 1000px; margin: 100px auto 40px; padding: 20px;
+        }
+
+        .section {
+            display: none; animation: fadeIn 0.5s ease forwards;
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 30px; box-shadow: var(--glass-shadow);
+        }
+
+        .section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- TABELE --- */
+        h2 { text-align: center; margin-bottom: 30px; font-size: 2rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px;}
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: center; border-bottom: 1px solid var(--glass-border); }
+        th { font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;}
+        tr:hover { background: rgba(255, 255, 255, 0.03); transition: 0.3s; }
+        
+        .flag { font-size: 1.5rem; vertical-align: middle; margin-right: 10px; }
+        .text-left { text-align: left; }
+        .medal-icon { font-size: 1.2rem; }
+        .gold { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .silver { color: #c0c0c0; }
+        .bronze { color: #cd7f32; }
+
+        /* --- KONTROLE IN FORME --- */
+        .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        select, input, .btn-primary {
+            background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border);
+            color: white; padding: 10px 15px; border-radius: 10px; outline: none;
+        }
+        select option { background: var(--bg-color); }
+        .btn-primary { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; transition: 0.3s;}
+        .btn-primary:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+
+        /* --- ADMIN PANEL --- */
+        .admin-grid { display: grid; grid-template-columns: 200px 1fr; gap: 20px; }
+        .admin-menu { display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--glass-border); padding-right: 20px;}
+        .admin-menu button { background: transparent; border: 1px solid var(--glass-border); color: white; padding: 10px; border-radius: 10px; cursor: pointer; text-align: left;}
+        .admin-menu button.active { background: var(--primary); color: black; font-weight: bold;}
+        .admin-content { padding-left: 10px; }
+
+        /* Pomožni razredi */
+        .badge { background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <button class="active" onclick="showSection('medalje')">Medalje</button>
+        <button onclick="showSection('kategorije')">Kategorije</button>
+        <button onclick="showSection('sestavek')">Skupni seštevek</button>
+        <button onclick="showSection('prijava')" id="nav-prijava">Prijava</button>
+    </nav>
+
+    <div class="container">
+        <div id="medalje" class="section active">
+            <h2>Stanje Medalj</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-left">Država</th>
+                        <th>Skupno 🏅</th>
+                        <th>Zlato 🥇</th>
+                        <th>Srebro 🥈</th>
+                        <th>Bron 🥉</th>
+                    </tr>
+                </thead>
+                <tbody id="medals-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="kategorije" class="section">
+            <h2>Rezultati po kategorijah</h2>
+            <div class="controls">
+                <select id="cat-select" onchange="renderCategoryResults()">
+                    <option value="">-- Izberi kategorijo --</option>
+                </select>
+            </div>
+            <table id="cat-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Mesto</th>
+                        <th class="text-left">Tekmovalec (Država)</th>
+                        <th>Rezultat</th>
+                        <th>Opomba</th>
+                    </tr>
+                </thead>
+                <tbody id="cat-body"></tbody>
+            </table>
+        </div>
+
+        <div id="sestavek" class="section">
+            <h2>Skupni seštevek točk</h2>
+            <div class="controls">
+                <select id="filter-location" onchange="renderStandings()">
+                    <option value="all">Skupno (Zunaj + Notri)</option>
+                    <option value="notri">Samo Notranje</option>
+                    <option value="zunaj">Samo Zunanje</option>
+                </select>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Uvrstitev</th>
+                        <th class="text-left">Država</th>
+                        <th>Točke</th>
+                    </tr>
+                </thead>
+                <tbody id="standings-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="prijava" class="section">
+            <h2>Prijava za zaposlene</h2>
+            <div style="max-width: 300px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px;">
+                <input type="text" id="username" placeholder="Uporabniško ime (admin)">
+                <input type="password" id="password" placeholder="Geslo (admin)">
+                <button class="btn-primary" onclick="login()">Prijavi se</button>
+                <p id="login-error" style="color: #ef4444; display: none; text-align: center;">Napačni podatki!</p>
+            </div>
+        </div>
+
+        <div id="admin" class="section">
+            <h2>Nadzorna Plošča</h2>
+            <button onclick="logout()" style="float:right; margin-top:-60px;" class="badge">Odjava</button>
+            
+            <div class="admin-grid">
+                <div class="admin-menu">
+                    <button class="active" onclick="switchAdmin('admin-kat')">Kategorije</button>
+                    <button onclick="switchAdmin('admin-vpis')">Vpis Rezultatov</button>
+                    <button onclick="switchAdmin('admin-nacrt')">Načrtovanje</button>
+                    <button onclick="switchAdmin('admin-tek')">Tekmovalci</button>
+                </div>
+                
+                <div class="admin-content">
+                    <div id="admin-kat">
+                        <h3>Urejanje kategorij</h3>
+                        <p class="badge" style="margin-top: 10px;">*Tukaj določiš enote (sekunde, metri), tip igre (Zunaj/Notri) in logiko (več je boljše/manj je boljše) ter število serij.*</p>
+                        <button class="btn-primary" style="margin-top: 20px;">+ Dodaj novo kategorijo</button>
+                    </div>
+                    
+                    <div id="admin-vpis" style="display:none;">
+                        <h3>Vpis rezultatov</h3>
+                        <p class="badge" style="margin-top: 10px;">*Sistem samodejno preračuna DNF logiko. Če ima tekmovalec >2 DNF v seriji, je diskvalificiran.*</p>
+                        <select style="margin-top: 20px; width: 100%;"><option>Izberi tekmo za današnji dan...</option></select>
+                    </div>
+
+                    <div id="admin-nacrt" style="display:none;">
+                        <h3>Načrtovanje</h3>
+                        <input type="date" style="margin-top: 20px;">
+                        <button class="btn-primary">Dodeli kategorijo dnevu</button>
+                    </div>
+
+                    <div id="admin-tek" style="display:none;">
+                        <h3>Tekmovalci in Države</h3>
+                        <div class="controls" style="justify-content: flex-start;">
+                            <button class="btn-primary">Uredi Države</button>
+                            <button class="btn-primary">Uredi Osebe</button>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Opomba: En tekmovalec lahko zastopa več držav.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- BAZA PODATKOV (LocalStorage Inicializacija) ---
+        const defaultData = {
+            countries: [
+                { id: 'c1', name: 'Slovenija', flag: '🇸🇮', gold: 2, silver: 1, bronze: 0 },
+                { id: 'c2', name: 'Hrvaška', flag: '🇭🇷', gold: 0, silver: 2, bronze: 1 },
+                { id: 'c3', name: 'Italija', flag: '🇮🇹', gold: 1, silver: 0, bronze: 2 }
+            ],
+            categories: [
+                { id: 'kat1', name: 'Met metle v daljavo', location: 'zunaj', unit: 'm' },
+                { id: 'kat2', name: 'Zadevanje koša s papirjem', location: 'notri', unit: 'točke' }
+            ],
+            standings: [ // Demonstracijski seštevek za testiranje
+                { countryId: 'c1', total: 280, notri: 100, zunaj: 180 },
+                { countryId: 'c2', total: 220, notri: 140, zunaj: 80 },
+                { countryId: 'c3', total: 160, notri: 60, zunaj: 100 }
+            ],
+            results: []
+        };
+
+        // Naloži ali ustvari podatke
+        let db = JSON.parse(localStorage.getItem('olympicDb'));
+        if (!db) {
+            db = defaultData;
+            localStorage.setItem('olympicDb', JSON.stringify(db));
+        }
+
+        // --- NAVIGACIJA ---
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+
+            if(id === 'medalje') renderMedals();
+            if(id === 'sestavek') renderStandings();
+            if(id === 'kategorije') populateCategories();
+        }
+
+        // --- IZRAČUN TOČK (Tvoja specifična logika) ---
+        function calculatePoints(place) {
+            if (place === 1) return 100;
+            if (place === 2) return 80;
+            if (place === 3) return 60;
+            if (place === 4) return 40;
+            if (place === 5) return 35;
+            if (place > 5) {
+                // Vsako naslednje mesto -0.02 točke od 35
+                let pts = 35 - ((place - 5) * 0.02);
+                return pts > 0 ? parseFloat(pts.toFixed(2)) : 0; 
+            }
+            return 0;
+        }
+
+        // --- RENDERIRANJE MEDALJ ---
+        function renderMedals() {
+            const tbody = document.getElementById('medals-body');
+            tbody.innerHTML = '';
+            
+            // Sortiranje po zlatu, nato srebru, nato bronu
+            let sorted = [...db.countries].sort((a, b) => {
+                if(b.gold !== a.gold) return b.gold - a.gold;
+                if(b.silver !== a.silver) return b.silver - a.silver;
+                return b.bronze - a.bronze;
+            });
+
+            sorted.forEach(c => {
+                let total = c.gold + c.silver + c.bronze;
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-left"><span class="flag">${c.flag}</span> ${c.name}</td>
+                        <td style="font-weight: bold;">${total}</td>
+                        <td class="gold medal-icon">${c.gold}</td>
+                        <td class="silver medal-icon">${c.silver}</td>
+                        <td class="bronze medal-icon">${c.bronze}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- RENDERIRANJE SEŠTEVKA ---
+        function renderStandings() {
+            const tbody = document.getElementById('standings-body');
+            const filter = document.getElementById('filter-location').value;
+            tbody.innerHTML = '';
+
+            // Poveži točke z imenom države
+            let viewData = db.standings.map(s => {
+                let country = db.countries.find(c => c.id === s.countryId);
+                let points = filter === 'all' ? s.total : (filter === 'notri' ? s.notri : s.zunaj);
+                return { name: country.name, flag: country.flag, points: points };
+            }).sort((a, b) => b.points - a.points); // Sortiraj padajoče
+
+            viewData.forEach((d, index) => {
+                let rankStyle = index === 0 ? 'color: var(--primary); font-weight: bold; font-size:1.2rem;' : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="${rankStyle}">${index + 1}.</td>
+                        <td class="text-left"><span class="flag">${d.flag}</span> ${d.name}</td>
+                        <td style="font-weight: bold;">${d.points.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- KATEGORIJE ---
+        function populateCategories() {
+            const select = document.getElementById('cat-select');
+            if(select.options.length === 1) { // Napolni samo prvič
+                db.categories.forEach(cat => {
+                    select.innerHTML += `<option value="${cat.id}">${cat.name} (${cat.location})</option>`;
+                });
+            }
+        }
+
+        function renderCategoryResults() {
+            const val = document.getElementById('cat-select').value;
+            const table = document.getElementById('cat-table');
+            const tbody = document.getElementById('cat-body');
+            
+            if(!val) { table.style.display = 'none'; return; }
+            table.style.display = 'table';
+            
+            // Mock podatki za prikaz (Tukaj bi sicer filtrirali db.results)
+            tbody.innerHTML = `
+                <tr>
+                    <td class="gold">1 🥇</td>
+                    <td class="text-left">Janez Novak (🇸🇮 Slovenija)</td>
+                    <td>14.5 m</td>
+                    <td>100 točk</td>
+                </tr>
+                <tr>
+                    <td class="silver">2 🥈</td>
+                    <td class="text-left">Mario Rossi (🇮🇹 Italija)</td>
+                    <td>13.2 m</td>
+                    <td>80 točk</td>
+                </tr>
+                <tr>
+                    <td>-</td>
+                    <td class="text-left">Luka Horvat (🇭🇷 Hrvaška)</td>
+                    <td style="color: #ef4444; font-weight:bold;">DNF</td>
+                    <td>Preveč prestopov</td>
+                </tr>
+            `;
+        }
+
+        // --- ADMIN LOGIN LOGIKA ---
+        function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            
+            if(u === 'admin' && p === 'admin') {
+                document.getElementById('nav-prijava').innerText = 'Admin Panel';
+                document.getElementById('login-error').style.display = 'none';
+                showSection('admin');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            document.getElementById('nav-prijava').innerText = 'Prijava';
+            showSection('prijava');
+        }
+
+        function switchAdmin(id) {
+            document.querySelectorAll('.admin-content > div').forEach(div => div.style.display = 'none');
+            document.querySelectorAll('.admin-menu button').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(id).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        // Inicializacija ob zagonu
+        renderMedals();
+
+    </script>
+</body>
+</html>
