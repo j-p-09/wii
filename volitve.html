@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII Filmi - Glasovalni Sistem</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --bg: #ecf0f1;
+            --text: #333;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f1c40f;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        
+        /* Layouts */
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        
+        /* Typography */
+        h1, h2, h3 { color: var(--primary); margin-bottom: 15px; }
+        
+        /* Forms & Inputs */
+        input[type="text"], input[type="number"], input[type="password"] {
+            width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 4px;
+        }
+        button {
+            background-color: var(--secondary); color: white; border: none; padding: 10px 15px;
+            cursor: pointer; border-radius: 4px; font-weight: bold; transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        button.danger { background-color: var(--danger); }
+        button.danger:hover { background-color: #c0392b; }
+        button.success { background-color: var(--success); }
+        
+        /* Login Page */
+        #login-view { max-width: 400px; margin: 100px auto; text-align: center; }
+        
+        /* Admin Navigation */
+        .admin-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        .admin-nav button { background-color: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .admin-nav button.active { background-color: var(--primary); color: white; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: var(--primary); color: white; }
+        
+        /* Flex rows */
+        .flex-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px; }
+        .flex-row > div { flex: 1; }
+
+        /* Round Panels */
+        .round-panel { border: 2px solid var(--primary); border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+        .round-header { background-color: var(--primary); color: white; padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; }
+        .round-content { padding: 15px; background: #fafafa; }
+        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; background: white; color: var(--primary); }
+        .status-badge.ODPRTO { background: var(--success); color: white;}
+        .status-badge.ZAPRTO { background: var(--danger); color: white;}
+        .status-badge.DODATNO { background: var(--warning); color: black;}
+
+        /* User Voting Area */
+        .voting-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .movie-card { border: 1px solid #ccc; padding: 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: white; }
+        .movie-card:hover { background: #f1f1f1; }
+        .movie-card input[type="checkbox"] { transform: scale(1.5); cursor: pointer; }
+        .movie-card.disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .floating-counter { position: fixed; top: 20px; right: 20px; background: var(--secondary); color: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-size: 1.2em; z-index: 1000;}
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <div id="login-view" class="container">
+        <h1>WII Filmi</h1>
+        <p>Prijava v sistem</p><br>
+        <input type="text" id="login-code" placeholder="Vnesite šifro (npr. ADMIN)">
+        <button onclick="login()">Prijavi se</button>
+        <p id="login-error" class="hidden" style="color: red; margin-top: 10px;">Napačna šifra!</p>
+    </div>
+
+    <div id="admin-view" class="container hidden">
+        <div class="header-bar">
+            <h2>Nadzorna plošča - Administrator</h2>
+            <button class="danger" onclick="logout()">Odjava</button>
+        </div>
+        
+        <div class="admin-nav">
+            <button id="tab-btn-volilci" onclick="switchAdminTab('volilci')">VOLILCI</button>
+            <button id="tab-btn-filmi" onclick="switchAdminTab('filmi')">FILMI</button>
+            <button id="tab-btn-krogi" onclick="switchAdminTab('krogi')">VOLILNI KROGI</button>
+        </div>
+
+        <div id="admin-volilci" class="admin-tab hidden">
+            <h3>Seznam uporabnikov</h3>
+            <div class="flex-row">
+                <div><input type="text" id="new-user-ime" placeholder="Ime"></div>
+                <div><input type="text" id="new-user-priimek" placeholder="Priimek"></div>
+                <div><input type="text" id="new-user-sifra" placeholder="Šifra"></div>
+                <div><button onclick="addUser()">Dodaj uporabnika</button></div>
+            </div>
+            <table>
+                <thead><tr><th>Ime</th><th>Priimek</th><th>Šifra</th><th>Akcije</th></tr></thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+        </div>
+
+        <div id="admin-filmi" class="admin-tab hidden">
+            <h3>Seznam filmov</h3>
+            <div class="flex-row">
+                <div style="flex: 3;"><input type="text" id="new-movie-naslov" placeholder="Naslov filma"></div>
+                <div style="flex: 1;"><button onclick="addMovie()">Dodaj film</button></div>
+            </div>
+            <table>
+                <thead><tr><th>Naslov</th><th>Status</th><th>Akcije</th></tr></thead>
+                <tbody id="movies-tbody"></tbody>
+            </table>
+        </div>
+
+        <div id="admin-krogi" class="admin-tab hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Volilni krogi</h3>
+                <button class="danger" onclick="resetVse()">Ponastavi VSE rezultate</button>
+            </div>
+            <hr style="margin: 15px 0;">
+
+            <div id="krogi-setup" class="hidden">
+                <p>Določite število volilnih krogov:</p>
+                <div class="flex-row">
+                    <div><input type="number" id="num-rounds" min="1" max="10" placeholder="Število krogov"></div>
+                    <div><button onclick="generateRoundConfig()">Potrdi</button></div>
+                </div>
+            </div>
+
+            <div id="krogi-config" class="hidden">
+                <h4>Nastavitve krogov</h4>
+                <div id="krogi-config-forms"></div>
+                <button onclick="saveRounds()" style="margin-top: 15px;">Shrani in ustvari kroge</button>
+            </div>
+
+            <div id="krogi-list" class="hidden">
+                </div>
+        </div>
+    </div>
+
+    <div id="user-view" class="container hidden">
+        <div class="header-bar">
+            <h2>Glasovanje</h2>
+            <button class="danger" onclick="logout()">Odjava</button>
+        </div>
+        
+        <div id="user-voting-area">
+            <h3 id="user-round-title"></h3>
+            <p id="user-round-info" style="margin-bottom: 20px;"></p>
+            
+            <div id="user-movies-list" class="voting-grid"></div>
+            
+            <button id="submit-votes-btn" class="success" style="width: 100%; font-size: 1.2em; padding: 15px;" onclick="submitVotes()">Oddaj glasove</button>
+        </div>
+
+        <div id="user-no-voting" class="hidden">
+            <h3>Trenutno ni aktivnih volitev za vas.</h3>
+            <p>Glasovanje je morda zaprto, še ni odprto, ali pa ste v tem krogu že oddali svoj glas.</p>
+        </div>
+
+        <div class="floating-counter hidden" id="vote-counter">
+            Preostalo glasov: <strong id="votes-left">0</strong>
+        </div>
+    </div>
+
+    <script>
+        /* --- PRIVZETI PODATKI --- */
+        const defaultMovies = [
+            "Ježek Sonic 2", "Velika nagrada Evrope", "Ježek Sonic 3", "Levji Kralj", "Zapoj", 
+            "Iskanje pozabljive Dory", "Ježek Sonic", "Veličastnih 6", "Wall – E", "V tvojih sanjah (Slosub)", 
+            "Nemo", "Kralj vseh kraljev", "Lili in žverca", "Angry Birds", "Elio", "Čudežni park", 
+            "Asterix", "Jelenček Niko 3", "Transformerji", "Obuti maček zadnja želja", "Divja Robotka", 
+            "Gasilec Samo", "Ledena doba 5", "Ledena doba 4", "Ledena doba 3", "Ledena doba 2", 
+            "Jelenček Niko", "Jelenček niko 2", "Jaz baraba 4", "Luca", "Ratatoulie", "Vrvež v moji glavi"
+        ];
+
+        /* --- STATE MANAGEMENT --- */
+        let state = {
+            users: JSON.parse(localStorage.getItem('wii_users')) || [],
+            movies: JSON.parse(localStorage.getItem('wii_movies')) || defaultMovies.map((m, i) => ({ id: i, naslov: m, status: 'Aktivno' })),
+            rounds: JSON.parse(localStorage.getItem('wii_rounds')) || [],
+            currentUser: null // Lahko 'ADMIN' ali user object
+        };
+
+        function saveData() {
+            localStorage.setItem('wii_users', JSON.stringify(state.users));
+            localStorage.setItem('wii_movies', JSON.stringify(state.movies));
+            localStorage.setItem('wii_rounds', JSON.stringify(state.rounds));
+        }
+
+        /* --- NAVIGACIJA --- */
+        function showView(viewId) {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('admin-view').classList.add('hidden');
+            document.getElementById('user-view').classList.add('hidden');
+            document.getElementById('vote-counter').classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        /* --- PRIJAVA IN ODJAVA --- */
+        function login() {
+            const code = document.getElementById('login-code').value.trim();
+            document.getElementById('login-error').classList.add('hidden');
+
+            if (code === 'ADMIN') {
+                state.currentUser = 'ADMIN';
+                document.getElementById('login-code').value = '';
+                showView('admin-view');
+                switchAdminTab('volilci');
+            } else {
+                const user = state.users.find(u => u.sifra === code);
+                if (user) {
+                    state.currentUser = user;
+                    document.getElementById('login-code').value = '';
+                    showView('user-view');
+                    initUserVoting();
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            }
+        }
+
+        function logout() {
+            state.currentUser = null;
+            showView('login-view');
+        }
+
+        /* ==================== ADMIN LOGIKA ==================== */
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.admin-nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`admin-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tab}`).classList.add('active');
+
+            if (tab === 'volilci') renderUsers();
+            if (tab === 'filmi') renderMovies();
+            if (tab === 'krogi') renderRounds();
+        }
+
+        /* VOLILCI */
+        function renderUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = state.users.map((u, index) => `
+                <tr>
+                    <td>${u.ime}</td>
+                    <td>${u.priimek}</td>
+                    <td>${u.sifra}</td>
+                    <td>
+                        <button onclick="deleteUser(${index})" class="danger">Izbriši</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addUser() {
+            const ime = document.getElementById('new-user-ime').value.trim();
+            const priimek = document.getElementById('new-user-priimek').value.trim();
+            const sifra = document.getElementById('new-user-sifra').value.trim();
+            
+            if (!ime || !priimek || !sifra) return alert('Izpolnite vsa polja!');
+            if (sifra === 'ADMIN' || state.users.some(u => u.sifra === sifra)) return alert('Šifra že obstaja ali ni dovoljena!');
+
+            state.users.push({ id: Date.now(), ime, priimek, sifra, votedRounds: [] });
+            saveData();
+            renderUsers();
+            document.getElementById('new-user-ime').value = '';
+            document.getElementById('new-user-priimek').value = '';
+            document.getElementById('new-user-sifra').value = '';
+        }
+
+        function deleteUser(index) {
+            if(confirm('Res želite izbrisati uporabnika?')) {
+                state.users.splice(index, 1);
+                saveData();
+                renderUsers();
+            }
+        }
+
+        /* FILMI */
+        function renderMovies() {
+            const tbody = document.getElementById('movies-tbody');
+            tbody.innerHTML = state.movies.map((m, index) => `
+                <tr>
+                    <td>${m.naslov}</td>
+                    <td>${m.status}</td>
+                    <td>
+                        <button onclick="deleteMovie(${index})" class="danger">Izbriši</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addMovie() {
+            const naslov = document.getElementById('new-movie-naslov').value.trim();
+            if (!naslov) return alert('Vnesite naslov!');
+            state.movies.push({ id: Date.now(), naslov, status: 'Aktivno' });
+            saveData();
+            renderMovies();
+            document.getElementById('new-movie-naslov').value = '';
+        }
+
+        function deleteMovie(index) {
+            if(confirm('Izbrišem film?')) {
+                state.movies.splice(index, 1);
+                saveData();
+                renderMovies();
+            }
+        }
+
+        /* VOLILNI KROGI */
+        function renderRounds() {
+            if (state.rounds.length === 0) {
+                document.getElementById('krogi-setup').classList.remove('hidden');
+                document.getElementById('krogi-config').classList.add('hidden');
+                document.getElementById('krogi-list').classList.add('hidden');
+            } else {
+                document.getElementById('krogi-setup').classList.add('hidden');
+                document.getElementById('krogi-config').classList.add('hidden');
+                document.getElementById('krogi-list').classList.remove('hidden');
+                
+                const list = document.getElementById('krogi-list');
+                list.innerHTML = state.rounds.map((r, i) => `
+                    <div class="round-panel">
+                        <div class="round-header" onclick="toggleRoundPanel(${i})">
+                            <span>${i+1}. Krog</span>
+                            <span class="status-badge ${r.status}">${r.status.replace('_', ' ')}</span>
+                        </div>
+                        <div id="round-content-${i}" class="round-content hidden">
+                            <p><strong>Izpade filmov:</strong> ${r.izpade}</p>
+                            <p><strong>Glasov na uporabnika:</strong> ${r.glasov}</p>
+                            <hr style="margin: 10px 0;">
+                            ${getRoundControls(r, i)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function generateRoundConfig() {
+            const num = parseInt(document.getElementById('num-rounds').value);
+            if (!num || num < 1) return;
+            
+            let html = '';
+            for(let i=1; i<=num; i++) {
+                html += `
+                    <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc;">
+                        <h5>${i}. Krog</h5>
+                        <input type="number" id="krog-${i}-izpade" placeholder="Koliko filmov izpade?" style="width:48%; display:inline-block;">
+                        <input type="number" id="krog-${i}-glasov" placeholder="Koliko glasov ima uporabnik?" style="width:48%; display:inline-block;">
+                    </div>
+                `;
+            }
+            document.getElementById('krogi-config-forms').innerHTML = html;
+            document.getElementById('krogi-setup').classList.add('hidden');
+            document.getElementById('krogi-config').classList.remove('hidden');
+        }
+
+        function saveRounds() {
+            const num = document.getElementById('krogi-config-forms').children.length;
+            let newRounds = [];
+            for(let i=1; i<=num; i++) {
+                let izpade = document.getElementById(`krog-${i}-izpade`).value;
+                let glasov = document.getElementById(`krog-${i}-glasov`).value;
+                if(!izpade || !glasov) return alert('Izpolnite vse podatke za vse kroge!');
+                
+                newRounds.push({
+                    id: i,
+                    izpade: parseInt(izpade),
+                    glasov: parseInt(glasov),
+                    status: 'NEAKTIVEN',
+                    votes: {}, // userId: [movieIds]
+                    dodatnoVotes: {}, // Za tie-breaker
+                    tieBreakMovies: [],
+                    resultsLog: ''
+                });
+            }
+            state.rounds = newRounds;
+            saveData();
+            renderRounds();
+        }
+
+        function toggleRoundPanel(index) {
+            document.getElementById(`round-content-${index}`).classList.toggle('hidden');
+        }
+
+        function getRoundControls(r, i) {
+            let html = `Opozorilo: Status kroga je ${r.status.replace('_', ' ')}.<br><br>`;
+            
+            if (r.status === 'NEAKTIVEN') {
+                html += `<button class="success" onclick="changeRoundStatus(${i}, 'ODPRTO')">Odpri krog za glasovanje</button>`;
+            } else if (r.status === 'ODPRTO') {
+                let currentVotes = Object.keys(r.votes).length;
+                html += `<p>Oddanih glasovnic: ${currentVotes}</p>`;
+                html += `<button class="danger" onclick="closeRound(${i})">Zapri krog</button>`;
+            } else if (r.status === 'ZAPRTO' || r.status === 'NEURADNI_REZULTATI') {
+                html += `<p>Analiziranje...</p>`;
+            } else if (r.status === 'URADNI_REZULTATI') {
+                html += `<strong>URADNI REZULTATI:</strong><br><pre>${r.resultsLog}</pre>`;
+            } else if (r.status === 'DODATNO') {
+                html += `<p style="color:red; font-weight:bold;">Sistem je zaznal izenačenje. Potrebno je dodatno glasovanje za obstanek!</p>`;
+                html += `Filmi v dodatnem odločanju: ${r.tieBreakMovies.map(id => state.movies.find(m=>m.id===id).naslov).join(', ')}<br><br>`;
+                let currentVotes = Object.keys(r.dodatnoVotes).length;
+                html += `<p>Oddanih dodatnih glasovnic: ${currentVotes}</p>`;
+                html += `<button class="danger" onclick="closeDodatno(${i})">Zapri dodatno glasovanje in preveri</button>`;
+            }
+            return html;
+        }
+
+        function changeRoundStatus(roundIndex, newStatus) {
+            // Pred odprtjem novega kroga, zapri ostale odprte
+            if (newStatus === 'ODPRTO') {
+                state.rounds.forEach(r => {
+                    if(r.status === 'ODPRTO' || r.status === 'DODATNO') r.status = 'NEAKTIVEN';
+                });
+            }
+            state.rounds[roundIndex].status = newStatus;
+            saveData();
+            renderRounds();
+        }
+
+        /* --- LOGIKA ZAPIRANJA IN IZRAČUNA REZULTATOV --- */
+        function closeRound(roundIndex) {
+            let round = state.rounds[roundIndex];
+            round.status = 'ZAPRTO';
+            
+            // 1. Tally votes
+            let activeMovies = state.movies.filter(m => m.status === 'Aktivno');
+            let tally = {};
+            activeMovies.forEach(m => tally[m.id] = 0);
+            
+            Object.values(round.votes).forEach(voteArray => {
+                voteArray.forEach(mId => { if(tally[mId] !== undefined) tally[mId]++; });
+            });
+
+            // 2. Sortiranje
+            let sorted = activeMovies.map(m => ({ id: m.id, naslov: m.naslov, votes: tally[m.id] }))
+                                     .sort((a,b) => b.votes - a.votes);
+            
+            let dropCount = round.izpade;
+            let keepCount = sorted.length - dropCount;
+
+            // Generate log
+            let log = sorted.map((m, idx) => `${idx+1}. ${m.naslov} (${m.votes} glasov)`).join('\n');
+
+            if (keepCount > 0 && dropCount > 0 && sorted[keepCount-1].votes === sorted[keepCount].votes) {
+                // TIE BREAKER POTREBEN
+                let tieVotes = sorted[keepCount-1].votes;
+                let tiedMovies = sorted.filter(m => m.votes === tieVotes).map(m => m.id);
+                
+                round.status = 'DODATNO';
+                round.tieBreakMovies = tiedMovies;
+                round.resultsLog = `Izenačenje pri ${tieVotes} glasovih!\n\n` + log;
+            } else {
+                // URADNI REZULTATI
+                round.status = 'URADNI_REZULTATI';
+                round.resultsLog = `Izpadli filmi:\n` + sorted.slice(keepCount).map(m=>m.naslov).join('\n') + `\n\nCelotna lestvica:\n` + log;
+                
+                // Označi filme kot izpadle
+                sorted.slice(keepCount).forEach(mObj => {
+                    let m = state.movies.find(x => x.id === mObj.id);
+                    if(m) m.status = `Izpadel v ${roundIndex+1}. krogu`;
+                });
+            }
+
+            saveData();
+            renderRounds();
+        }
+
+        function closeDodatno(roundIndex) {
+            let round = state.rounds[roundIndex];
+            
+            let tally = {};
+            round.tieBreakMovies.forEach(id => tally[id] = 0);
+            
+            Object.values(round.dodatnoVotes).forEach(voteArray => {
+                voteArray.forEach(mId => { if(tally[mId] !== undefined) tally[mId]++; });
+            });
+
+            let sortedTie = round.tieBreakMovies.map(id => ({ id: id, naslov: state.movies.find(x=>x.id===id).naslov, votes: tally[id] }))
+                                                .sort((a,b) => b.votes - a.votes);
+
+            // Koliko od teh izenačenih mora izpasti?
+            let allActive = state.movies.filter(m => m.status === 'Aktivno');
+            let mainTally = {}; // Rabimo stare rezultate, da ugotovimo, koliko mest je še
+            allActive.forEach(m => mainTally[m.id] = 0);
+            Object.values(round.votes).forEach(voteArray => { voteArray.forEach(mId => { if(mainTally[mId] !== undefined) mainTally[mId]++; }); });
+            
+            let sortedMain = allActive.map(m => ({ id: m.id, votes: mainTally[m.id] })).sort((a,b) => b.votes - a.votes);
+            let tieVotesValue = sortedMain[sortedMain.length - round.izpade].votes; // vote count that caused tie
+            let safelyKept = sortedMain.filter(m => m.votes > tieVotesValue).length;
+            let totalKeep = sortedMain.length - round.izpade;
+            let spotsLeftForTied = totalKeep - safelyKept;
+
+            // Računalnik odloča ob ponovnem izenačenju - preprosto po trenutnem (ali abecednem) vrstnem redu sortiranja (prvi preživijo)
+            let survivingTiedIds = sortedTie.slice(0, spotsLeftForTied).map(m=>m.id);
+            let eliminatedTiedIds = sortedTie.slice(spotsLeftForTied).map(m=>m.id);
+
+            round.status = 'URADNI_REZULTATI';
+            round.resultsLog += `\n\n--- REZULTATI DODATNEGA GLASOVANJA ---\n`;
+            round.resultsLog += sortedTie.map(m=> `${m.naslov} (${m.votes} dodatnih glasov)`).join('\n');
+            if(sortedTie.length > spotsLeftForTied && sortedTie[spotsLeftForTied-1].votes === sortedTie[spotsLeftForTied].votes) {
+                round.resultsLog += `\n\n(Računalnik je razrešil ponovno izenačenje.)`;
+            }
+
+            // Izloči dejansko izpadle iz main kroga IN dodatnega
+            let finalEliminatedIds = sortedMain.filter(m => m.votes < tieVotesValue).map(m=>m.id).concat(eliminatedTiedIds);
+            
+            finalEliminatedIds.forEach(id => {
+                let m = state.movies.find(x => x.id === id);
+                if(m) m.status = `Izpadel v ${roundIndex+1}. krogu`;
+            });
+
+            saveData();
+            renderRounds();
+        }
+
+        function resetVse() {
+            if(confirm('POZOR: To bo izbrisalo VSE volilne kroge, rezultate in ponastavilo filme v aktivno stanje. Uporabniki bodo obdržani. Nadaljujem?')) {
+                state.rounds = [];
+                state.movies.forEach(m => m.status = 'Aktivno');
+                state.users.forEach(u => u.votedRounds = []);
+                saveData();
+                renderRounds();
+                renderMovies();
+            }
+        }
+
+
+        /* ==================== UPORABNIK (GLASOVANJE) LOGIKA ==================== */
+        let userSelections = [];
+        let activeRoundObj = null;
+        let activeRoundIndex = -1;
+        let isDodatno = false;
+
+        function initUserVoting() {
+            // Najdi odprt krog
+            activeRoundIndex = state.rounds.findIndex(r => r.status === 'ODPRTO' || r.status === 'DODATNO');
+            
+            if (activeRoundIndex === -1) {
+                document.getElementById('user-voting-area').classList.add('hidden');
+                document.getElementById('user-no-voting').classList.remove('hidden');
+                return;
+            }
+
+            activeRoundObj = state.rounds[activeRoundIndex];
+            isDodatno = activeRoundObj.status === 'DODATNO';
+            
+            // Preveri če je že glasoval
+            let alreadyVoted = false;
+            if (isDodatno && activeRoundObj.dodatnoVotes[state.currentUser.sifra]) alreadyVoted = true;
+            if (!isDodatno && activeRoundObj.votes[state.currentUser.sifra]) alreadyVoted = true;
+
+            if (alreadyVoted) {
+                document.getElementById('user-voting-area').classList.add('hidden');
+                document.getElementById('user-no-voting').classList.remove('hidden');
+                document.getElementById('user-no-voting').innerHTML = '<h3>Glas v tem krogu ste že oddali.</h3>';
+                return;
+            }
+
+            // Pripravi UI za glasovanje
+            document.getElementById('user-voting-area').classList.remove('hidden');
+            document.getElementById('user-no-voting').classList.add('hidden');
+            document.getElementById('vote-counter').classList.remove('hidden');
+            userSelections = [];
+
+            document.getElementById('user-round-title').innerText = `${activeRoundIndex + 1}. Volilni krog ${isDodatno ? '(DODATNO ODLOČANJE)' : ''}`;
+            
+            let maxVotes = isDodatno ? activeRoundObj.tieBreakMovies.length - 1 : activeRoundObj.glasov; 
+            if (maxVotes < 1) maxVotes = 1; // Safeguard
+            
+            document.getElementById('user-round-info').innerText = `V tem krogu lahko glasujete za ${maxVotes} filmov, ki jih želite obdržati.`;
+            document.getElementById('votes-left').innerText = maxVotes;
+
+            renderVotingMovies(maxVotes);
+        }
+
+        function renderVotingMovies(maxVotes) {
+            const list = document.getElementById('user-movies-list');
+            let moviesToShow = [];
+            
+            if (isDodatno) {
+                moviesToShow = state.movies.filter(m => activeRoundObj.tieBreakMovies.includes(m.id));
+            } else {
+                moviesToShow = state.movies.filter(m => m.status === 'Aktivno');
+            }
+
+            list.innerHTML = moviesToShow.map(m => `
+                <div class="movie-card" id="movie-card-${m.id}" onclick="toggleMovieSelection(${m.id}, ${maxVotes})">
+                    <input type="checkbox" id="chk-${m.id}" onclick="event.stopPropagation(); toggleMovieSelection(${m.id}, ${maxVotes})">
+                    <label style="cursor:pointer;">${m.naslov}</label>
+                </div>
+            `).join('');
+        }
+
+        function toggleMovieSelection(movieId, maxVotes) {
+            const idx = userSelections.indexOf(movieId);
+            const chk = document.getElementById(`chk-${movieId}`);
+            const card = document.getElementById(`movie-card-${movieId}`);
+
+            if (idx > -1) {
+                // Deselect
+                userSelections.splice(idx, 1);
+                chk.checked = false;
+                card.style.borderColor = "#ccc";
+            } else {
+                // Select
+                if (userSelections.length >= maxVotes) {
+                    chk.checked = false; // Ne dovoli več
+                    return;
+                }
+                userSelections.push(movieId);
+                chk.checked = true;
+                card.style.borderColor = "var(--success)";
+            }
+
+            let left = maxVotes - userSelections.length;
+            document.getElementById('votes-left').innerText = left;
+
+            // Visual feedback - disable ostale, če smo na max
+            document.querySelectorAll('.movie-card').forEach(c => {
+                let id = parseInt(c.id.replace('movie-card-', ''));
+                if (userSelections.length >= maxVotes && !userSelections.includes(id)) {
+                    c.classList.add('disabled');
+                    c.querySelector('input').disabled = true;
+                } else {
+                    c.classList.remove('disabled');
+                    c.querySelector('input').disabled = false;
+                }
+            });
+        }
+
+        function submitVotes() {
+            let maxVotes = isDodatno ? (activeRoundObj.tieBreakMovies.length - 1 < 1 ? 1 : activeRoundObj.tieBreakMovies.length - 1) : activeRoundObj.glasov;
+            
+            if (userSelections.length !== maxVotes && !confirm(`Niste porabili vseh glasov (ostalo: ${maxVotes - userSelections.length}). Želite vseeno oddati?`)) {
+                return;
+            }
+
+            if (isDodatno) {
+                activeRoundObj.dodatnoVotes[state.currentUser.sifra] = [...userSelections];
+            } else {
+                activeRoundObj.votes[state.currentUser.sifra] = [...userSelections];
+            }
+
+            saveData();
+            document.getElementById('vote-counter').classList.add('hidden');
+            initUserVoting(); // Znova preveri - zdaj bo pokazal "že glasoval"
+        }
+
+    </script>
+</body>
+</html>
