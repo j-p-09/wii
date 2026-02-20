@@ -8,13 +8,12 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-
+        
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         .glass {
@@ -35,66 +34,67 @@
             transform: translateY(-2px);
         }
 
-        .active-nav {
-            background: rgba(255, 255, 255, 0.2) !important;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-        }
-
-        .section-animate {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .active-tab {
+            background: rgba(255, 255, 255, 0.15);
+            border-bottom: 2px solid #38bdf8;
         }
 
         input, select {
-            background: rgba(0, 0, 0, 0.2) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             color: white !important;
-            border-radius: 12px !important;
+            border-radius: 12px;
         }
 
-        .gold { color: #fbbf24; }
-        .silver { color: #94a3b8; }
-        .bronze { color: #b45309; }
+        .medal-gold { color: #fbbf24; }
+        .medal-silver { color: #94a3b8; }
+        .medal-bronze { color: #b45309; }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade { animation: fadeIn 0.5s ease forwards; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <nav class="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl">
-        <div class="glass p-2 flex justify-around items-center text-xs md:text-sm font-semibold uppercase tracking-wider">
-            <div onclick="showSection('medals')" id="nav-medals" class="nav-item px-4 py-3 rounded-xl active-nav">Medalje</div>
-            <div onclick="showSection('categories')" id="nav-categories" class="nav-item px-4 py-3 rounded-xl">Kategorije</div>
-            <div onclick="showSection('total')" id="nav-total" class="nav-item px-4 py-3 rounded-xl">Skupni Seštevek</div>
-            <div onclick="showSection('login')" id="nav-login" class="nav-item px-4 py-3 rounded-xl border border-white/10">Prijava</div>
+    <nav class="glass max-w-4xl mx-auto mb-12 p-2 flex flex-wrap justify-around items-center sticky top-4 z-50">
+        <div onclick="showSection('medalije')" class="nav-item px-6 py-3 rounded-xl flex items-center gap-2" id="btn-medalije">
+            <i data-lucide="trophy"></i> MEDALJE
+        </div>
+        <div onclick="showSection('kategorije-view')" class="nav-item px-6 py-3 rounded-xl flex items-center gap-2" id="btn-kategorije-view">
+            <i data-lucide="layout-grid"></i> KATEGORIJE
+        </div>
+        <div onclick="showSection('sestevek')" class="nav-item px-6 py-3 rounded-xl flex items-center gap-2" id="btn-sestevek">
+            <i data-lucide="sigma"></i> SKUPNI SEŠTEVEK
+        </div>
+        <div onclick="showSection('prijava')" class="nav-item px-6 py-3 rounded-xl flex items-center gap-2 border-l border-white/10" id="btn-prijava">
+            <i data-lucide="lock"></i> PRIJAVA
         </div>
     </nav>
 
-    <main class="mt-28 max-w-6xl mx-auto">
+    <main class="max-w-6xl mx-auto">
         
-        <section id="sec-medals" class="section-animate">
-            <div class="flex items-center gap-4 mb-8">
-                <i data-lucide="trophy" class="w-10 h-10 gold"></i>
-                <h1 class="text-4xl font-extrabold">Pregled Medalj</h1>
-            </div>
+        <section id="sec-medalije" class="animate-fade">
+            <h1 class="text-4xl font-extrabold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                Lestvica Medalj
+            </h1>
             <div class="glass overflow-hidden">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left">
                     <thead class="bg-white/5">
                         <tr>
                             <th class="p-6">Država</th>
-                            <th class="p-6 flex items-center gap-2">
-                                <i data-lucide="layers" class="w-5 h-5"></i> Skupno
+                            <th class="p-6 text-center">
+                                <div class="flex justify-center gap-1 opacity-70">
+                                    <i data-lucide="award" class="w-4 h-4"></i>
+                                    <span class="text-xs">SKUPAJ</span>
+                                </div>
                             </th>
-                            <th class="p-6 gold">Zlato</th>
-                            <th class="p-6 silver">Srebro</th>
-                            <th class="p-6 bronze">Bron</th>
+                            <th class="p-6 text-center medal-gold"><i data-lucide="medal" class="mx-auto"></i></th>
+                            <th class="p-6 text-center medal-silver"><i data-lucide="medal" class="mx-auto"></i></th>
+                            <th class="p-6 text-center medal-bronze"><i data-lucide="medal" class="mx-auto"></i></th>
                         </tr>
                     </thead>
                     <tbody id="medal-table-body">
@@ -103,435 +103,396 @@
             </div>
         </section>
 
-        <section id="sec-categories" class="section-animate hidden">
-            <h1 class="text-4xl font-extrabold mb-8">Rezultati po Kategorijah</h1>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" id="category-filter-list">
-                </div>
-            <div id="category-results-display" class="glass p-8">
-                <p class="text-white/50 italic">Izberi kategorijo za prikaz rezultatov...</p>
+        <section id="sec-kategorije-view" class="hidden animate-fade">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold">Rezultati po kategorijah</h2>
+                <select id="view-cat-select" onchange="renderCategoryResults()" class="p-2 pr-8"></select>
             </div>
+            <div id="category-results-container"></div>
         </section>
 
-        <section id="sec-total" class="section-animate hidden">
-            <div class="flex justify-between items-end mb-8">
-                <h1 class="text-4xl font-extrabold">Skupni Seštevek Točk</h1>
-                <div class="flex glass p-1 rounded-xl">
-                    <button onclick="renderTotal('all')" class="px-4 py-2 rounded-lg bg-white/10" id="btn-all">Vse</button>
-                    <button onclick="renderTotal('indoor')" class="px-4 py-2 rounded-lg" id="btn-indoor">Notranje</button>
-                    <button onclick="renderTotal('outdoor')" class="px-4 py-2 rounded-lg" id="btn-outdoor">Zunanje</button>
+        <section id="sec-sestevek" class="hidden animate-fade">
+            <div class="flex flex-col items-center gap-6 mb-8">
+                <h2 class="text-3xl font-bold">Skupni Seštevek Točk</h2>
+                <div class="flex glass p-1 rounded-2xl">
+                    <button onclick="renderTotalScore('vse')" class="px-6 py-2 rounded-xl hover:bg-white/5">Skupno</button>
+                    <button onclick="renderTotalScore('notranje')" class="px-6 py-2 rounded-xl hover:bg-white/5">Notranje</button>
+                    <button onclick="renderTotalScore('zunanje')" class="px-6 py-2 rounded-xl hover:bg-white/5">Zunanje</button>
                 </div>
             </div>
-            <div class="glass p-6">
-                <div id="total-score-list" class="space-y-4">
-                    </div>
-            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="total-score-grid"></div>
         </section>
 
-        <section id="sec-login" class="section-animate hidden">
-            <div class="max-w-md mx-auto glass p-10 mt-20 text-center">
-                <i data-lucide="lock" class="w-12 h-12 mx-auto mb-6 text-white/30"></i>
-                <h2 class="text-2xl font-bold mb-6">Admin Prijava</h2>
-                <input type="text" id="admin-user" placeholder="Uporabniško ime" class="w-full p-4 mb-4">
-                <input type="password" id="admin-pass" placeholder="Geslo" class="w-full p-4 mb-6">
-                <button onclick="login()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-xl font-bold transition">PRIJAVA</button>
-            </div>
-        </section>
-
-        <section id="sec-admin" class="section-animate hidden">
-            <div class="flex flex-wrap gap-4 mb-8">
-                <button onclick="showAdminTab('adm-cat')" class="px-6 py-3 glass hover:bg-white/10 rounded-xl">Kategorije</button>
-                <button onclick="showAdminTab('adm-res')" class="px-6 py-3 glass hover:bg-white/10 rounded-xl">Vpis Rezultatov</button>
-                <button onclick="showAdminTab('adm-plan')" class="px-6 py-3 glass hover:bg-white/10 rounded-xl">Načrtovanje</button>
-                <button onclick="showAdminTab('adm-players')" class="px-6 py-3 glass hover:bg-white/10 rounded-xl">Tekmovalci</button>
-                <button onclick="logout()" class="px-6 py-3 bg-red-500/20 hover:bg-red-500/40 rounded-xl ml-auto text-red-300">Odjava</button>
+        <section id="sec-prijava" class="hidden animate-fade">
+            <div id="login-form" class="glass max-w-md mx-auto p-8 text-center">
+                <i data-lucide="shield-check" class="w-16 h-16 mx-auto mb-6 text-blue-400"></i>
+                <h2 class="text-2xl font-bold mb-6">Admin Dostop</h2>
+                <input type="text" id="username" placeholder="Uporabniško ime" class="w-full p-3 mb-4">
+                <input type="password" id="password" placeholder="Geslo" class="w-full p-3 mb-6">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition">PRIJAVA</button>
             </div>
 
-            <div id="adm-cat" class="admin-tab glass p-8">
-                <h3 class="text-xl font-bold mb-4">Dodaj / Uredi Kategorijo</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <input type="text" id="cat-name" placeholder="Ime kategorije (npr. Met Sekire)">
-                    <select id="cat-type">
-                        <option value="indoor">Notranje</option>
-                        <option value="outdoor">Zunanje</option>
-                    </select>
-                    <input type="text" id="cat-unit" placeholder="Enota (s, m, točke)">
-                    <select id="cat-sort">
-                        <option value="asc">Manj je bolje (npr. čas)</option>
-                        <option value="desc">Več je bolje (npr. daljava)</option>
-                    </select>
-                    <input type="number" id="cat-series" placeholder="Št. serij">
-                    <input type="number" id="cat-attempts" placeholder="Poskusov v seriji">
+            <div id="admin-dashboard" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <button onclick="showAdminTab('admin-kategorije')" class="glass p-4 hover:bg-blue-500/20 transition rounded-2xl">Kategorije</button>
+                    <button onclick="showAdminTab('admin-vpis')" class="glass p-4 hover:bg-blue-500/20 transition rounded-2xl">Vpis Rezultatov</button>
+                    <button onclick="showAdminTab('admin-nacrt')" class="glass p-4 hover:bg-blue-500/20 transition rounded-2xl">Načrtovanje</button>
+                    <button onclick="showAdminTab('admin-tekmovalci')" class="glass p-4 hover:bg-blue-500/20 transition rounded-2xl">Tekmovalci</button>
                 </div>
-                <button onclick="saveCategory()" class="bg-green-600 px-8 py-3 rounded-xl font-bold">Shrani Kategorijo</button>
-                
-                <div class="mt-8 border-t border-white/10 pt-6" id="admin-category-list">
-                    </div>
-            </div>
 
-            <div id="adm-players" class="admin-tab hidden glass p-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div>
-                        <h3 class="text-xl font-bold mb-4">Države</h3>
-                        <div class="flex gap-2 mb-4">
-                            <input type="text" id="new-country-name" placeholder="Ime države" class="flex-1">
-                            <input type="text" id="new-country-flag" placeholder="Emoji zastave" class="w-20 text-center">
-                            <button onclick="addCountry()" class="bg-indigo-600 px-4 rounded-xl">Dodaj</button>
-                        </div>
-                        <div id="admin-country-list" class="space-y-2"></div>
+                <div id="tab-admin-kategorije" class="admin-tab glass p-6">
+                    <h3 class="text-xl font-bold mb-4">Urejanje Kategorij</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <input type="text" id="cat-name" placeholder="Ime (npr. Met sekire)">
+                        <select id="cat-type"><option value="zunanje">Zunanje</option><option value="notranje">Notranje</option></select>
+                        <input type="text" id="cat-unit" placeholder="Enota (s, m, točke)">
+                        <select id="cat-order"><option value="desc">Več je bolje (m)</option><option value="asc">Manj je bolje (s)</option></select>
+                        <input type="number" id="cat-series" placeholder="Št. serij">
+                        <input type="number" id="cat-attempts" placeholder="Poskusi v seriji">
+                        <button onclick="addCategory()" class="bg-emerald-600 p-2 rounded-xl col-span-2">Dodaj Kategorijo</button>
                     </div>
-                    <div>
-                        <h3 class="text-xl font-bold mb-4">Osebe</h3>
-                        <div class="flex flex-col gap-2 mb-4">
-                            <input type="text" id="athlete-name" placeholder="Ime in priimek">
-                            <div id="athlete-country-selects" class="text-sm text-white/60 mb-2">
-                                Izberi države (lahko več):
-                                <div id="country-checkboxes" class="grid grid-cols-2 gap-2 mt-2"></div>
+                    <div id="admin-cat-list" class="space-y-2"></div>
+                </div>
+
+                <div id="tab-admin-vpis" class="admin-tab hidden glass p-6">
+                    <h3 class="text-xl font-bold mb-4">Vpis Rezultatov</h3>
+                    <div class="flex gap-4 mb-6">
+                        <select id="vpis-cat-select" class="flex-1"></select>
+                        <input type="date" id="vpis-date" class="flex-1">
+                        <button onclick="loadResultEntry()" class="bg-blue-600 px-6 rounded-xl">Odpri vnos</button>
+                    </div>
+                    <div id="vpis-form-container"></div>
+                </div>
+
+                <div id="tab-admin-tekmovalci" class="admin-tab hidden glass p-6">
+                    <h3 class="text-xl font-bold mb-4">Države in Tekmovalci</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold mb-2">Dodaj Državo</h4>
+                            <div class="flex gap-2">
+                                <input type="text" id="country-name" placeholder="Ime države" class="flex-1">
+                                <input type="text" id="country-flag" placeholder="Emoji zastave" class="w-20">
+                                <button onclick="addCountry()" class="bg-emerald-600 px-4 rounded-xl">+</button>
                             </div>
-                            <button onclick="addAthlete()" class="bg-indigo-600 py-3 rounded-xl">Dodaj Tekmovalca</button>
+                            <div id="admin-country-list" class="mt-4 space-y-2"></div>
                         </div>
-                        <div id="admin-athlete-list" class="space-y-2"></div>
+                        <div>
+                            <h4 class="font-bold mb-2">Dodaj Tekmovalca</h4>
+                            <div class="flex flex-col gap-2">
+                                <input type="text" id="player-name" placeholder="Ime tekmovalca">
+                                <select id="player-country-select" class="w-full"></select>
+                                <button onclick="addPlayer()" class="bg-emerald-600 p-2 rounded-xl">Dodaj</button>
+                            </div>
+                            <div id="admin-player-list" class="mt-4 space-y-2"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div id="adm-res" class="admin-tab hidden glass p-8">
-                <h3 class="text-xl font-bold mb-4">Vpis Rezultatov</h3>
-                <div class="flex gap-4 mb-6">
-                    <select id="res-cat-select" onchange="prepareResultEntry()" class="flex-1"></select>
-                    <input type="date" id="res-date" class="flex-1">
-                </div>
-                <div id="result-entry-form" class="space-y-6">
-                    </div>
-            </div>
-
-            <div id="adm-plan" class="admin-tab hidden glass p-8">
-                <h3 class="text-xl font-bold mb-4">Urnik tekmovanj</h3>
-                <div class="flex gap-4 mb-6">
-                    <select id="plan-cat-select" class="flex-1"></select>
-                    <input type="date" id="plan-date" class="flex-1">
-                    <button onclick="saveSchedule()" class="bg-indigo-600 px-6 rounded-xl">Dodaj na Urnik</button>
-                </div>
-                <div id="schedule-list" class="space-y-2"></div>
             </div>
         </section>
 
     </main>
 
     <script>
-        // DATA MODEL
-        let db = JSON.parse(localStorage.getItem('olympics_db')) || {
-            countries: [],
-            athletes: [],
+        // --- DATA STRUCTURE & INITIALIZATION ---
+        let data = JSON.parse(localStorage.getItem('olympics_db')) || {
             categories: [],
-            results: [],
+            countries: [],
+            players: [],
+            results: [], // {catId, date, scores: [{playerId, countryId, values: [[]], total, rank, points}]}
             schedule: []
         };
 
-        function saveDb() {
-            localStorage.setItem('olympics_db', JSON.stringify(db));
+        function saveData() {
+            localStorage.setItem('olympics_db', JSON.stringify(data));
             refreshUI();
         }
 
-        // NAVIGATION
+        // --- NAVIGATION ---
         function showSection(id) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById('sec-' + id).classList.remove('hidden');
-            
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
-            document.getElementById('nav-' + id).classList.add('active-nav');
-            
-            if(id === 'medals') renderMedals();
-            if(id === 'total') renderTotal('all');
-            if(id === 'categories') renderPublicCategories();
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-tab'));
+            document.getElementById('btn-' + id).classList.add('active-tab');
+            refreshUI();
         }
 
         function showAdminTab(id) {
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            if(id === 'adm-players') renderAdminPlayers();
-            if(id === 'adm-res') populateResultSelects();
-            if(id === 'adm-plan') renderSchedule();
+            document.getElementById('tab-' + id).classList.remove('hidden');
         }
 
-        // ADMIN LOGIC
-        function login() {
-            const user = document.getElementById('admin-user').value;
-            const pass = document.getElementById('admin-pass').value;
-            if(user === 'ADMIN' && pass === 'ADMIN') {
-                showSection('admin');
-                showAdminTab('adm-cat');
-                renderAdminCategories();
-            } else {
-                alert('Napačni podatki!');
-            }
-        }
-
-        function logout() { showSection('login'); }
-
-        // COUNTRIES & ATHLETES
-        function addCountry() {
-            const name = document.getElementById('new-country-name').value;
-            const flag = document.getElementById('new-country-flag').value;
-            if(!name) return;
-            db.countries.push({ id: Date.now(), name, flag, gold: 0, silver: 0, bronze: 0 });
-            saveDb();
-            renderAdminPlayers();
-        }
-
-        function addAthlete() {
-            const name = document.getElementById('athlete-name').value;
-            const selectedCountries = Array.from(document.querySelectorAll('.country-chk:checked')).map(c => parseInt(c.value));
-            if(!name || selectedCountries.length === 0) return;
-            db.athletes.push({ id: Date.now(), name, countries: selectedCountries });
-            saveDb();
-            renderAdminPlayers();
-        }
-
-        function renderAdminPlayers() {
-            const cList = document.getElementById('admin-country-list');
-            cList.innerHTML = db.countries.map(c => `<div class="p-3 glass flex justify-between"><span>${c.flag} ${c.name}</span> <button onclick="deleteItem('countries', ${c.id})" class="text-red-400">X</button></div>`).join('');
-
-            const aList = document.getElementById('admin-athlete-list');
-            aList.innerHTML = db.athletes.map(a => `<div class="p-3 glass flex justify-between"><span>${a.name}</span> <button onclick="deleteItem('athletes', ${a.id})" class="text-red-400">X</button></div>`).join('');
-
-            const chks = document.getElementById('country-checkboxes');
-            chks.innerHTML = db.countries.map(c => `<label class="flex items-center gap-2"><input type="checkbox" class="country-chk" value="${c.id}"> ${c.flag} ${c.name}</label>`).join('');
-        }
-
-        // CATEGORIES
-        function saveCategory() {
+        // --- ADMIN LOGIC: KATEGORIJE ---
+        function addCategory() {
             const cat = {
                 id: Date.now(),
                 name: document.getElementById('cat-name').value,
                 type: document.getElementById('cat-type').value,
                 unit: document.getElementById('cat-unit').value,
-                sort: document.getElementById('cat-sort').value,
+                order: document.getElementById('cat-order').value,
                 series: parseInt(document.getElementById('cat-series').value),
                 attempts: parseInt(document.getElementById('cat-attempts').value)
             };
-            db.categories.push(cat);
-            saveDb();
-            renderAdminCategories();
+            data.categories.push(cat);
+            saveData();
         }
 
-        function renderAdminCategories() {
-            const list = document.getElementById('admin-category-list');
-            list.innerHTML = db.categories.map(c => `
-                <div class="p-4 glass mb-2 flex justify-between items-center">
-                    <div>
-                        <span class="font-bold">${c.name}</span> 
-                        <span class="text-xs opacity-60 ml-2">(${c.type === 'indoor' ? 'Notri' : 'Zunaj'}, ${c.series}x${c.attempts})</span>
-                    </div>
-                    <button onclick="deleteItem('categories', ${c.id})" class="text-red-400">Izbriši</button>
-                </div>
-            `).join('');
-        }
-
-        // RESULTS LOGIC
-        function populateResultSelects() {
-            const sel = document.getElementById('res-cat-select');
-            sel.innerHTML = '<option value="">Izberi kategorijo...</option>' + 
-                db.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        }
-
-        function prepareResultEntry() {
-            const catId = document.getElementById('res-cat-select').value;
-            const cat = db.categories.find(c => c.id == catId);
-            const container = document.getElementById('result-entry-form');
-            if(!cat) return container.innerHTML = "";
-
-            let html = `<div class="overflow-x-auto"><table class="w-full"><thead><tr><th class="p-2">Tekmovalec (Država)</th>`;
-            for(let s=1; s<=cat.series; s++) {
-                for(let a=1; a<=cat.attempts; a++) {
-                    html += `<th class="p-2 text-xs">S${s}-P${a}</th>`;
-                }
-            }
-            html += `</tr></thead><tbody>`;
-
-            // For each athlete-country combination
-            db.athletes.forEach(ath => {
-                ath.countries.forEach(cId => {
-                    const country = db.countries.find(c => c.id == cId);
-                    html += `<tr>
-                        <td class="p-2 text-sm">${ath.name} (${country.flag})</td>`;
-                    for(let s=1; s<=cat.series; s++) {
-                        for(let a=1; a<=cat.attempts; a++) {
-                            html += `<td class="p-1"><input type="text" class="res-input w-16 p-1 text-center" data-athlete="${ath.id}" data-country="${cId}" data-series="${s}" data-attempt="${a}" placeholder="DNF?"></td>`;
-                        }
-                    }
-                    html += `</tr>`;
-                });
+        // --- ADMIN LOGIC: TEKMOVALCI ---
+        function addCountry() {
+            data.countries.push({ 
+                id: Date.now(), 
+                name: document.getElementById('country-name').value, 
+                flag: document.getElementById('country-flag').value 
             });
+            saveData();
+        }
 
-            html += `</tbody></table></div><button onclick="calculateAndSaveResults(${catId})" class="w-full bg-indigo-600 py-4 mt-4 rounded-xl font-bold">IZRAČUNAJ IN SHRANI REZULTATE</button>`;
+        function addPlayer() {
+            const player = {
+                id: Date.now(),
+                name: document.getElementById('player-name').value,
+                countryId: parseInt(document.getElementById('player-country-select').value)
+            };
+            data.players.push(player);
+            saveData();
+        }
+
+        // --- VPIS REZULTATOV LOGIKA ---
+        function loadResultEntry() {
+            const catId = parseInt(document.getElementById('vpis-cat-select').value);
+            const cat = data.categories.find(c => c.id === catId);
+            const container = document.getElementById('vpis-form-container');
+            
+            if(!cat) return;
+
+            let html = `<div class="mt-6 space-y-6">`;
+            data.players.forEach(p => {
+                const country = data.countries.find(c => c.id === p.countryId);
+                html += `
+                    <div class="glass p-4 border-l-4 border-blue-500">
+                        <div class="flex justify-between mb-4">
+                            <span class="font-bold">${country.flag} ${p.name}</span>
+                            <span class="text-xs opacity-50 uppercase">${cat.unit}</span>
+                        </div>
+                        <div class="grid grid-cols-${cat.series} gap-4">`;
+                
+                for(let s=0; s<cat.series; s++) {
+                    html += `<div class="space-y-2"><p class="text-xs text-blue-300">Serija ${s+1}</p>`;
+                    for(let a=0; a<cat.attempts; a++) {
+                        html += `<input type="text" placeholder="P${a+1}" 
+                                 class="score-input w-full p-1 text-sm" 
+                                 data-player="${p.id}" data-country="${p.countryId}" 
+                                 data-series="${s}" data-attempt="${a}">`;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div></div>`;
+            });
+            html += `<button onclick="saveResults(${catId})" class="w-full bg-emerald-600 p-4 rounded-2xl font-bold mt-4">SHRANI IN IZRAČUNAJ REZULTATE</button></div>`;
             container.innerHTML = html;
         }
 
-        function calculateAndSaveResults(catId) {
-            const cat = db.categories.find(c => c.id == catId);
-            const inputs = document.querySelectorAll('.res-input');
-            const date = document.getElementById('res-date').value;
+        function saveResults(catId) {
+            const cat = data.categories.find(c => c.id === catId);
+            const inputs = document.querySelectorAll('.score-input');
+            const date = document.getElementById('vpis-date').value;
             
             let tempResults = {};
 
             inputs.forEach(input => {
-                const key = `${input.dataset.athlete}-${input.dataset.country}`;
-                if(!tempResults[key]) tempResults[key] = { athleteId: input.dataset.athlete, countryId: input.dataset.country, attempts: [] };
+                const pId = input.dataset.player;
+                const cId = input.dataset.country;
+                const sIdx = input.dataset.series;
+                const val = input.value.toUpperCase();
+
+                if(!tempResults[pId]) tempResults[pId] = { playerId: pId, countryId: cId, values: [], dnfCount: 0 };
+                if(!tempResults[pId].values[sIdx]) tempResults[pId].values[sIdx] = [];
                 
-                let val = input.value.toUpperCase() === 'DNF' ? 'DNF' : parseFloat(input.value);
-                tempResults[key].attempts.push({
-                    series: input.dataset.series,
-                    val: val
-                });
+                let numericVal = parseFloat(val);
+                if(val === 'DNF') {
+                    tempResults[pId].dnfCount++;
+                    numericVal = cat.order === 'asc' ? Infinity : -1;
+                }
+                tempResults[pId].values[sIdx].push(numericVal || 0);
             });
 
-            // Process rankings
-            let finalFlat = Object.values(tempResults).map(res => {
-                // Rule: If > 2 DNFs total, DSQ. (Adjusting logic: let's say 3 or more total is DSQ)
-                const dnfCount = res.attempts.filter(a => a.val === 'DNF').length;
-                const isDSQ = dnfCount >= 3; 
+            // Logika za točkovanje
+            let processed = Object.values(tempResults).map(res => {
+                // Izračunaj najboljši rezultat posameznika (v vseh serijah)
+                let allAttempts = res.values.flat();
+                let best = cat.order === 'asc' ? Math.min(...allAttempts) : Math.max(...allAttempts);
                 
-                // Best attempt logic
-                const validAttempts = res.attempts.filter(a => typeof a.val === 'number');
-                let best = isDSQ || validAttempts.length === 0 ? null : 
-                           (cat.sort === 'asc' ? Math.min(...validAttempts.map(v => v.val)) : Math.max(...validAttempts.map(v => v.val)));
+                // Diskvalifikacija če je preveč DNF (npr. več kot 2 na celo tekmo)
+                let isDQ = res.dnfCount > 2;
 
-                return { ...res, best, isDSQ, catId, date };
+                return { ...res, best: isDQ ? (cat.order === 'asc' ? 999999 : -1) : best, isDQ };
             });
 
-            // Sort by best
-            finalFlat = finalFlat.filter(f => !f.isDSQ && f.best !== null).sort((a, b) => cat.sort === 'asc' ? a.best - b.best : b.best - a.best);
-            
-            // Assign ranks and points
-            finalFlat.forEach((res, index) => {
-                const rank = index + 1;
-                res.rank = rank;
-                if(rank === 1) res.points = 100;
-                else if(rank === 2) res.points = 80;
-                else if(rank === 3) res.points = 60;
-                else if(rank === 4) res.points = 40;
-                else if(rank === 5) res.points = 35;
-                else res.points = Math.max(0, 35 - ((rank - 5) * 0.02));
+            // Sortiranje
+            processed.sort((a, b) => cat.order === 'asc' ? a.best - b.best : b.best - a.best);
+
+            // Dodelitev točk: 100, 80, 60, 40, 35, nato -0.02
+            const pointMap = [100, 80, 60, 40, 35];
+            processed = processed.map((r, idx) => {
+                let pts = 0;
+                if(!r.isDQ) {
+                    if(idx < 5) pts = pointMap[idx];
+                    else pts = Math.max(0, 35 - ((idx - 4) * 0.02));
+                }
+                return { ...r, rank: idx + 1, points: pts };
             });
 
-            // Remove old results for this category/date and save new
-            db.results = db.results.filter(r => !(r.catId == catId && r.date == date));
-            db.results.push(...finalFlat);
-            
-            updateMedalsFromResults();
-            saveDb();
+            // Shrani
+            data.results = data.results.filter(r => !(r.catId === catId && r.date === date));
+            data.results.push({ catId, date, scores: processed });
+            saveData();
             alert("Rezultati shranjeni!");
         }
 
-        function updateMedalsFromResults() {
-            // Reset medals
-            db.countries.forEach(c => { c.gold = 0; c.silver = 0; c.bronze = 0; });
-            
-            db.results.forEach(r => {
-                const country = db.countries.find(c => c.id == r.countryId);
-                if(country) {
-                    if(r.rank === 1) country.gold++;
-                    if(r.rank === 2) country.silver++;
-                    if(r.rank === 3) country.bronze++;
-                }
-            });
-        }
-
-        // PUBLIC VIEWS
+        // --- PRIKAZI (VIEWS) ---
         function renderMedals() {
-            const body = document.getElementById('medal-table-body');
-            const sorted = [...db.countries].sort((a, b) => (b.gold * 1000 + b.silver * 10 + b.bronze) - (a.gold * 1000 + a.silver * 10 + a.bronze));
-            
-            body.innerHTML = sorted.map(c => `
-                <tr class="border-t border-white/5 hover:bg-white/5 transition">
-                    <td class="p-6 font-bold text-lg">${c.flag} ${c.name}</td>
-                    <td class="p-6 font-semibold">${c.gold + c.silver + c.bronze}</td>
-                    <td class="p-6 gold font-bold">${c.gold}</td>
-                    <td class="p-6 silver font-bold">${c.silver}</td>
-                    <td class="p-6 bronze font-bold">${c.bronze}</td>
+            const medalTable = document.getElementById('medal-table-body');
+            const summary = {};
+
+            data.countries.forEach(c => summary[c.id] = { ...c, gold: 0, silver: 0, bronze: 0, total: 0 });
+
+            data.results.forEach(res => {
+                res.scores.forEach(s => {
+                    if(s.rank === 1) summary[s.countryId].gold++;
+                    else if(s.rank === 2) summary[s.countryId].silver++;
+                    else if(s.rank === 3) summary[s.countryId].bronze++;
+                });
+            });
+
+            const sorted = Object.values(summary).sort((a,b) => (b.gold * 10 + b.silver * 5 + b.bronze) - (a.gold * 10 + a.silver * 5 + a.bronze));
+
+            medalTable.innerHTML = sorted.map(c => `
+                <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                    <td class="p-6 flex items-center gap-4">
+                        <span class="text-3xl">${c.flag}</span>
+                        <span class="font-bold">${c.name}</span>
+                    </td>
+                    <td class="p-6 text-center font-bold text-xl">${c.gold + c.silver + c.bronze}</td>
+                    <td class="p-6 text-center text-xl">${c.gold}</td>
+                    <td class="p-6 text-center text-xl">${c.silver}</td>
+                    <td class="p-6 text-center text-xl">${c.bronze}</td>
                 </tr>
             `).join('');
         }
 
-        function renderTotal(filter) {
-            const list = document.getElementById('total-score-list');
-            ['all', 'indoor', 'outdoor'].forEach(f => document.getElementById('btn-'+f).classList.remove('bg-white/10'));
-            document.getElementById('btn-'+filter).classList.add('bg-white/10');
+        function renderTotalScore(filter = 'vse') {
+            const container = document.getElementById('total-score-grid');
+            const pointsByCountry = {};
+            data.countries.forEach(c => pointsByCountry[c.id] = { ...c, pts: 0 });
 
-            let countryPoints = {};
-            db.countries.forEach(c => countryPoints[c.id] = 0);
-
-            db.results.forEach(r => {
-                const cat = db.categories.find(c => c.id == r.catId);
-                if(filter === 'all' || (cat && cat.type === filter)) {
-                    countryPoints[r.countryId] += r.points;
+            data.results.forEach(res => {
+                const cat = data.categories.find(c => c.id === res.catId);
+                if(filter === 'vse' || cat.type === filter) {
+                    res.scores.forEach(s => {
+                        pointsByCountry[s.countryId].pts += s.points;
+                    });
                 }
             });
 
-            const sorted = db.countries
-                .map(c => ({...c, totalPoints: countryPoints[c.id]}))
-                .sort((a, b) => b.totalPoints - a.totalPoints);
+            const sorted = Object.values(pointsByCountry).sort((a,b) => b.pts - a.pts);
 
-            list.innerHTML = sorted.map((c, i) => `
-                <div class="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+            container.innerHTML = sorted.map((c, i) => `
+                <div class="glass p-6 flex justify-between items-center animate-fade" style="animation-delay: ${i*0.05}s">
                     <div class="flex items-center gap-4">
-                        <span class="text-2xl font-black opacity-20 w-8">#${i+1}</span>
-                        <span class="text-xl">${c.flag} ${c.name}</span>
+                        <span class="text-2xl opacity-50 font-black">#${i+1}</span>
+                        <span class="text-3xl">${c.flag}</span>
+                        <span class="font-bold text-lg">${c.name}</span>
                     </div>
-                    <div class="text-2xl font-bold text-indigo-400">${c.totalPoints.toFixed(2)} <span class="text-xs text-white/40">TČK</span></div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black text-blue-400">${c.pts.toFixed(2)}</span>
+                        <p class="text-[10px] opacity-50">TOČK</p>
+                    </div>
                 </div>
             `).join('');
         }
 
-        function renderPublicCategories() {
-            const filterList = document.getElementById('category-filter-list');
-            filterList.innerHTML = db.categories.map(c => `
-                <button onclick="viewCategoryResults(${c.id})" class="glass p-4 hover:bg-white/10 transition text-sm font-bold">
-                    ${c.name}
-                </button>
-            `).join('');
-        }
+        function renderCategoryResults() {
+            const catId = parseInt(document.getElementById('view-cat-select').value);
+            const container = document.getElementById('category-results-container');
+            const resData = data.results.find(r => r.catId === catId);
 
-        function viewCategoryResults(id) {
-            const cat = db.categories.find(c => c.id == id);
-            const results = db.results.filter(r => r.catId == id).sort((a,b) => a.rank - b.rank);
-            const display = document.getElementById('category-results-display');
-            
-            if(results.length === 0) {
-                display.innerHTML = `<p>Ni rezultatov za to kategorijo.</p>`;
+            if(!resData) {
+                container.innerHTML = "<p class='text-center opacity-50 py-12'>Ni še vpisanih rezultatov za to kategorijo.</p>";
                 return;
             }
 
-            display.innerHTML = `
-                <h2 class="text-2xl font-bold mb-4">${cat.name} (${cat.unit})</h2>
-                <div class="space-y-2">
-                    ${results.map(r => {
-                        const ath = db.athletes.find(a => a.id == r.athleteId);
-                        const cou = db.countries.find(c => c.id == r.countryId);
-                        return `
-                        <div class="flex justify-between p-3 border-b border-white/5">
-                            <span>${r.rank}. ${ath.name} (${cou.flag})</span>
-                            <span class="font-mono font-bold">${r.best} ${cat.unit}</span>
-                        </div>`;
-                    }).join('')}
+            container.innerHTML = `
+                <div class="glass overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="p-4">Mesto</th>
+                                <th class="p-4">Tekmovalec</th>
+                                <th class="p-4">Najboljši rezultat</th>
+                                <th class="p-4 text-emerald-400">Točke</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${resData.scores.map(s => {
+                                const player = data.players.find(p => p.id == s.playerId);
+                                const country = data.countries.find(c => c.id == s.countryId);
+                                return `
+                                    <tr class="border-b border-white/5">
+                                        <td class="p-4 font-bold">#${s.rank}</td>
+                                        <td class="p-4">${country.flag} ${player.name}</td>
+                                        <td class="p-4">${s.best === Infinity || s.best === -1 ? 'DQ' : s.best}</td>
+                                        <td class="p-4 font-bold text-emerald-400">${s.points.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
                 </div>
             `;
         }
 
-        function deleteItem(collection, id) {
-            db[collection] = db[collection].filter(item => item.id !== id);
-            saveDb();
-            refreshUI();
-        }
-
+        // --- POMOŽNE FUNKCIJE ---
         function refreshUI() {
             lucide.createIcons();
+            renderMedals();
+            renderTotalScore();
+            
+            // Popravi selecte
+            const vCat = document.getElementById('vpis-cat-select');
+            const viewCat = document.getElementById('view-cat-select');
+            const pCountry = document.getElementById('player-country-select');
+            
+            if(vCat) vCat.innerHTML = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            if(viewCat) viewCat.innerHTML = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            if(pCountry) pCountry.innerHTML = data.countries.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            // Seznam kategorij v adminu
+            const adminCatList = document.getElementById('admin-cat-list');
+            if(adminCatList) {
+                adminCatList.innerHTML = data.categories.map(c => `
+                    <div class="flex justify-between p-2 bg-white/5 rounded-lg">
+                        <span>${c.name} (${c.type})</span>
+                        <button onclick="deleteCat(${c.id})" class="text-red-400">X</button>
+                    </div>
+                `).join('');
+            }
         }
 
-        // Initialize
+        function deleteCat(id) {
+            data.categories = data.categories.filter(c => c.id !== id);
+            saveData();
+        }
+
+        function handleLogin() {
+            if(document.getElementById('username').value === 'ADMIN') {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+            }
+        }
+
+        // Init
         window.onload = () => {
-            renderMedals();
             refreshUI();
+            lucide.createIcons();
         };
     </script>
 </body>
