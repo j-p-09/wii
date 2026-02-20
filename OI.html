@@ -204,7 +204,7 @@
                         <th>Mesto</th>
                         <th>Tekmovalec</th>
                         <th>Država</th>
-                        <th>Rezultat</th>
+                        <th>Skupni Rezultat</th>
                     </tr>
                 </thead>
                 <tbody id="cat-results-body"></tbody>
@@ -214,11 +214,6 @@
 
     <section id="total" class="animate">
         <h1>Skupna Razvrstitev</h1>
-        <div class="view-tabs">
-            <button class="tab-btn active" onclick="updateTotalView('all', this)">Skupno</button>
-            <button class="tab-btn" onclick="updateTotalView('indoor', this)">Notranje</button>
-            <button class="tab-btn" onclick="updateTotalView('outdoor', this)">Zunanje</button>
-        </div>
         <div class="glass-card">
             <table>
                 <thead>
@@ -260,8 +255,8 @@
                         <input type="text" id="cat-name" placeholder="Ime (npr. Tek na 100m)">
                         <select id="cat-env"><option value="outdoor">Zunanje</option><option value="indoor">Notranje</option></select>
                         <input type="text" id="cat-unit" placeholder="Enota (sek, m, kg)">
-                        <select id="cat-dir"><option value="asc">Manj je bolje (Čas)</option><option value="desc">Več je bolje (Daljava)</option></select>
-                        <input type="number" id="cat-series" placeholder="Število serij (običajno 1)" value="1">
+                        <select id="cat-dir"><option value="asc">Manj je bolje (Čas)</option><option value="desc">Več je bolje (Daljava/Točke)</option></select>
+                        <input type="number" id="cat-series" placeholder="Število serij" value="1">
                         <input type="number" id="cat-attempts" placeholder="Poskusov v seriji" value="1">
                         <button class="btn-save" onclick="db_addCategory()">Dodaj Kategorijo</button>
                     </div>
@@ -270,6 +265,7 @@
                 <div id="a-res" class="admin-sub" style="display:none;">
                     <div class="glass-card">
                         <h3>Vpis Rezultatov</h3>
+                        <p style="font-size: 0.8rem; margin-bottom: 10px; opacity: 0.7;">* 3x DNF = Celoten rezultat DNF. Manj kot 3x DNF se seštejejo le številke.</p>
                         <select id="res-cat-sel" onchange="loadResultEntry()"></select>
                         <input type="date" id="res-date">
                         <div id="res-entry-area"></div>
@@ -281,12 +277,11 @@
                     <div class="glass-card">
                         <h3>Države</h3>
                         <input type="text" id="c-name" placeholder="Ime države">
-                        <input type="text" id="c-code" placeholder="Kraca (si, us, it)">
+                        <input type="text" id="c-code" placeholder="Koda (npr: si, us, de)">
                         <button class="btn-save" style="background:#444; color:#fff;" onclick="db_addCountry()">Dodaj Državo</button>
                         <hr style="margin: 20px 0; opacity: 0.1;">
                         <h3>Tekmovalci</h3>
                         <input type="text" id="ath-name" placeholder="Ime in priimek">
-                        <label style="font-size: 0.7rem; opacity: 0.7;">Drži CTRL za izbor več držav:</label>
                         <select id="ath-c-sel" multiple style="height:100px;"></select>
                         <button class="btn-save" onclick="db_addAthlete()">Dodaj Tekmovalca</button>
                     </div>
@@ -299,10 +294,7 @@
 <script>
     // --- DATABASE ---
     let db = JSON.parse(localStorage.getItem('olympics_pro_db_v2')) || {
-        countries: [],
-        athletes: [],
-        categories: [],
-        results: []
+        countries: [], athletes: [], categories: [], results: []
     };
 
     function sync() {
@@ -333,8 +325,7 @@
         if(name && code) {
             db.countries.push({ id: "C" + Date.now(), name, code });
             sync();
-            document.getElementById('c-name').value = '';
-            document.getElementById('c-code').value = '';
+            document.getElementById('c-name').value = ''; document.getElementById('c-code').value = '';
         }
     }
 
@@ -351,7 +342,7 @@
     function db_addCategory() {
         const name = document.getElementById('cat-name').value;
         if(!name) return;
-        const cat = {
+        db.categories.push({
             id: "CAT" + Date.now(),
             name: name,
             env: document.getElementById('cat-env').value,
@@ -359,50 +350,32 @@
             dir: document.getElementById('cat-dir').value,
             series: parseInt(document.getElementById('cat-series').value) || 1,
             attempts: parseInt(document.getElementById('cat-attempts').value) || 1
-        };
-        db.categories.push(cat);
+        });
         sync();
         document.getElementById('cat-name').value = '';
     }
 
-    // --- VPIS REZULTATOV (FIXED) ---
+    // --- VPIS REZULTATOV ---
     function loadResultEntry() {
         const catId = document.getElementById('res-cat-sel').value;
         const area = document.getElementById('res-entry-area');
         area.innerHTML = '';
-        
         if(!catId) return;
         const cat = db.categories.find(c => c.id === catId);
-        if(!cat) return;
-
+        
         let foundAny = false;
-
         db.countries.forEach(country => {
             const countryAthletes = db.athletes.filter(ath => ath.countries.includes(country.id));
-            
             if(countryAthletes.length > 0) {
                 foundAny = true;
-                let countryHtml = `<div class="country-group-header">
-                    <img src="https://flagcdn.com/w40/${country.code}.png" style="margin-right:10px;"> ${country.name}
-                </div>`;
-                
+                let countryHtml = `<div class="country-group-header"><img src="https://flagcdn.com/w40/${country.code}.png" style="margin-right:10px;"> ${country.name}</div>`;
                 countryAthletes.forEach(ath => {
-                    countryHtml += `<div style="padding:15px; border-bottom:1px solid var(--glass-border); background: rgba(0,0,0,0.1);">
-                        <strong>${ath.name}</strong>`;
-                    
+                    countryHtml += `<div style="padding:15px; border-bottom:1px solid var(--glass-border); background: rgba(0,0,0,0.1);"><strong>${ath.name}</strong>`;
                     for(let s=1; s<=cat.series; s++) {
                         countryHtml += `<div style="margin-top:10px; font-size:0.8rem;">Serija ${s}: `;
                         for(let a=1; a<=cat.attempts; a++) {
                             const existing = db.results.find(r => r.catId === catId && r.athId === ath.id && r.countryId === country.id && r.s == s && r.a == a);
-                            const val = existing ? existing.val : "";
-                            
-                            countryHtml += `<input type="text" placeholder="Rez/DNF" 
-                                class="r-val" 
-                                data-ath="${ath.id}" 
-                                data-country="${country.id}" 
-                                data-s="${s}" data-a="${a}" 
-                                value="${val}"
-                                style="width:80px; display:inline-block; margin-right:5px; margin-bottom:0;">`;
+                            countryHtml += `<input type="text" placeholder="Rez/DNF" class="r-val" data-ath="${ath.id}" data-country="${country.id}" data-s="${s}" data-a="${a}" value="${existing ? existing.val : ""}" style="width:75px; display:inline-block; margin-right:5px; margin-bottom:0;">`;
                         }
                         countryHtml += `</div>`;
                     }
@@ -411,70 +384,61 @@
                 area.innerHTML += countryHtml;
             }
         });
-
-        if(!foundAny) {
-            area.innerHTML = `<div class="no-data-msg">Ni najdenih tekmovalcev za to kategorijo. Najprej dodaj države in tekmovalce!</div>`;
-            document.getElementById('btn-save-res').style.display = 'none';
-        } else {
-            document.getElementById('btn-save-res').style.display = 'block';
-        }
+        document.getElementById('btn-save-res').style.display = foundAny ? 'block' : 'none';
+        if(!foundAny) area.innerHTML = `<div class="no-data-msg">Ni najdenih tekmovalcev. Dodaj jih v zavihku Države & Tekmovalci!</div>`;
     }
 
     function db_saveResults() {
         const catId = document.getElementById('res-cat-sel').value;
         const date = document.getElementById('res-date').value;
         const inputs = document.querySelectorAll('.r-val');
-        
         inputs.forEach(i => {
             const val = i.value.trim().toUpperCase();
             db.results = db.results.filter(r => !(r.catId === catId && r.athId === i.dataset.ath && r.countryId === i.dataset.country && r.s == i.dataset.s && r.a == i.dataset.a));
-
             if(val !== "") {
-                db.results.push({
-                    catId, date, 
-                    athId: i.dataset.ath, 
-                    countryId: i.dataset.country,
-                    s: i.dataset.s, a: i.dataset.a, 
-                    val: val === 'DNF' ? 'DNF' : parseFloat(val.replace(',', '.'))
-                });
+                db.results.push({ catId, date, athId: i.dataset.ath, countryId: i.dataset.country, s: i.dataset.s, a: i.dataset.a, val: val === 'DNF' ? 'DNF' : parseFloat(val.replace(',', '.')) });
             }
         });
         sync();
         alert("Rezultati shranjeni!");
     }
 
-    // --- RANKINGS ---
+    // --- NOVA LOGIKA SEŠTEVANJA IN DNF (3x DNF = OUT) ---
     function getRankings(catId) {
         const cat = db.categories.find(c => c.id === catId);
         if(!cat) return [];
-        let performances = [];
         const catResults = db.results.filter(r => r.catId === catId);
-        
         const keys = [...new Set(catResults.map(r => `${r.athId}-${r.countryId}`))];
-
+        
+        let performances = [];
         keys.forEach(key => {
             const [athId, countryId] = key.split('-');
             const results = catResults.filter(r => r.athId === athId && r.countryId === countryId);
-            let bestVal = cat.dir === 'asc' ? Infinity : -Infinity;
-
+            
+            let dnfCount = 0;
+            let sum = 0;
+            
             results.forEach(r => {
-                if(r.val === 'DNF') return;
-                if(cat.dir === 'asc') { if(r.val < bestVal) bestVal = r.val; }
-                else { if(r.val > bestVal) bestVal = r.val; }
+                if(r.val === 'DNF') dnfCount++;
+                else sum += r.val;
             });
 
-            if(bestVal !== Infinity && bestVal !== -Infinity) {
-                const ath = db.athletes.find(a => a.id === athId);
-                const country = db.countries.find(c => c.id === countryId);
-                performances.push({
-                    athId, countryId, val: bestVal,
-                    name: ath ? ath.name : '?',
-                    countryName: country ? country.name : '?',
-                    countryCode: country ? country.code : 'un'
-                });
-            }
+            let finalVal = (dnfCount >= 3) ? "DNF" : sum;
+            const ath = db.athletes.find(a => a.id === athId);
+            const country = db.countries.find(c => c.id === countryId);
+
+            performances.push({
+                athId, countryId, val: finalVal,
+                name: ath ? ath.name : '?', countryName: country ? country.name : '?', countryCode: country ? country.code : 'un'
+            });
         });
-        return performances.sort((a,b) => cat.dir === 'asc' ? a.val - b.val : b.val - a.val);
+
+        return performances.sort((a, b) => {
+            if (a.val === "DNF" && b.val === "DNF") return 0;
+            if (a.val === "DNF") return 1;
+            if (b.val === "DNF") return -1;
+            return cat.dir === 'asc' ? a.val - b.val : b.val - a.val;
+        });
     }
 
     // --- UI RENDERING ---
@@ -490,9 +454,9 @@
         db.countries.forEach(c => stats[c.id] = { gold:0, silver:0, bronze:0, total:0, name: c.name, code: c.code });
         db.categories.forEach(cat => {
             const rank = getRankings(cat.id);
-            if(rank[0]) { stats[rank[0].countryId].gold++; stats[rank[0].countryId].total++; }
-            if(rank[1]) { stats[rank[1].countryId].silver++; stats[rank[1].countryId].total++; }
-            if(rank[2]) { stats[rank[2].countryId].bronze++; stats[rank[2].countryId].total++; }
+            if(rank[0] && rank[0].val !== "DNF") { stats[rank[0].countryId].gold++; stats[rank[0].countryId].total++; }
+            if(rank[1] && rank[1].val !== "DNF") { stats[rank[1].countryId].silver++; stats[rank[1].countryId].total++; }
+            if(rank[2] && rank[2].val !== "DNF") { stats[rank[2].countryId].bronze++; stats[rank[2].countryId].total++; }
         });
         const sorted = Object.values(stats).sort((a,b) => b.gold - a.gold || b.silver - a.silver);
         document.getElementById('medal-table-body').innerHTML = sorted.map(c => `
@@ -512,6 +476,7 @@
         db.categories.forEach(cat => {
             const rank = getRankings(cat.id);
             rank.forEach((r, i) => {
+                if(r.val === "DNF") return;
                 const pos = i + 1;
                 let p = (pos === 1) ? 100 : (pos === 2) ? 80 : (pos === 3) ? 60 : Math.max(0, 50 - pos * 5);
                 if(points[r.countryId] !== undefined) points[r.countryId] += p;
@@ -533,7 +498,7 @@
         const rank = getRankings(catId);
         const cat = db.categories.find(c => c.id === catId);
         document.getElementById('cat-results-body').innerHTML = rank.map((r, i) => `
-            <tr><td>${i+1}.</td><td>${r.name}</td><td>${r.countryName}</td><td>${r.val} ${cat.unit}</td></tr>
+            <tr><td>${i+1}.</td><td>${r.name}</td><td>${r.countryName}</td><td><strong>${r.val === "DNF" ? "DNF" : r.val + " " + cat.unit}</strong></td></tr>
         `).join('');
     }
 
@@ -549,9 +514,8 @@
     }
 
     function handleLogin() {
-        if(document.getElementById('user').value === 'ADMIN' && document.getElementById('pass').value === '1234') {
-            changeSection('admin-panel');
-        } else alert("Napačni podatki!");
+        if(document.getElementById('user').value === 'ADMIN' && document.getElementById('pass').value === '1234') changeSection('admin-panel');
+        else alert("Napačni podatki!");
     }
 
     function logout() { location.reload(); }
