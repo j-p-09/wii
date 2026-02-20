@@ -118,11 +118,10 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .medal-group { display: flex; align-items: center; gap: 5px; }
         .medal-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 
         /* --- FILTRI / POGLEDI --- */
-        .view-tabs { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
+        .view-tabs { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
         .tab-btn {
             background: var(--glass);
             border: 1px solid var(--glass-border);
@@ -132,10 +131,12 @@
             cursor: pointer;
             transition: 0.3s;
         }
-        .tab-btn.active { background: var(--accent); border-color: var(--accent); font-weight: bold; }
+        .tab-btn.active { background: var(--accent); border-color: var(--accent); font-weight: bold; color: #000; }
 
         /* --- ADMIN PANEL --- */
         .admin-layout { display: grid; grid-template-columns: 240px 1fr; gap: 30px; }
+        @media (max-width: 768px) { .admin-layout { grid-template-columns: 1fr; } }
+
         .admin-sidebar { display: flex; flex-direction: column; gap: 10px; }
         .admin-sidebar button {
             background: var(--glass);
@@ -161,9 +162,19 @@
             margin-top: 5px;
             margin-bottom: 15px;
         }
-        .btn-save { background: var(--accent); color: #000; border: none; padding: 15px 30px; border-radius: 12px; cursor: pointer; font-weight: 800; width: 100%; }
+        .btn-save { background: var(--accent); color: #000; border: none; padding: 15px 30px; border-radius: 12px; cursor: pointer; font-weight: 800; width: 100%; transition: 0.3s; }
+        .btn-save:hover { filter: brightness(1.2); }
 
-        .dnf-badge { background: var(--danger); font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; }
+        .country-group-header {
+            background: var(--glass-heavy);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: 800;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -254,8 +265,7 @@
             <div class="admin-sidebar">
                 <button onclick="showAdminSub('a-cats', this)" class="active">Kategorije</button>
                 <button onclick="showAdminSub('a-res', this)">Vpis Rezultatov</button>
-                <button onclick="showAdminSub('a-plan', this)">Načrtovanje</button>
-                <button onclick="showAdminSub('a-athletes', this)">Tekmovalci</button>
+                <button onclick="showAdminSub('a-athletes', this)">Države & Tekmovalci</button>
                 <button onclick="logout()" style="color:var(--danger)">Odjava</button>
             </div>
             
@@ -267,7 +277,7 @@
                         <select id="cat-env"><option value="outdoor">Zunanje</option><option value="indoor">Notranje</option></select>
                         <input type="text" id="cat-unit" placeholder="Enota (sek, m, kg)">
                         <select id="cat-dir"><option value="asc">Manj je bolje (Čas)</option><option value="desc">Več je bolje (Daljava)</option></select>
-                        <input type="number" id="cat-series" placeholder="Število serij">
+                        <input type="number" id="cat-series" placeholder="Število serij (običajno 1)">
                         <input type="number" id="cat-attempts" placeholder="Poskusov v seriji">
                         <button class="btn-save" onclick="db_addCategory()">Dodaj Kategorijo</button>
                     </div>
@@ -276,29 +286,26 @@
                 <div id="a-res" class="admin-sub" style="display:none;">
                     <div class="glass-card">
                         <h3>Vpis Rezultatov</h3>
+                        <p style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 10px;">Rezultati se vpisujejo ločeno za vsako državo, v kateri tekmovalec nastopa.</p>
                         <select id="res-cat-sel" onchange="loadResultEntry()"></select>
                         <input type="date" id="res-date">
                         <div id="res-entry-area"></div>
-                        <button class="btn-save" id="btn-save-res" style="display:none;" onclick="db_saveResults()">Shrani Rezultate</button>
+                        <button class="btn-save" id="btn-save-res" style="display:none; margin-top:20px;" onclick="db_saveResults()">Shrani Vse Rezultate</button>
                     </div>
-                </div>
-
-                <div id="a-plan" class="admin-sub" style="display:none;">
-                    <div class="glass-card">
-                        <h3>Načrtovanje Dogodkov</h3>
-                        <p>Funkcija za razporejanje kategorij po datumih.</p>
-                        </div>
                 </div>
 
                 <div id="a-athletes" class="admin-sub" style="display:none;">
                     <div class="glass-card">
-                        <h3>Države & Tekmovalci</h3>
+                        <h3>Države</h3>
                         <input type="text" id="c-name" placeholder="Ime države">
-                        <input type="text" id="c-code" placeholder="ISO Koda (npr: si, us, de, it)">
+                        <input type="text" id="c-code" placeholder="ISO Koda (npr: si, us, de)">
                         <button class="btn-save" style="background:#444; color:#fff; margin-bottom:20px;" onclick="db_addCountry()">Dodaj Državo</button>
                         
+                        <hr style="opacity:0.1; margin: 20px 0;">
+                        
+                        <h3>Tekmovalci</h3>
                         <input type="text" id="ath-name" placeholder="Ime tekmovalca">
-                        <label>Izberi države (več hkrati z CTRL)</label>
+                        <label>Nastopa za države (drži CTRL za več):</label>
                         <select id="ath-c-sel" multiple style="height:100px;"></select>
                         <button class="btn-save" onclick="db_addAthlete()">Dodaj Tekmovalca</button>
                     </div>
@@ -310,13 +317,12 @@
 </div>
 
 <script>
-    // --- DATABASE INITIALIZATION ---
+    // --- DATABASE ---
     let db = JSON.parse(localStorage.getItem('olympics_pro_db')) || {
         countries: [],
         athletes: [],
         categories: [],
-        results: [],
-        schedule: []
+        results: [] // Struktura: {catId, date, athId, countryId, s, a, val}
     };
 
     function sync() {
@@ -329,7 +335,7 @@
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('#main-nav button').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        btn.classList.add('active');
+        if(btn) btn.classList.add('active');
         refreshUI();
     }
 
@@ -340,12 +346,12 @@
         btn.classList.add('active');
     }
 
-    // --- DATA HANDLING ---
+    // --- DB ACTIONS ---
     function db_addCountry() {
         const name = document.getElementById('c-name').value;
         const code = document.getElementById('c-code').value.toLowerCase();
         if(name && code) {
-            db.countries.push({ id: Date.now(), name, code });
+            db.countries.push({ id: Date.now().toString(), name, code });
             sync();
             document.getElementById('c-name').value = '';
             document.getElementById('c-code').value = '';
@@ -356,7 +362,7 @@
         const name = document.getElementById('ath-name').value;
         const cIds = Array.from(document.getElementById('ath-c-sel').selectedOptions).map(o => o.value);
         if(name && cIds.length > 0) {
-            db.athletes.push({ id: Date.now(), name, countries: cIds });
+            db.athletes.push({ id: Date.now().toString(), name, countries: cIds });
             sync();
             document.getElementById('ath-name').value = '';
         }
@@ -364,38 +370,63 @@
 
     function db_addCategory() {
         const cat = {
-            id: Date.now(),
+            id: Date.now().toString(),
             name: document.getElementById('cat-name').value,
             env: document.getElementById('cat-env').value,
             unit: document.getElementById('cat-unit').value,
             dir: document.getElementById('cat-dir').value,
-            series: parseInt(document.getElementById('cat-series').value),
-            attempts: parseInt(document.getElementById('cat-attempts').value)
+            series: parseInt(document.getElementById('cat-series').value) || 1,
+            attempts: parseInt(document.getElementById('cat-attempts').value) || 1
         };
         db.categories.push(cat);
         sync();
     }
 
-    // --- RESULT LOGIC ---
+    // --- LOGIKA VPISA (DRŽAVA -> TEKMOVALEC) ---
     function loadResultEntry() {
         const catId = document.getElementById('res-cat-sel').value;
-        const cat = db.categories.find(c => c.id == catId);
+        const cat = db.categories.find(c => c.id === catId);
         const area = document.getElementById('res-entry-area');
         area.innerHTML = '';
         if(!cat) return;
 
-        db.athletes.forEach(ath => {
-            let html = `<div style="padding:15px; border-bottom:1px solid var(--glass-border);">
-                        <strong>${ath.name}</strong><br>`;
-            for(let s=1; s<=cat.series; s++) {
-                html += `<div style="margin:5px 0; font-size:0.8rem;">Serija ${s}: `;
-                for(let a=1; a<=cat.attempts; a++) {
-                    html += `<input type="text" placeholder="Rez/DNF" class="r-val" data-ath="${ath.id}" data-s="${s}" data-a="${a}" style="width:70px; display:inline-block; margin-right:5px;">`;
-                }
-                html += `</div>`;
+        db.countries.forEach(country => {
+            // Poišči vse tekmovalce, ki so dodeljeni tej državi
+            const countryAthletes = db.athletes.filter(ath => ath.countries.includes(country.id));
+            
+            if(countryAthletes.length > 0) {
+                let countryHtml = `<div class="country-group-header">
+                    <img src="https://flagcdn.com/w40/${country.code}.png" style="margin-right:10px; border-radius:3px;"> 
+                    ${country.name.toUpperCase()}
+                </div>`;
+                
+                countryAthletes.forEach(ath => {
+                    countryHtml += `<div style="padding:15px; border-bottom:1px solid var(--glass-border); background: rgba(255,255,255,0.02);">
+                        <strong>${ath.name}</strong>`;
+                    
+                    for(let s=1; s<=cat.series; s++) {
+                        countryHtml += `<div style="margin:5px 0; font-size:0.8rem; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span>Serija ${s}:</span>`;
+                        for(let a=1; a<=cat.attempts; a++) {
+                            // Poišči obstoječo vrednost, če obstaja
+                            const existing = db.results.find(r => r.catId === catId && r.athId === ath.id && r.countryId === country.id && r.s == s && r.a == a);
+                            const val = existing ? existing.val : "";
+                            
+                            countryHtml += `<input type="text" placeholder="Rez/DNF" 
+                                class="r-val" 
+                                data-ath="${ath.id}" 
+                                data-country="${country.id}" 
+                                data-s="${s}" 
+                                data-a="${a}" 
+                                value="${val}"
+                                style="width:80px; margin-bottom:0;">`;
+                        }
+                        countryHtml += `</div>`;
+                    }
+                    countryHtml += `</div>`;
+                });
+                area.innerHTML += countryHtml;
             }
-            html += `</div>`;
-            area.innerHTML += html;
         });
         document.getElementById('btn-save-res').style.display = 'block';
     }
@@ -406,53 +437,81 @@
         const inputs = document.querySelectorAll('.r-val');
         
         inputs.forEach(i => {
-            if(i.value !== "") {
-                db.results = db.results.filter(r => !(r.catId == catId && r.athId == i.dataset.ath && r.s == i.dataset.s && r.a == i.dataset.a));
+            const val = i.value.trim().toUpperCase();
+            // Najprej pobrišemo star zapis za ta ključ (cat + ath + country + s + a)
+            db.results = db.results.filter(r => !(
+                r.catId === catId && 
+                r.athId === i.dataset.ath && 
+                r.countryId === i.dataset.country && 
+                r.s == i.dataset.s && 
+                r.a == i.dataset.a
+            ));
+
+            if(val !== "") {
                 db.results.push({
-                    catId, date, athId: i.dataset.ath, s: i.dataset.s, a: i.dataset.a, 
-                    val: i.value.toUpperCase() === 'DNF' ? 'DNF' : parseFloat(i.value)
+                    catId, 
+                    date, 
+                    athId: i.dataset.ath, 
+                    countryId: i.dataset.country,
+                    s: i.dataset.s, 
+                    a: i.dataset.a, 
+                    val: val === 'DNF' ? 'DNF' : parseFloat(val.replace(',', '.'))
                 });
             }
         });
         sync();
-        alert("Rezultati shranjeni!");
+        alert("Rezultati za države so shranjeni!");
     }
 
-    // --- CALCULATIONS ---
+    // --- RANKING LOGIC (ZDAJ LOČENO PO DRŽAVAH) ---
     function getRankings(catId) {
-        const cat = db.categories.find(c => c.id == catId);
+        const cat = db.categories.find(c => c.id === catId);
         if(!cat) return [];
-        let athRankings = [];
+        
+        let performances = [];
 
-        db.athletes.forEach(ath => {
-            const results = db.results.filter(r => r.catId == catId && r.athId == ath.id);
-            if(results.length === 0) return;
+        // Gremo čez vse rezultate za to kategorijo
+        // Ker lahko tekmovalec nastopa za več držav, jih obravnavamo kot ločene vpise
+        const catResults = db.results.filter(r => r.catId === catId);
+        
+        // Unikatne kombinacije tekmovalec-država v tej kategoriji
+        const uniqueEntries = [];
+        catResults.forEach(r => {
+            const key = `${r.athId}-${r.countryId}`;
+            if(!uniqueEntries.includes(key)) uniqueEntries.push(key);
+        });
 
-            let isDQ = false;
+        uniqueEntries.forEach(key => {
+            const [athId, countryId] = key.split('-');
+            const ath = db.athletes.find(a => a.id === athId);
+            const country = db.countries.find(c => c.id === countryId);
+            const results = catResults.filter(r => r.athId === athId && r.countryId === countryId);
+
             let bestVal = cat.dir === 'asc' ? Infinity : -Infinity;
+            let isDQ = false;
 
-            for(let s=1; s<=cat.series; s++) {
-                const sRes = results.filter(r => r.s == s);
-                const dnfCount = sRes.filter(r => r.val === 'DNF').length;
-                if(dnfCount > 2) isDQ = true;
-                
-                sRes.forEach(r => {
-                    if(r.val !== 'DNF') {
-                        if(cat.dir === 'asc') { if(r.val < bestVal) bestVal = r.val; }
-                        else { if(r.val > bestVal) bestVal = r.val; }
-                    }
+            results.forEach(r => {
+                if(r.val === 'DNF') return; // DNF ne upoštevamo kot najboljši rez
+                if(cat.dir === 'asc') { if(r.val < bestVal) bestVal = r.val; }
+                else { if(r.val > bestVal) bestVal = r.val; }
+            });
+
+            if(bestVal !== Infinity && bestVal !== -Infinity) {
+                performances.push({
+                    athId,
+                    countryId,
+                    name: ath ? ath.name : 'Neznan',
+                    countryName: country ? country.name : 'Neznana',
+                    countryCode: country ? country.code : '',
+                    val: bestVal
                 });
-            }
-
-            if(!isDQ && bestVal !== Infinity && bestVal !== -Infinity) {
-                athRankings.push({ athId: ath.id, val: bestVal, name: ath.name, countries: ath.countries });
             }
         });
 
-        return athRankings.sort((a,b) => cat.dir === 'asc' ? a.val - b.val : b.val - a.val);
+        return performances.sort((a,b) => cat.dir === 'asc' ? a.val - b.val : b.val - a.val);
     }
 
-    // --- REFRESH UI ---
+    // --- UI RENDERING ---
     function refreshUI() {
         renderMedals();
         renderTotalScores();
@@ -466,19 +525,17 @@
 
         db.categories.forEach(cat => {
             const rank = getRankings(cat.id);
-            rank.slice(0, 3).forEach((r, i) => {
-                r.countries.forEach(cId => {
-                    if(stats[cId]) {
-                        if(i === 0) stats[cId].gold++;
-                        else if(i === 1) stats[cId].silver++;
-                        else if(i === 2) stats[cId].bronze++;
-                        stats[cId].total++;
-                    }
-                });
-            });
+            if(rank.length > 0) {
+                // Zlato
+                if(stats[rank[0].countryId]) { stats[rank[0].countryId].gold++; stats[rank[0].countryId].total++; }
+                // Srebro
+                if(rank[1] && stats[rank[1].countryId]) { stats[rank[1].countryId].silver++; stats[rank[1].countryId].total++; }
+                // Bron
+                if(rank[2] && stats[rank[2].countryId]) { stats[rank[2].countryId].bronze++; stats[rank[2].countryId].total++; }
+            }
         });
 
-        const sorted = Object.values(stats).sort((a,b) => b.gold - a.gold || b.silver - a.silver);
+        const sorted = Object.values(stats).sort((a,b) => b.gold - a.gold || b.silver - a.silver || b.bronze - a.bronze);
         document.getElementById('medal-table-body').innerHTML = sorted.map(c => `
             <tr>
                 <td><img src="https://flagcdn.com/w80/${c.code}.png" class="flag-box"> ${c.name}</td>
@@ -513,14 +570,15 @@
                 else if(pos === 3) p = 60;
                 else if(pos === 4) p = 40;
                 else if(pos === 5) p = 35;
-                else p = Math.max(0, 35 - (pos - 5) * 0.02);
+                else p = Math.max(0, 35 - (pos - 5) * 2);
                 
-                r.countries.forEach(cId => { if(points[cId] !== undefined) points[cId] += p; });
+                if(points[r.countryId] !== undefined) points[r.countryId] += p;
             });
         });
 
         const sorted = Object.entries(points)
-            .map(([id, p]) => ({ ...db.countries.find(c => c.id == id), p }))
+            .map(([id, p]) => ({ ...db.countries.find(c => c.id === id), p }))
+            .filter(c => c.name)
             .sort((a,b) => b.p - a.p);
 
         document.getElementById('total-points-body').innerHTML = sorted.map((c, i) => `
@@ -544,12 +602,12 @@
         document.querySelectorAll('#public-cat-tabs .tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const rank = getRankings(catId);
-        const cat = db.categories.find(c => c.id == catId);
+        const cat = db.categories.find(c => c.id === catId);
         document.getElementById('cat-results-body').innerHTML = rank.map((r, i) => `
             <tr>
                 <td>${i+1}.</td>
                 <td>${r.name}</td>
-                <td>${r.countries.map(cId => db.countries.find(cx => cx.id == cId)?.name).join(', ')}</td>
+                <td><img src="https://flagcdn.com/w40/${r.countryCode}.png" style="vertical-align:middle; margin-right:8px; border-radius:2px;"> ${r.countryName}</td>
                 <td>${r.val} ${cat.unit}</td>
             </tr>
         `).join('');
@@ -560,12 +618,18 @@
         if(cSel) cSel.innerHTML = db.countries.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         
         const rSel = document.getElementById('res-cat-sel');
-        if(rSel) rSel.innerHTML = '<option value="">Izberi kategorijo...</option>' + db.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if(rSel) {
+            const currentVal = rSel.value;
+            rSel.innerHTML = '<option value="">Izberi kategorijo za vpis...</option>' + 
+                db.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            rSel.value = currentVal;
+        }
     }
 
     function handleLogin() {
         if(document.getElementById('user').value === 'ADMIN' && document.getElementById('pass').value === '1234') {
-            changeSection('admin-panel', document.createElement('button'));
+            changeSection('admin-panel');
+            showAdminSub('a-cats', document.querySelector('.admin-sidebar button'));
         } else alert("Napačni podatki!");
     }
 
