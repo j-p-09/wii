@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOLO SREČE - Programska Rešitev</title>
+    <style>
+        :root {
+            --purple-bg: #4a148c;
+            --purple-dark: #311b92;
+            --green-tile: #2e7d32;
+            --blue-tile: #1565c0;
+            --yellow-accent: #fdd835;
+            --text-white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--purple-bg), var(--purple-dark));
+            color: var(--text-white);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- MODALS & DIALOGS (Custom style) --- */
+        .custom-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+            display: none;
+        }
+
+        /* --- SCREENS --- */
+        .screen { display: none; width: 95%; max-width: 1200px; text-align: center; }
+        .screen.active { display: block; }
+
+        h1 { font-size: 3rem; text-shadow: 2px 2px #000; margin-bottom: 20px; }
+
+        /* --- BUTTONS --- */
+        .btn {
+            background: var(--yellow-accent);
+            color: #000;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 1.1rem;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+
+        /* --- GRID SETUP --- */
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(14, 1fr);
+            gap: 5px;
+            background: #1a237e;
+            padding: 15px;
+            border: 5px solid var(--blue-tile);
+            border-radius: 10px;
+            margin: 20px auto;
+            width: fit-content;
+        }
+
+        .tile {
+            width: 50px;
+            height: 60px;
+            background: var(--green-tile);
+            border: 2px solid #1b5e20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #000;
+            cursor: pointer;
+        }
+
+        .tile.active-letter { background: white; }
+        .tile.revealed { background: white; }
+        .tile.hidden-tile { opacity: 0.3; cursor: default; }
+
+        /* --- ROUND SELECTOR --- */
+        .round-selector {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .round-btn {
+            width: 40px;
+            height: 40px;
+            background: #ddd;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .round-btn.set { background: #4caf50; color: white; }
+
+        /* --- PLAYERS AREA --- */
+        .players-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+        .player-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            width: 250px;
+            position: relative;
+        }
+        .player-card.active-turn { border: 3px solid var(--yellow-accent); box-shadow: 0 0 15px var(--yellow-accent); }
+
+        /* --- WHEEL CONTAINER --- */
+        #wheel-canvas {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            border: 10px solid #fff;
+            transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
+        }
+
+        /* --- ALPHABET --- */
+        .alphabet {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .letter-btn {
+            width: 35px;
+            height: 35px;
+            background: white;
+            color: black;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .letter-btn.vowel { background: #ef5350; color: white; }
+        .letter-btn.used { opacity: 0.2; pointer-events: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="overlay"></div>
+    <div id="customDialog" class="custom-dialog">
+        <h3 id="dialogTitle">Naslov</h3>
+        <div id="dialogContent"></div>
+        <div id="dialogButtons" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="menuScreen" class="screen active">
+        <h1>KOLO SREČE</h1>
+        <button class="btn" onclick="showScreen('gameScreen')">ZAČNI IGRO</button><br>
+        <button class="btn" onclick="showScreen('wordsScreen')">NASTAVI BESEDE</button><br>
+        <button class="btn" onclick="showScreen('playersScreen')">UREDI IGRALCE</button><br>
+        <button class="btn" onclick="showScreen('settingsScreen')">SPLOŠNE NASTAVITVE</button>
+    </div>
+
+    <div id="wordsScreen" class="screen">
+        <h2>Nastavi besede</h2>
+        <div class="round-selector" id="roundSelector"></div>
+        
+        <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+            <div id="setupControls">
+                <button class="btn btn-small" onclick="moveWord('up')">▲</button><br>
+                <button class="btn btn-small" onclick="moveWord('left')">◀</button>
+                <button class="btn btn-small" onclick="moveWord('right')">▶</button><br>
+                <button class="btn btn-small" onclick="moveWord('down')">▼</button>
+            </div>
+            
+            <div class="board-container" id="setupBoard"></div>
+
+            <div id="rowErasers">
+                <button class="btn btn-small" onclick="clearRow(0)">✎ 1</button><br>
+                <button class="btn btn-small" onclick="clearRow(1)">✎ 2</button><br>
+                <button class="btn btn-small" onclick="clearRow(2)">✎ 3</button><br>
+                <button class="btn btn-small" onclick="clearRow(3)">✎ 4</button>
+            </div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <label>Kategorija:</label>
+            <input type="text" id="setupCategory" placeholder="Vpiši kategorijo...">
+            <button class="btn btn-small" onclick="openWordPrompt()">✎ Vnesi besedo</button>
+            <button class="btn btn-small" onclick="analyzeWord()">📊 Analiza</button>
+            <button class="btn btn-small" onclick="resetRound()">🗑 Pobriši krog</button>
+        </div>
+        <button class="btn" onclick="saveRound()">SHRANI</button>
+        <button class="btn" onclick="showScreen('menuScreen')">NAZAJ</button>
+    </div>
+
+    <div id="playersScreen" class="screen">
+        <h2>Uredi igralce</h2>
+        <div id="playerInputs"></div>
+        <button class="btn" onclick="addPlayerField()">+ Dodaj igralca</button>
+        <button class="btn" onclick="showScreen('menuScreen')">NAZAJ</button>
+    </div>
+
+    <div id="settingsScreen" class="screen">
+        <h2>Splošne nastavitve</h2>
+        <div>Cena samoglasnika: <input type="number" id="vowelPrice" value="120"> <span class="currencyLabel">€</span></div>
+        <div>Valuta: 
+            <select id="currency" onchange="updateCurrencySymbol()">
+                <option value="€">€</option>
+                <option value="$">$</option>
+            </select>
+        </div>
+        <hr>
+        <h3>Presenečenja</h3>
+        <input type="text" id="s1" value="1-10.000€"><br>
+        <input type="text" id="s2" value="Bankrot"><br>
+        <input type="text" id="s3" value="35.000€"><br>
+        <input type="text" id="s4" value="Brezplačen samoglasnik">
+        <br>
+        <button class="btn" onclick="showScreen('menuScreen')">NAZAJ</button>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <h1 id="gameHeader">KOLO SREČE</h1>
+        <div id="activeCategory" style="background: var(--blue-tile); padding: 5px; margin-bottom: 10px; font-weight: bold;">...</div>
+        
+        <div class="alphabet" id="alphabet"></div>
+
+        <div class="board-container" id="gameBoard"></div>
+
+        <div style="margin: 20px;">
+            <button class="btn" onclick="showWheel()">VRTI</button>
+            <button class="btn" onclick="solvePuzzle()">POKAŽI</button>
+            <button class="btn" id="activateBoardBtn" onclick="openRoundPicker()">AKTIVIRAJ ZASLON</button>
+            <span id="roundNumberDisplay" style="margin-left:20px; font-weight: bold;">Začetek</span>
+        </div>
+
+        <div class="players-bar" id="gamePlayers"></div>
+
+        <button class="btn btn-small" style="position: absolute; top: 10px; right: 10px;" onclick="showScreen('menuScreen')">Zapusti igro</button>
+    </div>
+
+    <div id="wheelScreen" class="screen">
+        <h2 id="wheelPlayerName">Igralec na vrsti</h2>
+        <div style="display:flex; justify-content: space-around; align-items: center;">
+            <div id="winDisplay">
+                <h3>Zadetek</h3>
+                <div id="landedValue" style="font-size: 2.5rem; color: var(--yellow-accent);">€ 0</div>
+                <button class="btn" id="surpriseBtn" style="display:none" onclick="showSurprise()">?</button>
+            </div>
+            <div id="wheelWrapper">
+                <canvas id="wheel-canvas" width="400" height="400"></canvas>
+                <br>
+                <button class="btn" onclick="spinWheel()">VRTI!</button>
+            </div>
+        </div>
+        <button class="btn" onclick="backToGame()">NAZAJ</button>
+    </div>
+
+    <script>
+        /* --- STATE MANAGEMENT --- */
+        let state = {
+            rounds: Array.from({length: 12}, () => ({ word: "", category: "", grid: [], saved: false })),
+            currentSetupRound: 0,
+            players: [
+                { name: "Igralec 1", inRound: 0, safe: 0, cards: 0 },
+                { name: "Igralec 2", inRound: 0, safe: 0, cards: 0 }
+            ],
+            settings: { vowelPrice: 120, currency: "€", surprises: [] },
+            game: {
+                activeRoundIndex: -1,
+                currentPlayer: 0,
+                lastValue: 0,
+                usedLetters: []
+            }
+        };
+
+        const gridRows = [12, 14, 14, 12]; // Indented grid structure
+
+        /* --- INITIALIZATION --- */
+        function init() {
+            renderRoundSelector();
+            renderSetupBoard();
+            renderPlayerInputs();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'gameScreen') renderGameView();
+        }
+
+        /* --- WORD SETUP LOGIC --- */
+        function renderRoundSelector() {
+            const container = document.getElementById('roundSelector');
+            container.innerHTML = '';
+            for(let i=0; i<12; i++) {
+                const b = document.createElement('button');
+                b.className = `round-btn ${state.rounds[i].saved ? 'set' : ''}`;
+                b.innerText = i+1;
+                b.onclick = () => loadSetupRound(i);
+                container.appendChild(b);
+            }
+        }
+
+        function loadSetupRound(idx) {
+            state.currentSetupRound = idx;
+            document.getElementById('setupCategory').value = state.rounds[idx].category;
+            renderSetupBoard();
+        }
+
+        function renderSetupBoard() {
+            const board = document.getElementById('setupBoard');
+            board.innerHTML = '';
+            const round = state.rounds[state.currentSetupRound];
+            
+            for(let r=0; r<4; r++) {
+                const rowSize = gridRows[r];
+                const offset = (14 - rowSize) / 2;
+                for(let i=0; i<14; i++) {
+                    const tile = document.createElement('div');
+                    if(i < offset || i >= offset + rowSize) {
+                        tile.className = 'tile hidden-tile';
+                    } else {
+                        tile.className = 'tile';
+                        const char = round.grid.find(g => g.r === r && g.c === i);
+                        if(char) tile.innerText = char.val;
+                        tile.onclick = () => {
+                            const val = prompt("Vnesi črko:");
+                            if(val !== null) updateTile(r, i, val.toUpperCase());
+                        };
+                    }
+                    board.appendChild(tile);
+                }
+            }
+        }
+
+        function updateTile(r, c, val) {
+            const round = state.rounds[state.currentSetupRound];
+            round.grid = round.grid.filter(g => !(g.r === r && g.c === c));
+            if(val) round.grid.push({r, c, val});
+            renderSetupBoard();
+        }
+
+        function openWordPrompt() {
+            const word = prompt("Vnesi besedo ali besedno zvezo:");
+            if(!word) return;
+            // Simple auto-layout: center in middle row (row 1 or 2)
+            const round = state.rounds[state.currentSetupRound];
+            round.grid = [];
+            let startCol = Math.floor((14 - word.length) / 2);
+            for(let i=0; i<word.length; i++) {
+                if(word[i] !== " ") {
+                    round.grid.push({ r: 1, c: startCol + i, val: word[i].toUpperCase() });
+                }
+            }
+            renderSetupBoard();
+        }
+
+        function moveWord(dir) {
+            const round = state.rounds[state.currentSetupRound];
+            round.grid.forEach(g => {
+                if(dir === 'up') g.r--;
+                if(dir === 'down') g.r++;
+                if(dir === 'left') g.c--;
+                if(dir === 'right') g.c++;
+            });
+            renderSetupBoard();
+        }
+
+        function clearRow(r) {
+            const round = state.rounds[state.currentSetupRound];
+            round.grid = round.grid.filter(g => g.r !== r);
+            renderSetupBoard();
+        }
+
+        function analyzeWord() {
+            const round = state.rounds[state.currentSetupRound];
+            const letters = round.grid.map(g => g.val).join('');
+            const vowels = (letters.match(/[AEIOUČŠŽ]/gi) || []).length;
+            showCustomDialog("Analiza", `Število črk: ${letters.length}<br>Samoglasnikov: ${vowels}`);
+        }
+
+        function saveRound() {
+            const round = state.rounds[state.currentSetupRound];
+            round.category = document.getElementById('setupCategory').value;
+            round.saved = true;
+            renderRoundSelector();
+            showCustomDialog("Sistem", "Krog shranjen!");
+        }
+
+        /* --- PLAYER LOGIC --- */
+        function renderPlayerInputs() {
+            const cont = document.getElementById('playerInputs');
+            cont.innerHTML = '';
+            state.players.forEach((p, i) => {
+                cont.innerHTML += `<input type="text" value="${p.name}" onchange="state.players[${i}].name=this.value"> <br>`;
+            });
+        }
+        function addPlayerField() {
+            if(state.players.length < 12) {
+                state.players.push({ name: `Igralec ${state.players.length+1}`, inRound: 0, safe: 0, cards: 0 });
+                renderPlayerInputs();
+            }
+        }
+
+        /* --- GAMEPLAY LOGIC --- */
+        function renderGameView() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            const round = state.rounds[state.game.activeRoundIndex] || { grid: [] };
+            
+            for(let r=0; r<4; r++) {
+                const rowSize = gridRows[r];
+                const offset = (14 - rowSize) / 2;
+                for(let i=0; i<14; i++) {
+                    const tile = document.createElement('div');
+                    if(i < offset || i >= offset + rowSize) {
+                        tile.className = 'tile hidden-tile';
+                    } else {
+                        const charData = round.grid.find(g => g.r === r && g.c === i);
+                        if(charData) {
+                            tile.className = 'tile active-letter';
+                            if(state.game.usedLetters.includes(charData.val)) {
+                                tile.innerText = charData.val;
+                                tile.classList.add('revealed');
+                            }
+                        } else {
+                            tile.className = 'tile';
+                        }
+                    }
+                    board.appendChild(tile);
+                }
+            }
+
+            // Render Alphabet
+            const alphaCont = document.getElementById('alphabet');
+            alphaCont.innerHTML = '';
+            const alphabet = "ABCČDEFGHIJKLMNOPQRSŠTUVWXYZŽ".split("");
+            const vowels = "AEIOU".split("");
+            
+            alphabet.forEach(l => {
+                const btn = document.createElement('button');
+                btn.innerText = l;
+                btn.className = `letter-btn ${vowels.includes(l) ? 'vowel' : ''} ${state.game.usedLetters.includes(l) ? 'used' : ''}`;
+                btn.onclick = () => guessLetter(l);
+                alphaCont.appendChild(btn);
+            });
+
+            // Render Players
+            const pCont = document.getElementById('gamePlayers');
+            pCont.innerHTML = '';
+            state.players.forEach((p, i) => {
+                const card = document.createElement('div');
+                card.className = `player-card ${state.game.currentPlayer === i ? 'active-turn' : ''}`;
+                card.innerHTML = `
+                    <strong>${p.name}</strong><br>
+                    Trenutno: <span id="p-round-${i}">${p.inRound}</span> ${state.settings.currency}<br>
+                    Na varnem: <span id="p-safe-${i}">${p.safe}</span> ${state.settings.currency}<br>
+                    <button class="btn btn-small" onclick="handleCard(${i})">Kartoni: ${p.cards}</button>
+                `;
+                pCont.appendChild(card);
+            });
+        }
+
+        function openRoundPicker() {
+            const content = state.rounds
+                .map((r, i) => r.saved ? `<button class="btn" onclick="activateRound(${i})">${i+1}</button>` : '')
+                .join('');
+            showCustomDialog("Izberi krog", content || "Noben krog ni nastavljen!");
+        }
+
+        function activateRound(idx) {
+            state.game.activeRoundIndex = idx;
+            state.game.usedLetters = [];
+            document.getElementById('activeCategory').innerText = state.rounds[idx].category;
+            document.getElementById('roundNumberDisplay').innerText = `${idx+1}. Krog`;
+            hideDialog();
+            renderGameView();
+        }
+
+        function guessLetter(l) {
+            if(state.game.lastValue === 0 && !"AEIOU".includes(l)) {
+                alert("Najprej zavrti kolo!");
+                return;
+            }
+            
+            state.game.usedLetters.push(l);
+            const round = state.rounds[state.game.activeRoundIndex];
+            const occurrences = round.grid.filter(g => g.val === l).length;
+            
+            if(occurrences > 0) {
+                const reward = occurrences * state.game.lastValue;
+                state.players[state.game.currentPlayer].inRound += reward;
+                // If vowel, subtract price
+                if("AEIOU".includes(l)) {
+                    state.players[state.game.currentPlayer].inRound -= state.settings.vowelPrice;
+                }
+                state.game.lastValue = 0;
+            } else {
+                nextPlayer();
+            }
+            renderGameView();
+        }
+
+        function nextPlayer() {
+            state.game.currentPlayer = (state.game.currentPlayer + 1) % state.players.length;
+            state.game.lastValue = 0;
+            renderGameView();
+        }
+
+        function solvePuzzle() {
+            const sol = prompt("Vnesi celotno rešitev:");
+            const round = state.rounds[state.game.activeRoundIndex];
+            const actual = round.grid.sort((a,b) => a.r - b.r || a.c - b.c).map(g => g.val).join('');
+            
+            if(sol && sol.toUpperCase().replace(/\s/g, '') === actual) {
+                showCustomDialog("ZMAGA!", "Pravilno! Denar gre na varno + 60 bonus.");
+                state.players.forEach(p => {
+                    p.safe += p.inRound;
+                    p.inRound = 0;
+                });
+                state.players[state.game.currentPlayer].safe += 60;
+                renderGameView();
+            } else {
+                alert("Napačno!");
+                nextPlayer();
+            }
+        }
+
+        /* --- WHEEL LOGIC --- */
+        const wheelValues = [500, 1000, "Bankrot", 200, 700, "Preskok", 150, 600, "SURPRISE", 300, 900, 250];
+        function showWheel() {
+            document.getElementById('wheelPlayerName').innerText = state.players[state.game.currentPlayer].name;
+            showScreen('wheelScreen');
+            drawWheel();
+        }
+
+        function drawWheel() {
+            const canvas = document.getElementById('wheel-canvas');
+            const ctx = canvas.getContext('2d');
+            const arc = (2 * Math.PI) / wheelValues.length;
+            
+            wheelValues.forEach((val, i) => {
+                ctx.fillStyle = i % 2 === 0 ? "#f44336" : "#2196f3";
+                ctx.beginPath();
+                ctx.moveTo(200, 200);
+                ctx.arc(200, 200, 200, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(200, 200);
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
+                ctx.fillText(val, 100, 10);
+                ctx.restore();
+            });
+        }
+
+        function spinWheel() {
+            const rand = Math.floor(Math.random() * 360) + 1440;
+            const canvas = document.getElementById('wheel-canvas');
+            canvas.style.transform = `rotate(${rand}deg)`;
+            
+            setTimeout(() => {
+                const actualDeg = rand % 360;
+                const idx = Math.floor((360 - (actualDeg % 360)) / (360 / wheelValues.length)) % wheelValues.length;
+                const result = wheelValues[idx];
+                
+                document.getElementById('landedValue').innerText = result;
+                if(result === "Bankrot") {
+                    state.players[state.game.currentPlayer].inRound = 0;
+                    setTimeout(backToGame, 2000);
+                } else if(result === "Preskok") {
+                    setTimeout(() => { backToGame(); nextPlayer(); }, 2000);
+                } else if(result === "SURPRISE") {
+                    document.getElementById('surpriseBtn').style.display = 'inline-block';
+                } else {
+                    state.game.lastValue = parseInt(result);
+                }
+            }, 4000);
+        }
+
+        function backToGame() {
+            showScreen('gameScreen');
+            document.getElementById('surpriseBtn').style.display = 'none';
+        }
+
+        /* --- UTILS --- */
+        function showCustomDialog(title, content) {
+            document.getElementById('dialogTitle').innerText = title;
+            document.getElementById('dialogContent').innerHTML = content;
+            document.getElementById('dialogButtons').innerHTML = '<button class="btn btn-small" onclick="hideDialog()">Zapri</button>';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('customDialog').style.display = 'block';
+        }
+
+        function hideDialog() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('customDialog').style.display = 'none';
+        }
+
+        function handleCard(idx) {
+            const p = state.players[idx];
+            p.cards++;
+            if(p.cards >= 2) {
+                alert(`${p.name} dobi rdeči karton in BANKROTIRA!`);
+                p.inRound = 0;
+                p.cards = 0;
+            }
+            renderGameView();
+        }
+
+        init();
+    </script>
+</body>
+</html>
