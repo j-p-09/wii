@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezultati Iger 2026</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #111;
+        }
+
+        .hidden { display: none !important; }
+
+        /* Login Screen */
+        #login-view {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #login-view h2 { margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; }
+        button {
+            padding: 10px 15px; background: #0056b3; color: white; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 14px;
+        }
+        button:hover { background: #004494; }
+        .logout-btn { background: #dc3545; float: right; margin: 10px; }
+
+        /* Admin Layout */
+        #admin-view { display: flex; min-height: 100vh; background: white; }
+        #sidebar {
+            width: 200px; background: #333; color: white; padding-top: 20px;
+        }
+        #sidebar ul { list-style: none; padding: 0; margin: 0; }
+        #sidebar li { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #444; }
+        #sidebar li:hover, #sidebar li.active { background: #0056b3; }
+        #content { flex-grow: 1; padding: 20px; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+
+        /* Tables Admin */
+        table.admin-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table.admin-table th, table.admin-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        table.admin-table th { background: #f2f2f2; }
+        .action-btn { padding: 4px 8px; margin-right: 5px; font-size: 12px; }
+
+        /* Country View (Matches Images) */
+        #country-view { max-width: 800px; margin: 40px auto; background: white; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+        .country-header { font-size: 18px; margin-bottom: 10px; }
+        .country-note { font-size: 14px; line-height: 1.5; margin-bottom: 30px; }
+        
+        table.result-table {
+            border-collapse: collapse;
+            width: 350px;
+            margin-bottom: 30px;
+        }
+        table.result-table th, table.result-table td {
+            border: 1px solid #b8b8b8;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        table.result-table th { font-weight: bold; background-color: #fff; }
+        table.result-table tr:nth-child(even) { background-color: #fcfcfc; }
+        
+        .status-text { font-size: 18px; margin-bottom: 20px; }
+        .status-subnote { font-size: 14px; margin-top: 20px; }
+        .rank-text { font-size: 18px; display: flex; align-items: center; }
+        
+        /* Medals */
+        .medal-icon {
+            display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+            margin-right: 8px; vertical-align: middle;
+        }
+        .medal-gold { background-color: #ffc107; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); }
+        .medal-silver { background-color: #e0e0e0; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); }
+        .medal-bronze { background-color: #cd7f32; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+    <div id="login-view">
+        <h2>Prijava</h2>
+        <div class="form-group">
+            <label>KRATICA</label>
+            <input type="text" id="login-kratica" placeholder="Vnesi kratico...">
+        </div>
+        <div class="form-group">
+            <label>ŠIFRA</label>
+            <input type="password" id="login-sifra" placeholder="Vnesi šifro...">
+        </div>
+        <button onclick="login()">Prijavi se</button>
+        <p id="login-error" style="color: red; display: none;">Napačna kratica ali šifra!</p>
+    </div>
+
+    <div id="admin-view" class="hidden">
+        <div id="sidebar">
+            <ul>
+                <li onclick="switchAdminTab('drzave')" id="tab-drzave" class="active">DRŽAVE</li>
+                <li onclick="switchAdminTab('tekme')" id="tab-tekme">TEKME</li>
+                <li onclick="switchAdminTab('rezultati')" id="tab-rezultati">REZULTATI</li>
+                <li onclick="switchAdminTab('status')" id="tab-status">STATUS</li>
+            </ul>
+        </div>
+        <div id="content">
+            <button class="logout-btn" onclick="logout()">Odjava</button>
+            <h2>Skrbniška plošča</h2>
+
+            <div id="sec-drzave" class="admin-section active">
+                <h3>Upravljanje držav</h3>
+                <input type="hidden" id="drzava-id">
+                <input type="text" id="drzava-ime" placeholder="Ime države (npr. Slovenija)">
+                <input type="text" id="drzava-kratica" placeholder="Kratica (npr. SLO)">
+                <input type="text" id="drzava-sifra" placeholder="Šifra za prijavo">
+                <button onclick="shraniDrzavo()">Shrani državo</button>
+                <button onclick="pocistiDrzavo()" style="background:#6c757d;">Počisti polja</button>
+                
+                <table class="admin-table">
+                    <thead><tr><th>Ime</th><th>Kratica</th><th>Šifra</th><th>Akcije</th></tr></thead>
+                    <tbody id="drzave-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="sec-tekme" class="admin-section">
+                <h3>Upravljanje tekem</h3>
+                <input type="hidden" id="tekma-id">
+                <input type="text" id="tekma-ime" placeholder="Ime tekme (npr. Skoki - tekma 1)">
+                <button onclick="shraniTekmo()">Shrani tekmo</button>
+                <button onclick="pocistiTekmo()" style="background:#6c757d;">Počisti polja</button>
+                
+                <table class="admin-table">
+                    <thead><tr><th>Ime tekme</th><th>Akcije</th></tr></thead>
+                    <tbody id="tekme-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="sec-rezultati" class="admin-section">
+                <h3>Vnos rezultatov</h3>
+                <select id="rezultati-tekma-select" onchange="naloziVnosRezultatov()">
+                    <option value="">-- Izberi tekmo --</option>
+                </select>
+                
+                <div id="vnos-rezultatov-div" class="hidden">
+                    <table class="admin-table" style="max-width: 500px;">
+                        <thead><tr><th>Država</th><th>Točke (0.0 za DNF)</th></tr></thead>
+                        <tbody id="rezultati-vnos-tbody"></tbody>
+                    </table>
+                    <br>
+                    <button onclick="shraniRezultate()">Shrani rezultate za to tekmo</button>
+                </div>
+            </div>
+
+            <div id="sec-status" class="admin-section">
+                <h3>Status iger in Skupni seštevek</h3>
+                <div style="margin-bottom: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+                    <label style="font-weight: bold; margin-right: 15px;">Trenutni status rezultatov:</label>
+                    <input type="radio" name="status-radio" id="status-neuradni" value="neuradni" onchange="spremeniStatus()"> <label for="status-neuradni">Neuradni</label>
+                    <input type="radio" name="status-radio" id="status-uradni" value="uradni" onchange="spremeniStatus()" style="margin-left:15px;"> <label for="status-uradni">Uradni</label>
+                </div>
+
+                <h4>Lestvica (Skupni seštevek)</h4>
+                <table class="admin-table" style="max-width: 600px;">
+                    <thead><tr><th>Mesto</th><th>Država</th><th>Skupaj Točk</th></tr></thead>
+                    <tbody id="status-lestvica-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="country-view" class="hidden">
+        <button class="logout-btn" onclick="logout()">Odjava</button>
+        <div style="clear: both;"></div>
+
+        <div class="country-header">Vpogled rezultatov iger 2026 za državo <b id="cv-ime"></b>.</div>
+        <div class="country-note">
+            Opomba: Če je pri katerikoli tekmi rezultat 0.0 točk, pomeni, da je bila država ocenjena z <b>DNF!</b> Pri tekmah, kjer ni bilo točkovanje s točkami (je bilo merjenje časa ali daljave ali poskokov) se je rezultat samo spremenil v točke glede na doseženo mesto.
+        </div>
+
+        <table class="result-table">
+            <thead>
+                <tr>
+                    <th>Tekma</th>
+                    <th>Točke</th>
+                </tr>
+            </thead>
+            <tbody id="cv-tbody">
+                </tbody>
+        </table>
+
+        <div class="status-text">
+            Status: <b id="cv-status-text"></b>
+        </div>
+
+        <div id="cv-official-rank" class="rank-text hidden">
+            Uvrstitev: <span id="cv-medal-icon"></span> <b id="cv-rank-bold"></b> <span id="cv-medal-text"></span>
+        </div>
+
+        <div id="cv-unofficial-note" class="status-subnote hidden">
+            *Opomba: Lahko se izvede še kakšna tekma ali popravi rezultate zaradi elektronske napake.
+        </div>
+    </div>
+
+    <script>
+        // --- BAZA PODATKOV (LocalStorage) ---
+        let db = {
+            drzave: [], 
+            tekme: [],  
+            rezultati: {}, // struktura: { idTekme: { kraticaDrzave: tocke } }
+            soUradni: false
+        };
+
+        function naloziDB() {
+            let shrani = localStorage.getItem('igre2026_db');
+            if (shrani) {
+                db = JSON.parse(shrani);
+            }
+        }
+
+        function shraniDB() {
+            localStorage.setItem('igre2026_db', JSON.stringify(db));
+        }
+
+        // --- SISTEM PRIJAVE ---
+        let trenutniUporabnik = null; // 'admin' ali kratica države
+
+        function login() {
+            let kratica = document.getElementById('login-kratica').value.trim();
+            let sifra = document.getElementById('login-sifra').value.trim();
+            let err = document.getElementById('login-error');
+
+            if (kratica === 'ADMIN' && sifra === 'ADNIM') {
+                trenutniUporabnik = 'admin';
+                err.style.display = 'none';
+                prikaziPoglede();
+            } else {
+                let drzava = db.drzave.find(d => d.kratica === kratica && d.sifra === sifra);
+                if (drzava) {
+                    trenutniUporabnik = drzava.kratica;
+                    err.style.display = 'none';
+                    prikaziPoglede();
+                } else {
+                    err.style.display = 'block';
+                }
+            }
+        }
+
+        function logout() {
+            trenutniUporabnik = null;
+            document.getElementById('login-kratica').value = '';
+            document.getElementById('login-sifra').value = '';
+            prikaziPoglede();
+        }
+
+        function prikaziPoglede() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('admin-view').classList.add('hidden');
+            document.getElementById('country-view').classList.add('hidden');
+
+            if (trenutniUporabnik === 'admin') {
+                document.getElementById('admin-view').classList.remove('hidden');
+                osveziAdminDrzave();
+                osveziAdminTekme();
+                osveziAdminRezultateSelect();
+                osveziAdminStatus();
+            } else if (trenutniUporabnik) {
+                document.getElementById('country-view').classList.remove('hidden');
+                osveziPogledDrzave();
+            } else {
+                document.getElementById('login-view').classList.remove('hidden');
+            }
+        }
+
+        // --- ADMIN FUNKCIJE ---
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('#sidebar li').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('sec-' + tabId).classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            if(tabId === 'rezultati') osveziAdminRezultateSelect();
+            if(tabId === 'status') osveziAdminStatus();
+        }
+
+        // 1. DRŽAVE
+        function shraniDrzavo() {
+            let id = document.getElementById('drzava-id').value;
+            let ime = document.getElementById('drzava-ime').value.trim();
+            let kratica = document.getElementById('drzava-kratica').value.trim();
+            let sifra = document.getElementById('drzava-sifra').value.trim();
+
+            if(!ime || !kratica || !sifra) { alert('Izpolni vsa polja!'); return; }
+
+            if (id) {
+                let d = db.drzave.find(x => x.kratica === id);
+                if (d) { d.ime = ime; d.kratica = kratica; d.sifra = sifra; }
+            } else {
+                if(db.drzave.find(x => x.kratica === kratica)) { alert('Ta kratica že obstaja!'); return; }
+                db.drzave.push({ ime, kratica, sifra });
+            }
+            shraniDB(); pocistiDrzavo(); osveziAdminDrzave();
+        }
+        function urediDrzavo(kratica) {
+            let d = db.drzave.find(x => x.kratica === kratica);
+            if(d) {
+                document.getElementById('drzava-id').value = d.kratica;
+                document.getElementById('drzava-ime').value = d.ime;
+                document.getElementById('drzava-kratica').value = d.kratica;
+                document.getElementById('drzava-sifra').value = d.sifra;
+            }
+        }
+        function izbrisiDrzavo(kratica) {
+            if(confirm('Res želiš izbrisati to državo?')) {
+                db.drzave = db.drzave.filter(x => x.kratica !== kratica);
+                shraniDB(); osveziAdminDrzave();
+            }
+        }
+        function pocistiDrzavo() {
+            document.getElementById('drzava-id').value = '';
+            document.getElementById('drzava-ime').value = '';
+            document.getElementById('drzava-kratica').value = '';
+            document.getElementById('drzava-sifra').value = '';
+        }
+        function osveziAdminDrzave() {
+            let tbody = document.getElementById('drzave-tbody');
+            tbody.innerHTML = '';
+            db.drzave.forEach(d => {
+                tbody.innerHTML += `<tr>
+                    <td>${d.ime}</td><td>${d.kratica}</td><td>${d.sifra}</td>
+                    <td>
+                        <button class="action-btn" onclick="urediDrzavo('${d.kratica}')">Uredi</button>
+                        <button class="action-btn" style="background:#dc3545;" onclick="izbrisiDrzavo('${d.kratica}')">Izbriši</button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        // 2. TEKME
+        function ustvariId() { return Date.now().toString(); }
+        
+        function shraniTekmo() {
+            let id = document.getElementById('tekma-id').value;
+            let ime = document.getElementById('tekma-ime').value.trim();
+            if(!ime) { alert('Vnesi ime tekme!'); return; }
+
+            if (id) {
+                let t = db.tekme.find(x => x.id === id);
+                if(t) t.ime = ime;
+            } else {
+                db.tekme.push({ id: ustvariId(), ime });
+            }
+            shraniDB(); pocistiTekmo(); osveziAdminTekme();
+        }
+        function urediTekmo(id) {
+            let t = db.tekme.find(x => x.id === id);
+            if(t) { document.getElementById('tekma-id').value = t.id; document.getElementById('tekma-ime').value = t.ime; }
+        }
+        function izbrisiTekmo(id) {
+            if(confirm('Res želiš izbrisati to tekmo?')) {
+                db.tekme = db.tekme.filter(x => x.id !== id);
+                delete db.rezultati[id];
+                shraniDB(); osveziAdminTekme();
+            }
+        }
+        function pocistiTekmo() {
+            document.getElementById('tekma-id').value = '';
+            document.getElementById('tekma-ime').value = '';
+        }
+        function osveziAdminTekme() {
+            let tbody = document.getElementById('tekme-tbody');
+            tbody.innerHTML = '';
+            db.tekme.forEach(t => {
+                tbody.innerHTML += `<tr>
+                    <td>${t.ime}</td>
+                    <td>
+                        <button class="action-btn" onclick="urediTekmo('${t.id}')">Uredi</button>
+                        <button class="action-btn" style="background:#dc3545;" onclick="izbrisiTekmo('${t.id}')">Izbriši</button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        // 3. REZULTATI
+        function osveziAdminRezultateSelect() {
+            let sel = document.getElementById('rezultati-tekma-select');
+            sel.innerHTML = '<option value="">-- Izberi tekmo --</option>';
+            db.tekme.forEach(t => {
+                sel.innerHTML += `<option value="${t.id}">${t.ime}</option>`;
+            });
+            document.getElementById('vnos-rezultatov-div').classList.add('hidden');
+        }
+        function naloziVnosRezultatov() {
+            let tekmaId = document.getElementById('rezultati-tekma-select').value;
+            let vnosDiv = document.getElementById('vnos-rezultatov-div');
+            let tbody = document.getElementById('rezultati-vnos-tbody');
+            
+            if(!tekmaId) { vnosDiv.classList.add('hidden'); return; }
+            
+            vnosDiv.classList.remove('hidden');
+            tbody.innerHTML = '';
+
+            // Razvrsti države glede na že vpisane rezultate za to tekmo (padajoče) - zahteva: se razvrstijo glede na dosežek
+            let podatkiZaTabelo = db.drzave.map(d => {
+                let tocke = db.rezultati[tekmaId] && db.rezultati[tekmaId][d.kratica] !== undefined 
+                            ? db.rezultati[tekmaId][d.kratica] 
+                            : '';
+                return { kratica: d.kratica, ime: d.ime, tocke: tocke };
+            });
+
+            podatkiZaTabelo.sort((a, b) => {
+                let valA = a.tocke === '' ? -1 : parseFloat(a.tocke);
+                let valB = b.tocke === '' ? -1 : parseFloat(b.tocke);
+                return valB - valA; // Padajoče
+            });
+
+            podatkiZaTabelo.forEach(d => {
+                tbody.innerHTML += `<tr>
+                    <td>${d.ime} (${d.kratica})</td>
+                    <td><input type="number" step="0.1" id="rez-${d.kratica}" value="${d.tocke}"></td>
+                </tr>`;
+            });
+        }
+        function shraniRezultate() {
+            let tekmaId = document.getElementById('rezultati-tekma-select').value;
+            if(!tekmaId) return;
+
+            if(!db.rezultati[tekmaId]) db.rezultati[tekmaId] = {};
+
+            db.drzave.forEach(d => {
+                let val = document.getElementById(`rez-${d.kratica}`).value;
+                if(val !== '') {
+                    db.rezultati[tekmaId][d.kratica] = parseFloat(val);
+                } else {
+                    delete db.rezultati[tekmaId][d.kratica];
+                }
+            });
+            shraniDB();
+            alert('Rezultati so shranjeni.');
+            naloziVnosRezultatov(); // Ponovno naloži, da se razvrstijo
+        }
+
+        // 4. STATUS
+        function osveziAdminStatus() {
+            document.getElementById('status-uradni').checked = db.soUradni;
+            document.getElementById('status-neuradni').checked = !db.soUradni;
+
+            let tbody = document.getElementById('status-lestvica-tbody');
+            let lestvica = izracunajLestvico();
+            
+            tbody.innerHTML = '';
+            lestvica.forEach((item, index) => {
+                tbody.innerHTML += `<tr>
+                    <td>${index + 1}.</td>
+                    <td>${item.ime}</td>
+                    <td><b>${item.skupaj.toFixed(1)}</b></td>
+                </tr>`;
+            });
+        }
+        function spremeniStatus() {
+            db.soUradni = document.getElementById('status-uradni').checked;
+            shraniDB();
+        }
+
+        // --- SKUPNE FUNKCIJE ---
+        function izracunajLestvico() {
+            let sumMap = {};
+            db.drzave.forEach(d => {
+                sumMap[d.kratica] = { ime: d.ime, kratica: d.kratica, skupaj: 0 };
+            });
+
+            db.tekme.forEach(t => {
+                if(db.rezultati[t.id]) {
+                    Object.keys(db.rezultati[t.id]).forEach(kratica => {
+                        if(sumMap[kratica]) sumMap[kratica].skupaj += db.rezultati[t.id][kratica];
+                    });
+                }
+            });
+
+            let lestvica = Object.values(sumMap);
+            lestvica.sort((a, b) => b.skupaj - a.skupaj);
+            return lestvica;
+        }
+
+        // --- POGLED DRŽAVE ---
+        function osveziPogledDrzave() {
+            let drzava = db.drzave.find(d => d.kratica === trenutniUporabnik);
+            if(!drzava) return;
+
+            document.getElementById('cv-ime').innerText = drzava.ime;
+            
+            // Tabela
+            let tbody = document.getElementById('cv-tbody');
+            tbody.innerHTML = '';
+            let skupajTock = 0;
+
+            db.tekme.forEach(t => {
+                let tocke = 0.0;
+                if(db.rezultati[t.id] && db.rezultati[t.id][drzava.kratica] !== undefined) {
+                    tocke = db.rezultati[t.id][drzava.kratica];
+                }
+                skupajTock += tocke;
+                tbody.innerHTML += `<tr>
+                    <td><b>${t.ime}</b></td>
+                    <td>${tocke.toFixed(1)}</td>
+                </tr>`;
+            });
+            tbody.innerHTML += `<tr>
+                <td><b>Skupaj</b></td>
+                <td><b>${skupajTock.toFixed(1)}</b></td>
+            </tr>`;
+
+            // Status in Uvrstitev
+            let rankDiv = document.getElementById('cv-official-rank');
+            let noteDiv = document.getElementById('cv-unofficial-note');
+            
+            if (db.soUradni) {
+                document.getElementById('cv-status-text').innerText = 'Objavljeni so uradni rezultati iger.';
+                noteDiv.classList.add('hidden');
+                rankDiv.classList.remove('hidden');
+
+                let lestvica = izracunajLestvico();
+                let mesto = lestvica.findIndex(x => x.kratica === drzava.kratica) + 1;
+
+                document.getElementById('cv-rank-bold').innerText = `${mesto}. mesto v skupnem seštevku`;
+                
+                let icon = document.getElementById('cv-medal-icon');
+                let text = document.getElementById('cv-medal-text');
+                
+                icon.className = 'medal-icon'; // reset
+                if (mesto === 1) {
+                    icon.classList.add('medal-gold');
+                    text.innerText = 'in prejem zlate medalje!';
+                } else if (mesto === 2) {
+                    icon.classList.add('medal-silver');
+                    text.innerText = 'in prejem srebrne medalje!';
+                } else if (mesto === 3) {
+                    icon.classList.add('medal-bronze');
+                    text.innerText = 'in prejem bronaste medalje!';
+                } else {
+                    icon.classList.add('hidden');
+                    text.innerText = '';
+                }
+                if (mesto <= 3) icon.classList.remove('hidden');
+
+            } else {
+                document.getElementById('cv-status-text').innerText = 'Objavljeni so neuradni rezultati iger.';
+                rankDiv.classList.add('hidden');
+                noteDiv.classList.remove('hidden');
+            }
+        }
+
+        // Inicializacija
+        naloziDB();
+        prikaziPoglede();
+    </script>
+</body>
+</html>
