@@ -416,6 +416,14 @@
 
         document.getElementById('skupaj-znesek').innerText = totalWii.toFixed(2) + ' WII';
         document.getElementById('skupaj-popust').innerText = totalDiscount.toFixed(2);
+
+        // --- NOVO: SINHRONIZACIJA Z ZASLONOM ZA GOSTE ---
+        localStorage.setItem('wii_projekcija_data', JSON.stringify({
+            status: 'buying',
+            cart: cart.filter(i => i.koda !== '' || i.naziv !== ''),
+            total: totalWii.toFixed(2),
+            customer: activeCustomer ? activeCustomer.name : ""
+        }));
     }
 
     function cellEdit(index, field, value) {
@@ -463,6 +471,7 @@
                     if(neplacano > 0) {
                         setTimeout(() => showModal({title: "Opozorilo", message: `Stranka ima neplačane kazni v višini ${neplacano} WII!`}), 500);
                     }
+                    updateCartUI(); // Posodobi projekcijo z imenom stranke
                 } else {
                     showModal({title: "Napaka", message: "Stranka ni najdena."});
                 }
@@ -504,7 +513,7 @@
     }
 
     function applyGiftCard() {
-        showModal({title:"Darilni bon", message:"Vnesi kodo bona:", type:"prompt", inputType:"text", onConfirm:(code)=>{
+        showModal({title:"Darilni bon", message:"Vnesi koda bona:", type:"prompt", inputType:"text", onConfirm:(code)=>{
             if(!code) return;
             let gc = db.giftCards.find(g => g.code === code);
             if(!gc || gc.value <= 0) return showModal({title:"Napaka", message:"Bon ne obstaja ali je na njem 0 WII."});
@@ -533,6 +542,14 @@
         document.getElementById('pay-za-placilo').value = total.toFixed(2);
         document.getElementById('pay-big-total').innerText = total.toFixed(2);
         resetPaymentMethods(); updatePaymentUI(); switchView('placilo');
+
+        // --- NOVO: SINHRONIZACIJA ---
+        localStorage.setItem('wii_projekcija_data', JSON.stringify({
+            status: 'payment',
+            total: total.toFixed(2),
+            paid: "0.00",
+            remaining: total.toFixed(2)
+        }));
     }
 
     function selectPaymentMethod(method) {
@@ -579,13 +596,24 @@
     function updatePaymentUI() {
         document.getElementById('pay-ze-placano').value = paymentState.paid.toFixed(2);
         let ostanek = paymentState.total - paymentState.paid;
+        let vracilo = 0;
         if (ostanek <= 0) {
             document.getElementById('pay-ostanek').value = "0.00";
-            document.getElementById('pay-vracilo').value = Math.abs(ostanek).toFixed(2);
+            vracilo = Math.abs(ostanek);
+            document.getElementById('pay-vracilo').value = vracilo.toFixed(2);
         } else {
             document.getElementById('pay-ostanek').value = ostanek.toFixed(2);
             document.getElementById('pay-vracilo').value = "0.00";
         }
+
+        // --- NOVO: SINHRONIZACIJA ---
+        localStorage.setItem('wii_projekcija_data', JSON.stringify({
+            status: 'payment',
+            total: paymentState.total.toFixed(2),
+            paid: paymentState.paid.toFixed(2),
+            remaining: (ostanek > 0 ? ostanek : 0).toFixed(2),
+            change: vracilo.toFixed(2)
+        }));
     }
 
     function finishTransaction() {
@@ -624,6 +652,9 @@
         
         db.seq++; saveDB();
         
+        // --- NOVO: SINHRONIZACIJA (Hvala) ---
+        localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
+
         showModal({title: "ZAKLJUČENO", message: "Račun je bil uspešno shranjen.", onConfirm: () => {
             initReceipt(); switchView('blagajna');
         }});
@@ -836,7 +867,7 @@
         let html = `<table class="crud-table"><tr><th>Zaposleni</th><th>Dolg/Plača (WII)</th></tr>`;
         db.users.filter(u=>u.role!=='customer').forEach((u, i) => {
             let idx = db.users.indexOf(u);
-            html += `<tr><td>${u.name}</td><td><input type="number" value="${u.salary}" onchange="db.users[${idx}].salary=parseFloat(this.value); saveDB()"></td></tr>`;
+            html += `<tr><td>${u.name}</td><td><input type="number" value="${u.salary}" onchange="db.users[idx].salary=parseFloat(this.value); saveDB()"></td></tr>`;
         });
         html += `</table>`;
         ws.innerHTML = html;
