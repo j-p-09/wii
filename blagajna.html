@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3</title>
+<title>WII Blagajna - Polna Verzija v3 (Firebase)</title>
 <style>
     /* RETRO POS STYLING & TIMES NEW ROMAN */
     :root {
@@ -268,37 +268,61 @@
     </div>
 
 <script>
-    /* ================= BAZA PODATKOV (LOCAL STORAGE) ================= */
+    /* ================= BAZA PODATKOV (FIREBASE) ================= */
+    const FIREBASE_URL = "https://wii-shop-default-rtdb.europe-west1.firebasedatabase.app/wii_db_v3.json";
     let db = { users: [], items: [], receipts: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3 };
 
-    function initDB() {
-        const stored = localStorage.getItem('wii_db_v3');
-        if (stored) {
-            db = JSON.parse(stored);
-            if(!db.giftCards) db.giftCards = [];
-            db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; }); // Default fallback za banko
-        } else {
-            db = {
-                users: [
-                    { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
-                    { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
-                    { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
-                ],
-                items: [
-                    { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
-                    { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
-                ],
-                receipts: [],
-                giftCards: [
-                    { code: 'BON10', value: 10 }
-                ],
-                register: { expectedCash: 0 },
-                seq: 3
-            };
-            saveDB();
+    async function initDB() {
+        try {
+            const response = await fetch(FIREBASE_URL);
+            const stored = await response.json();
+            
+            if (stored) {
+                db = stored;
+                if(!db.giftCards) db.giftCards = [];
+                if(!db.receipts) db.receipts = [];
+                if(!db.users) db.users = [];
+                if(!db.items) db.items = [];
+                db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; }); 
+            } else {
+                // Če je baza v Firebase popolnoma prazna, naloži začetne podatke
+                db = {
+                    users: [
+                        { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
+                        { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
+                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
+                    ],
+                    items: [
+                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
+                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
+                    ],
+                    receipts: [],
+                    giftCards: [
+                        { code: 'BON10', value: 10 }
+                    ],
+                    register: { expectedCash: 0 },
+                    seq: 3
+                };
+                saveDB();
+            }
+        } catch (error) {
+            console.error("Napaka pri povezavi s Firebase:", error);
+            alert("Baza podatkov ni dosegljiva. Preverite internetno povezavo!");
         }
+
+        // Ko so podatki naloženi, nadaljujemo z vizualnim zagonom blagajne
+        setDate(); 
+        initReceipt(); 
+        lockScreen();
     }
-    function saveDB() { localStorage.setItem('wii_db_v3', JSON.stringify(db)); }
+
+    function saveDB() {
+        fetch(FIREBASE_URL, {
+            method: 'PUT', // PUT prepiše vsebino z najnovejšo
+            body: JSON.stringify(db),
+            headers: { 'Content-Type': 'application/json' }
+        }).catch(error => console.error("Napaka pri shranjevanju v Firebase:", error));
+    }
 
     /* ================= GLOBALNO STANJE ================= */
     let cart = [];
@@ -924,8 +948,8 @@
         ws.innerHTML = html;
     }
 
-    /* Init */
-    window.onload = () => { initDB(); setDate(); initReceipt(); lockScreen(); };
+    /* Init se sedaj požene znotraj ashrinone funkcije zgoraj, da ne prehiti nalaganja! */
+    window.onload = () => { initDB(); };
 </script>
 </body>
 </html>
