@@ -269,7 +269,7 @@
 
 <script>
     /* ================= BAZA PODATKOV (FIREBASE) ================= */
-    const FIREBASE_URL = "https://wii-shop-default-rtdb.europe-west1.firebasedatabase.app/";
+    const FIREBASE_URL = "https://wii-shop-default-rtdb.europe-west1.firebasedatabase.app/wii_db_v3.json";
     let db = { users: [], items: [], receipts: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3 };
 
     async function initDB() {
@@ -288,6 +288,7 @@
                 // Če je baza v Firebase popolnoma prazna, naloži začetne podatke
                 db = {
                     users: [
+                        { id: '009', name: 'Jaša Petrinjak', role: 'manager', card: '009', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
                         { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
                         { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
                         { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
