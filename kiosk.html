@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII Shop - Samopostrežna Blagajna</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3a6ea5;
+            --secondary: #004e92;
+            --accent: #ffcc00;
+            --bg: #f4f7f6;
+            --text: #333;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+        /* Pozdravni zaslon */
+        #screen-welcome {
+            height: 100vh; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white; text-align: center; cursor: pointer;
+        }
+        #screen-welcome h1 { font-size: 4rem; margin-bottom: 20px; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); }
+        #screen-welcome p { font-size: 1.5rem; opacity: 0.9; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Vnos kartice */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content {
+            background: white; padding: 40px; border-radius: 20px; text-align: center; width: 400px;
+        }
+        .modal-content input {
+            width: 100%; padding: 15px; font-size: 1.5rem; margin-top: 20px; border: 2px solid #ddd; border-radius: 10px; text-align: center;
+        }
+
+        /* Glavni vmesnik naročila */
+        #screen-order { display: none; height: 100vh; grid-template-columns: 1fr 350px; }
+        
+        .items-grid {
+            padding: 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px; overflow-y: auto; background: var(--bg);
+        }
+        .item-card {
+            background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            text-align: center; transition: 0.3s; cursor: pointer; border: 2px solid transparent;
+        }
+        .item-card:active { transform: scale(0.95); border-color: var(--primary); }
+        .item-card h3 { font-size: 1.1rem; margin-bottom: 10px; height: 50px; overflow: hidden; }
+        .item-card .price { font-weight: 800; color: var(--primary); font-size: 1.3rem; }
+
+        /* Košarica */
+        .sidebar {
+            background: white; border-left: 1px solid #ddd; display: flex; flex-direction: column; padding: 20px;
+        }
+        .sidebar h2 { margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .cart-items { flex: 1; overflow-y: auto; }
+        .cart-item {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+            padding-bottom: 10px; border-bottom: 1px lightgray solid;
+        }
+        .cart-item-info h4 { font-size: 0.9rem; }
+        .cart-controls { display: flex; align-items: center; gap: 10px; }
+        .btn-qty { width: 30px; height: 30px; border-radius: 50%; border: none; background: #eee; font-weight: bold; }
+        
+        .cart-footer { padding-top: 20px; border-top: 2px solid #eee; }
+        .total-row { display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; }
+        
+        .btn-pay {
+            width: 100%; padding: 20px; background: #28a745; color: white; border: none;
+            border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer;
+        }
+
+        /* Uspeh plačila */
+        #success-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary); color: white; display: none;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 1000;
+        }
+        #success-overlay h1 { font-size: 5rem; margin-bottom: 20px; }
+        #success-overlay .order-num { font-size: 8rem; font-weight: 900; background: white; color: var(--primary); padding: 20px 60px; border-radius: 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-welcome" onclick="askForCard()">
+        <h1>WII Shop</h1>
+        <p>Pozdravljeni!<br>Za pričetek pritisnite tu</p>
+    </div>
+
+    <div id="modal-card" class="modal">
+        <div class="modal-content">
+            <h2>Vstavite ali vpišite številko kartice</h2>
+            <input type="password" id="card-input" placeholder="****" onkeypress="if(event.key==='Enter') checkUser()">
+            <p style="margin-top:20px; font-size: 0.8rem; color: #666;">(Pritisnite Enter po vnosu)</p>
+        </div>
+    </div>
+
+    <div id="screen-order">
+        <div class="items-grid" id="items-container">
+            </div>
+        <div class="sidebar">
+            <h2>Vaša košarica</h2>
+            <div id="customer-name-display" style="font-weight: bold; color: var(--primary); margin-bottom: 10px;"></div>
+            <div class="cart-items" id="cart-list">
+                </div>
+            <div class="cart-footer">
+                <div class="total-row">
+                    <span>Skupaj:</span>
+                    <span id="cart-total">0.00 WII</span>
+                </div>
+                <p style="color: red; font-size: 0.8rem; margin-bottom: 10px;">* PLAČILO MOŽNO LE S KARTICO</p>
+                <button class="btn-pay" onclick="startPayment()">PLAČAJ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-overlay">
+        <h1>Hvala za nakup!</h1>
+        <p style="font-size: 1.5rem; margin-bottom: 20px;">Plačilo je uspešno.</p>
+        <p>Številka vašega računa je:</p>
+        <div class="order-num" id="final-order-id">000</div>
+        <p style="margin-top: 40px; opacity: 0.8;">Plačilo z darilnimi boni ni mogoče.</p>
+    </div>
+
+<script>
+    const FIREBASE_URL = "https://wii-shop-default-rtdb.europe-west1.firebasedatabase.app/wii_db_v3.json";
+    
+    let db = null;
+    let currentUser = null;
+    let cart = [];
+
+    // Naloži bazo
+    async function loadDB() {
+        const response = await fetch(FIREBASE_URL);
+        db = await response.json();
+        renderItems();
+    }
+
+    function askForCard() {
+        document.getElementById('modal-card').style.display = 'flex';
+        document.getElementById('card-input').focus();
+    }
+
+    function checkUser() {
+        const pin = document.getElementById('card-input').value;
+        const user = db.users.find(u => u.card === pin || u.id === pin);
+
+        if (user) {
+            currentUser = user;
+            document.getElementById('modal-card').style.display = 'none';
+            document.getElementById('screen-welcome').style.display = 'none';
+            document.getElementById('screen-order').style.display = 'grid';
+            document.getElementById('customer-name-display').innerText = "Stranka: " + user.name;
+        } else {
+            alert("Stranka ni bila najdena v sistemu!");
+            document.getElementById('card-input').value = '';
+        }
+    }
+
+    function renderItems() {
+        const container = document.getElementById('items-container');
+        container.innerHTML = '';
+        db.items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            div.onclick = () => addToCart(item);
+            div.innerHTML = `
+                <h3>${item.naziv}</h3>
+                <div class="price">${item.cena.toFixed(2)} WII</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function addToCart(item) {
+        const existing = cart.find(c => c.koda === item.koda);
+        if (existing) {
+            existing.kol++;
+        } else {
+            cart.push({...item, kol: 1});
+        }
+        updateCartUI();
+    }
+
+    function changeQty(index, delta) {
+        cart[index].kol += delta;
+        if (cart[index].kol <= 0) cart.splice(index, 1);
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const list = document.getElementById('cart-list');
+        list.innerHTML = '';
+        let total = 0;
+
+        cart.forEach((item, i) => {
+            const itemTotal = item.cena * item.kol;
+            total += itemTotal;
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+                <div class="cart-item-info">
+                    <h4>${item.naziv}</h4>
+                    <small>${item.cena.toFixed(2)} WII</small>
+                </div>
+                <div class="cart-controls">
+                    <button class="btn-qty" onclick="changeQty(${i}, -1)">-</button>
+                    <span>${item.kol}</span>
+                    <button class="btn-qty" onclick="changeQty(${i}, 1)">+</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+
+        document.getElementById('cart-total').innerText = total.toFixed(2) + " WII";
+    }
+
+    async function startPayment() {
+        if (cart.length === 0) return;
+
+        const total = cart.reduce((sum, i) => sum + (i.cena * i.kol), 0);
+        
+        // Preveri bančno stanje
+        if (currentUser.bankBalance < total) {
+            alert("Na kartici nimate dovolj sredstev!");
+            return;
+        }
+
+        // Izvedi plačilo
+        const orderId = db.seq;
+        currentUser.bankBalance -= total;
+        
+        // Dodaj v zgodovino računov (povezava s prvo kodo)
+        const newReceipt = {
+            id: orderId,
+            date: new Date().toISOString(),
+            cashier: "SAMOPOSTREŽNA",
+            customer: currentUser.name,
+            customerId: currentUser.id,
+            total: total,
+            method: "kartica",
+            items: cart.map(i => ({...i, total: i.cena * i.kol, popust: 0}))
+        };
+
+        db.receipts.push(newReceipt);
+        db.seq++;
+
+        // Shrani v Firebase
+        await fetch(FIREBASE_URL, {
+            method: 'PUT',
+            body: JSON.stringify(db)
+        });
+
+        // Prikaži uspeh
+        document.getElementById('final-order-id').innerText = orderId.toString().padStart(3, '0');
+        document.getElementById('success-overlay').style.display = 'flex';
+
+        // Po 12 sekundah ponastavi vse
+        setTimeout(() => {
+            location.reload();
+        }, 12000);
+    }
+
+    window.onload = loadDB;
+</script>
+</body>
+</html>
