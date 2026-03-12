@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3 (Firebase)</title>
+<title>WII Blagajna - Polna Verzija v3</title>
 <style>
     /* RETRO POS STYLING & TIMES NEW ROMAN */
     :root {
@@ -268,60 +268,37 @@
     </div>
 
 <script>
-    /* ================= BAZA PODATKOV (FIREBASE) ================= */
-    const FIREBASE_URL = "https://wii-shop-default-rtdb.europe-west1.firebasedatabase.app/wii_db_v3.json";
+    /* ================= BAZA PODATKOV (LOCAL STORAGE) ================= */
     let db = { users: [], items: [], receipts: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3 };
 
-    async function initDB() {
-        try {
-            const response = await fetch(FIREBASE_URL);
-            const stored = await response.json();
-            
-            if (stored) {
-                db = stored;
-                if(!db.giftCards) db.giftCards = [];
-                if(!db.receipts) db.receipts = [];
-                if(!db.users) db.users = [];
-                if(!db.items) db.items = [];
-                db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; }); 
-            } else {
-                db = {
-                    users: [
-                        { id: '009', name: 'Jaša Petrinjak', role: 'manager', card: '009', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
-                        { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
-                        { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
-                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
-                    ],
-                    items: [
-                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
-                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
-                    ],
-                    receipts: [],
-                    giftCards: [
-                        { code: 'BON10', value: 10 }
-                    ],
-                    register: { expectedCash: 0 },
-                    seq: 3
-                };
-                saveDB();
-            }
-        } catch (error) {
-            console.error("Napaka pri povezavi s Firebase:", error);
-            alert("Baza podatkov ni dosegljiva. Preverite internetno povezavo!");
+    function initDB() {
+        const stored = localStorage.getItem('wii_db_v3');
+        if (stored) {
+            db = JSON.parse(stored);
+            if(!db.giftCards) db.giftCards = [];
+            db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; }); // Default fallback za banko
+        } else {
+            db = {
+                users: [
+                    { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
+                    { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
+                    { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
+                ],
+                items: [
+                    { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
+                    { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
+                ],
+                receipts: [],
+                giftCards: [
+                    { code: 'BON10', value: 10 }
+                ],
+                register: { expectedCash: 0 },
+                seq: 3
+            };
+            saveDB();
         }
-
-        setDate(); 
-        initReceipt(); 
-        lockScreen();
     }
-
-    function saveDB() {
-        fetch(FIREBASE_URL, {
-            method: 'PUT',
-            body: JSON.stringify(db),
-            headers: { 'Content-Type': 'application/json' }
-        }).catch(error => console.error("Napaka pri shranjevanju v Firebase:", error));
-    }
+    function saveDB() { localStorage.setItem('wii_db_v3', JSON.stringify(db)); }
 
     /* ================= GLOBALNO STANJE ================= */
     let cart = [];
@@ -414,6 +391,7 @@
 
         cart.forEach((item, index) => {
             if (item.koda !== '' || item.naziv !== '') {
+                // Popust v odstotkih %
                 let popustDecimal = (item.popust || 0) / 100;
                 let rednaCena = item.cena * item.kol;
                 item.total = rednaCena * (1 - popustDecimal);
@@ -439,6 +417,7 @@
         document.getElementById('skupaj-znesek').innerText = totalWii.toFixed(2) + ' WII';
         document.getElementById('skupaj-popust').innerText = totalDiscount.toFixed(2);
 
+        // --- NOVO: SINHRONIZACIJA Z ZASLONOM ZA GOSTE ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'buying',
             cart: cart.filter(i => i.koda !== '' || i.naziv !== ''),
@@ -453,6 +432,7 @@
         
         cart[index][field] = val;
 
+        // Auto-fill in dodajanje nove vrstice
         if (field === 'koda') {
             const found = db.items.find(i => i.koda === val);
             if (found) {
@@ -478,14 +458,12 @@
         }});
     }
 
-    // POPRAVLJENO: Iskanje stranke sedaj preverja ID, kartico in ime kot string
     function selectCustomer() {
         showModal({
             title: "Stranka", message: "Vnesi šifro/ime ali skeniraj kartico:", type: "prompt", inputType: "text",
             onConfirm: (val) => {
                 if(!val) return;
-                const searchVal = String(val).trim().toLowerCase();
-                const c = db.users.find(u => u && (String(u.card).trim() === String(val).trim() || String(u.id).trim() === String(val).trim() || u.name.toLowerCase().includes(searchVal)));
+                const c = db.users.find(u => u.card === val || u.id === val || u.name.toLowerCase().includes(val.toLowerCase()));
                 if (c) {
                     activeCustomer = c;
                     document.getElementById('racun-stranka').innerText = c.name;
@@ -493,7 +471,7 @@
                     if(neplacano > 0) {
                         setTimeout(() => showModal({title: "Opozorilo", message: `Stranka ima neplačane kazni v višini ${neplacano} WII!`}), 500);
                     }
-                    updateCartUI();
+                    updateCartUI(); // Posodobi projekcijo z imenom stranke
                 } else {
                     showModal({title: "Napaka", message: "Stranka ni najdena."});
                 }
@@ -565,6 +543,7 @@
         document.getElementById('pay-big-total').innerText = total.toFixed(2);
         resetPaymentMethods(); updatePaymentUI(); switchView('placilo');
 
+        // --- NOVO: SINHRONIZACIJA ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'payment',
             total: total.toFixed(2),
@@ -573,7 +552,6 @@
         }));
     }
 
-    // POPRAVLJENO: Iskanje za kartico sedaj pravilno preverja ID in kartico kot string
     function selectPaymentMethod(method) {
         if (method === 'gotovina') {
             document.getElementById('btn-gotovina').style.display = 'block';
@@ -583,7 +561,7 @@
         } else if (method === 'kartica') {
             showModal({title: "Kartica (Banka)", message: "Skeniraj kartico ali vnesi PIN uporabnika:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
                 if (pin) { 
-                    const user = db.users.find(u => u && (String(u.card).trim() === String(pin).trim() || String(u.id).trim() === String(pin).trim()));
+                    const user = db.users.find(u => u.card === pin || u.id === pin);
                     if(!user) return showModal({title:"Napaka", message:"Neveljavna kartica/PIN!"});
                     if(user.bankBalance < paymentState.total) return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${user.bankBalance} WII)`});
                     
@@ -628,6 +606,7 @@
             document.getElementById('pay-vracilo').value = "0.00";
         }
 
+        // --- NOVO: SINHRONIZACIJA ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'payment',
             total: paymentState.total.toFixed(2),
@@ -648,9 +627,10 @@
             customer: activeCustomer ? activeCustomer.name : '',
             customerId: activeCustomer ? activeCustomer.id : null,
             total: paymentState.total, method: paymentState.method,
-            items: JSON.parse(JSON.stringify(validItems)) 
+            items: JSON.parse(JSON.stringify(validItems)) // shrani vsebino racuna
         });
         
+        // Beleženje denarja
         if(paymentState.method === 'gotovina') {
             db.register.expectedCash += paymentState.total;
         } else if(paymentState.method === 'kartica') {
@@ -658,6 +638,7 @@
             if(u) u.bankBalance -= paymentState.total;
         }
         
+        // Poraba bonov in plačilo kazni
         validItems.forEach(it => {
             if(it.gcCode) {
                 let gc = db.giftCards.find(g => g.code === it.gcCode);
@@ -671,6 +652,7 @@
         
         db.seq++; saveDB();
         
+        // --- NOVO: SINHRONIZACIJA (Hvala) ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
 
         showModal({title: "ZAKLJUČENO", message: "Račun je bil uspešno shranjen.", onConfirm: () => {
@@ -679,19 +661,17 @@
     }
 
     /* ================= LOGIN & ZAKLEP ================= */
-    // POPRAVLJENO: Manager prijava sedaj preverja ID kot besedilo (string)
     function requireManagerAccess() {
         showModal({title: "Manager Prijava", message: "Vnesi šifro managerja:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
-            const user = db.users.find(u => u && String(u.id).trim() === String(pin).trim() && u.role === 'manager');
+            const user = db.users.find(u => u.id === pin && u.role === 'manager');
             if (user) { switchView('manager'); } 
             else { showModal({title: "Zavrnjeno", message: "Napačna šifra ali nimate pravic."}); }
         }});
     }
 
-    // POPRAVLJENO: Odklep zaslona sedaj preverja kartico/ID kot besedilo (string)
     function lockScreen() {
         showModal({title: "ZAKLENJENO", message: "Skeniraj kartico za odklep:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
-            const user = db.users.find(u => u && (String(u.card).trim() === String(pin).trim() || String(u.id).trim() === String(pin).trim()));
+            const user = db.users.find(u => u.card === pin || u.id === pin);
             if (user) { 
                 activeCashier = user;
                 document.getElementById('blagajnik-ime').innerText = user.name;
@@ -712,6 +692,7 @@
         document.getElementById('manager-buttons').style.display = 'grid';
     }
 
+    // 1. Prijava blagajne
     function mgrPrijava() {
         showModal({title:"Prijava Blagajne", message:"Vnesi začetni depozit (gotovina):", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
             if(v) {
@@ -721,8 +702,10 @@
         }});
     }
 
+    // 2. Vmesno
     function mgrVmesno() { showModal({title: "Vmesno Stanje", message: `Pričakovana gotovina v blagajni: ${db.register.expectedCash.toFixed(2)} WII`}); }
 
+    // 3. Odjava blagajne
     function mgrOdjava() {
         showModal({title:"Odjava", message:`Pričakovano: ${db.register.expectedCash.toFixed(2)} WII.\nVnesi dejansko stanje:`, type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
             if(v) {
@@ -734,18 +717,20 @@
                     let c = db.users.find(u => u.id === activeCashier.id);
                     if(c) { c.salary += diff; saveDB(); }
                 }
-                db.register.expectedCash = 0; saveDB(); 
+                db.register.expectedCash = 0; saveDB(); // Resetiraj za naslednji dan
                 showModal({title:"Izvid Odjave", message: msg});
             }
         }});
     }
 
+    // 4. Skim
     function mgrSkim() {
         showModal({title:"SKIM (Odvzem)", message:"Vnesi znesek, ki ga jemlješ iz blagajne:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
             if(v) { db.register.expectedCash -= parseFloat(v); saveDB(); showModal({title:"Info", message:"Znesek odštet."}); }
         }});
     }
 
+    // 5. Storno (Naprano s podrobnostmi)
     function mgrStorno() {
         showModal({title:"Storno", message:"Vnesi številko računa:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
             let recIndex = db.receipts.findIndex(r => r.id == v);
@@ -806,6 +791,7 @@
         renderStornoDetails(recIndex);
     }
 
+    // 6. Artikli (CRUD)
     function mgrArtikli() {
         let ws = openWorkspace("Urejanje Artiklov");
         let html = `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Cena</th><th>Akcija</th></tr>`;
@@ -821,6 +807,7 @@
         ws.innerHTML = html;
     }
 
+    // 7. Zaposleni / Stranke (CRUD) - DODANO DOBROIMETJE
     function renderUsers(roleFilter, title) {
         let ws = openWorkspace(title);
         let html = `<table class="crud-table"><tr><th>ID/Šifra</th><th>Ime</th><th>Kartica</th><th>Vloga</th><th>Dobroimetje</th><th>Akcija</th></tr>`;
@@ -846,6 +833,7 @@
     function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); }
     function mgrStranke() { renderUsers('all', 'Stranke in Dobroimetje'); } 
 
+    // 8. Zgodovina - Podrobnosti
     function mgrZgodovina() {
         let ws = openWorkspace("Zgodovina Računov");
         let html = `<table class="crud-table"><tr><th>Št</th><th>Datum</th><th>Stranka</th><th>Znesek</th><th>Način</th><th>Podrobnosti</th></tr>`;
@@ -873,6 +861,7 @@
         ws.innerHTML = html;
     }
 
+    // 9. Plača
     function mgrPlaca() {
         let ws = openWorkspace("Plače Zaposlenih");
         let html = `<table class="crud-table"><tr><th>Zaposleni</th><th>Dolg/Plača (WII)</th></tr>`;
@@ -884,6 +873,7 @@
         ws.innerHTML = html;
     }
 
+    // 10. Kazni
     function mgrKazni() {
         let ws = openWorkspace("Kazni Strank");
         let html = `<table class="crud-table"><tr><th>Stranka</th><th>Dodaj Kazen</th><th>Zgodovina Kazni (Zneski)</th></tr>`;
@@ -908,6 +898,7 @@
         }});
     }
 
+    // 11. Banka (Stanje na bančnem računu)
     function mgrBanka() {
         let ws = openWorkspace("Bančni Računi (Kritje na kartici)");
         let html = `<table class="crud-table"><tr><th>Stranka</th><th>Stanje (WII)</th></tr>`;
@@ -918,6 +909,7 @@
         ws.innerHTML = html;
     }
 
+    // 12. Darilni Boni (CRUD)
     function mgrBoni() {
         let ws = openWorkspace("Upravljanje z Darilnimi Boni");
         let html = `<table class="crud-table"><tr><th>Koda Bona</th><th>Vrednost (WII)</th><th>Akcija</th></tr>`;
@@ -932,7 +924,8 @@
         ws.innerHTML = html;
     }
 
-    window.onload = () => { initDB(); };
+    /* Init */
+    window.onload = () => { initDB(); setDate(); initReceipt(); lockScreen(); };
 </script>
 </body>
 </html>
