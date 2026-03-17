@@ -37,6 +37,11 @@
         .student-table .bold-row td { font-weight: bold; background-color: #f2f2f2; }
         .result-text { font-size: 18px; }
 
+        /* Barve za rezultate */
+        .score-red { color: #cc0000; font-weight: bold; }
+        .score-orange { color: #ff8c00; font-weight: bold; }
+        .score-green { color: #008000; font-weight: bold; }
+
         /* Admin pogled */
         .admin-nav { margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
         .admin-nav button { margin-right: 5px; }
@@ -152,14 +157,12 @@
         results: [{ studentCode: "TU010100SLO", assessmentId: 1, achieved: [2, 1, 2, 3, 4, 5, 6, 10, 2, 1, 2, 0] }]
     };
 
-    // Inicializacija baze ob zagonu
     async function initDb() {
         try {
             const response = await fetch(FIREBASE_URL);
             const data = await response.json();
             
             if (data) {
-                // Poskrbimo, da imamo vedno prazne sezname, če jih v bazi slučajno ni
                 db = {
                     students: data.students || [],
                     subjects: data.subjects || [],
@@ -168,20 +171,18 @@
                 };
             } else {
                 db = defaultData;
-                await saveDb(false); // Shranimo privzete podatke, če je baza prazna
+                await saveDb(false);
             }
             
-            // Omogočimo prijavo
             const loginBtn = document.getElementById('login-btn');
             loginBtn.disabled = false;
             loginBtn.innerText = "Prijava";
         } catch (error) {
             console.error("Napaka pri povezavi z bazo:", error);
-            alert("Napaka pri povezavi s podatkovno bazo. Preverite internetno povezavo.");
+            alert("Napaka pri povezavi s podatkovno bazo.");
         }
     }
 
-    // Shranjevanje v Firebase
     async function saveDb(showIndicator = true) {
         if (showIndicator) document.getElementById('saving-text').style.display = 'inline';
         try {
@@ -195,15 +196,13 @@
             }
         } catch (error) {
             console.error("Napaka pri shranjevanju:", error);
-            alert("Podatkov ni bilo mogoče shraniti v spletno bazo!");
             if (showIndicator) document.getElementById('saving-text').style.display = 'none';
         }
     }
 
-    // Poženemo inicializacijo, ko se stran naloži
     window.onload = initDb;
 
-    // --- PRIJAVA IN NAVIGACIJA ---
+    // --- PRIJAVA ---
     function login() {
         const code = document.getElementById('login-code').value.trim();
         const errorMsg = document.getElementById('login-error');
@@ -231,10 +230,9 @@
         document.getElementById('login-view').classList.remove('hidden');
         document.getElementById('admin-view').classList.add('hidden');
         document.getElementById('student-view').classList.add('hidden');
-        document.getElementById('res-editor').classList.add('hidden');
     }
 
-    // --- UČENEC POGLED ---
+    // --- POGLED UČENCA Z BARVNO LOGIKO ---
     function renderStudentView(student) {
         const infoContainer = document.getElementById('student-info-container');
         const table = document.getElementById('student-results-table');
@@ -243,11 +241,8 @@
         const result = db.results.find(r => r.studentCode === student.code);
         
         if (!result) {
-            infoContainer.innerHTML = `<p>Ime in priimek učenca: <b>${student.firstName} ${student.lastName}</b></p>
-                                       <p>Šifra učenca: <b>${student.code}</b></p>
-                                       <p>Za to šifro še ni vpisanih rezultatov.</p>`;
-            table.innerHTML = '';
-            percText.innerHTML = '';
+            infoContainer.innerHTML = `<p>Ime in priimek učenca: <b>${student.firstName} ${student.lastName}</b></p><p>Šifra: <b>${student.code}</b></p><p>Rezultatov še ni.</p>`;
+            table.innerHTML = ''; percText.innerHTML = '';
             return;
         }
 
@@ -270,10 +265,19 @@
         let rowAchieved = '<tr class="bold-row"><td>Dosežene točke:</td>';
         let rowPossible = '<tr><td>Možne točke:</td>';
 
-        possiblePoints.forEach((pts, index) => {
+        possiblePoints.forEach((maxPts, index) => {
+            const achPts = achievedPoints[index] !== undefined ? achievedPoints[index] : 0;
+            const percentage = (achPts / maxPts) * 100;
+            
+            // Barvna logika
+            let colorClass = '';
+            if (percentage <= 30) colorClass = 'score-red';
+            else if (percentage <= 82) colorClass = 'score-orange';
+            else colorClass = 'score-green';
+
             thead += `<td>${index + 1}.</td>`;
-            rowAchieved += `<td>${achievedPoints[index] !== undefined ? achievedPoints[index] : ''}</td>`;
-            rowPossible += `<td>${pts}</td>`;
+            rowAchieved += `<td class="${colorClass}">${achPts}</td>`;
+            rowPossible += `<td>${maxPts}</td>`;
         });
 
         thead += `<td>Skupaj:</td></tr>`;
@@ -281,195 +285,119 @@
         rowPossible += `<td>${sumPossible}</td></tr>`;
 
         table.innerHTML = thead + rowAchieved + rowPossible;
-        const percentage = Math.round((sumAchieved / sumPossible) * 100);
-        percText.innerHTML = `Na nacionalnem preverjanju znanja ste osvojili skupno <b>${percentage}%</b>.`;
+        const totalPerc = Math.round((sumAchieved / sumPossible) * 100);
+        percText.innerHTML = `Na nacionalnem preverjanju znanja ste osvojili skupno <b>${totalPerc}%</b>.`;
     }
 
-    // --- ADMIN POGLED & LOGIKA ---
+    // --- ADMIN LOGIKA ---
     function showAdminTab(tabId) {
         document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
         document.getElementById('tab-' + tabId).classList.remove('hidden');
-        
         if (tabId === 'ucenci') renderAdminStudents();
         if (tabId === 'predmeti') renderAdminSubjects();
         if (tabId === 'preverjanja') renderAdminAssessments();
     }
 
-    // 1. UČENCI
     function renderAdminStudents() {
         const tbody = document.getElementById('table-ucenci');
         tbody.innerHTML = '';
-        if(!db.students) return;
         db.students.forEach(s => {
-            tbody.innerHTML += `<tr>
-                <td>${s.code}</td><td>${s.firstName}</td><td>${s.lastName}</td>
-                <td><button class="action-btn danger" onclick="deleteStudent('${s.code}')">Izbriši</button></td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>${s.code}</td><td>${s.firstName}</td><td>${s.lastName}</td><td><button class="action-btn danger" onclick="deleteStudent('${s.code}')">Izbriši</button></td></tr>`;
         });
     }
 
     async function addStudent() {
-        const code = prompt("Vnesite novo šifro učenca:");
-        if (!code) return;
-        if (db.students.find(s => s.code === code)) return alert("Šifra že obstaja!");
-        const firstName = prompt("Vnesite ime:");
-        const lastName = prompt("Vnesite priimek:");
-        
+        const code = prompt("Šifra:"); if (!code) return;
+        const firstName = prompt("Ime:"); const lastName = prompt("Priimek:");
         db.students.push({ code, firstName, lastName });
-        renderAdminStudents();
-        await saveDb();
+        renderAdminStudents(); await saveDb();
     }
 
     async function deleteStudent(code) {
-        if(!confirm("Res želite izbrisati tega učenca? Izbrisani bodo tudi njegovi rezultati.")) return;
+        if(!confirm("Izbrišem?")) return;
         db.students = db.students.filter(s => s.code !== code);
         db.results = db.results.filter(r => r.studentCode !== code);
-        renderAdminStudents();
-        await saveDb();
+        renderAdminStudents(); await saveDb();
     }
 
-    // 2. PREDMETI
     function renderAdminSubjects() {
         const tbody = document.getElementById('table-predmeti');
         tbody.innerHTML = '';
-        if(!db.subjects) return;
         db.subjects.forEach(s => {
-            tbody.innerHTML += `<tr>
-                <td>${s.id}</td><td>${s.name}</td>
-                <td><button class="action-btn danger" onclick="deleteSubject(${s.id})">Izbriši</button></td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td><button class="action-btn danger" onclick="deleteSubject(${s.id})">Izbriši</button></td></tr>`;
         });
     }
 
     async function addSubject() {
-        const name = prompt("Vnesite ime predmeta:");
-        if (!name) return;
+        const name = prompt("Ime predmeta:"); if (!name) return;
         const id = db.subjects.length > 0 ? Math.max(...db.subjects.map(s => s.id)) + 1 : 1;
         db.subjects.push({ id, name });
-        renderAdminSubjects();
-        await saveDb();
+        renderAdminSubjects(); await saveDb();
     }
 
     async function deleteSubject(id) {
         db.subjects = db.subjects.filter(s => s.id !== id);
-        renderAdminSubjects();
-        await saveDb();
+        renderAdminSubjects(); await saveDb();
     }
 
-    // 3. PREVERJANJA
     function renderAdminAssessments() {
         const tbody = document.getElementById('table-preverjanja');
         tbody.innerHTML = '';
-        if(!db.assessments) return;
         db.assessments.forEach(a => {
             const subj = db.subjects.find(s => s.id == a.subjectId);
-            const tasksList = a.tasks ? a.tasks.join(', ') : '';
-            const tasksLen = a.tasks ? a.tasks.length : 0;
-            tbody.innerHTML += `<tr>
-                <td>${a.id}</td><td>${a.name}</td><td>${subj ? subj.name : 'Neznano'}</td><td>${a.date}</td>
-                <td>${tasksLen} nalog (${tasksList})</td>
-                <td><button class="action-btn danger" onclick="deleteAssessment(${a.id})">Izbriši</button></td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>${a.id}</td><td>${a.name}</td><td>${subj ? subj.name : 'Neznano'}</td><td>${a.date}</td><td>${a.tasks.length} nalog</td><td><button class="action-btn danger" onclick="deleteAssessment(${a.id})">Izbriši</button></td></tr>`;
         });
     }
 
     async function addAssessment() {
-        const name = prompt("Ime preverjanja (npr. NPZ Slovenščina):");
-        if(!name) return;
-        let subjText = "Vnesite ID predmeta za to preverjanje:\n";
-        db.subjects.forEach(s => subjText += `${s.id} - ${s.name}\n`);
-        const subjectId = parseInt(prompt(subjText));
-        const date = prompt("Datum preverjanja (npr. 1. 1. 2000):");
-        const tasksStr = prompt("Vnesite možne točke za vsako nalogo, ločene z vejico (npr. 2,3,4,5,6,7,8,12,3,4,5,3):");
-        if(!tasksStr) return;
-
-        const tasks = tasksStr.split(',').map(t => parseInt(t.trim())).filter(t => !isNaN(t));
+        const name = prompt("Ime:"); if(!name) return;
+        let subjText = ""; db.subjects.forEach(s => subjText += `${s.id}:${s.name} `);
+        const subjectId = parseInt(prompt("ID predmeta (" + subjText + "):"));
+        const date = prompt("Datum:");
+        const tasksStr = prompt("Možne točke (npr. 2,5,3):");
+        const tasks = tasksStr.split(',').map(t => parseInt(t.trim()));
         const id = db.assessments.length > 0 ? Math.max(...db.assessments.map(a => a.id)) + 1 : 1;
-        
         db.assessments.push({ id, subjectId, name, date, tasks });
-        renderAdminAssessments();
-        await saveDb();
+        renderAdminAssessments(); await saveDb();
     }
 
     async function deleteAssessment(id) {
         db.assessments = db.assessments.filter(a => a.id !== id);
-        renderAdminAssessments();
-        await saveDb();
+        renderAdminAssessments(); await saveDb();
     }
 
-    // 4. REZULTATI
     let currentEditStudent = null;
-
     function findStudentForResults() {
         const code = document.getElementById('res-student-code').value.trim();
         const student = db.students.find(s => s.code === code);
-        const editor = document.getElementById('res-editor');
-        
-        if (!student) {
-            alert("Učenec s to šifro ne obstaja!");
-            editor.classList.add('hidden');
-            return;
-        }
-
+        if (!student) return alert("Ni učenca!");
         currentEditStudent = student;
         document.getElementById('res-student-name').innerText = `Urejanje: ${student.firstName} ${student.lastName}`;
-        editor.classList.remove('hidden');
-
+        document.getElementById('res-editor').classList.remove('hidden');
         const select = document.getElementById('res-assessment-select');
-        select.innerHTML = '<option value="">-- Izberi preverjanje --</option>';
-        if(db.assessments) {
-            db.assessments.forEach(a => {
-                select.innerHTML += `<option value="${a.id}">${a.name} (${a.date})</option>`;
-            });
-        }
-        document.getElementById('res-tasks-container').innerHTML = '';
+        select.innerHTML = '<option value="">-- Izberi --</option>';
+        db.assessments.forEach(a => { select.innerHTML += `<option value="${a.id}">${a.name}</option>`; });
     }
 
     function loadResultForm() {
         const assessmentId = parseInt(document.getElementById('res-assessment-select').value);
-        const container = document.getElementById('res-tasks-container');
-        if(!assessmentId) {
-            container.innerHTML = ''; return;
-        }
-
+        if(!assessmentId) return;
         const assessment = db.assessments.find(a => a.id === assessmentId);
         const existingResult = db.results.find(r => r.studentCode === currentEditStudent.code && r.assessmentId === assessmentId);
-        
-        let html = '<table class="admin-table"><thead><tr><th>Naloga</th><th>Možne točke</th><th>Dosežene točke</th></tr></thead><tbody>';
-        
-        if(assessment.tasks) {
-            assessment.tasks.forEach((maxPts, index) => {
-                let val = existingResult && existingResult.achieved[index] !== undefined ? existingResult.achieved[index] : '';
-                html += `<tr>
-                    <td>${index + 1}.</td>
-                    <td>${maxPts}</td>
-                    <td><input type="number" class="res-input" data-index="${index}" value="${val}" min="0" max="${maxPts}"></td>
-                </tr>`;
-            });
-        }
-        
-        html += '</tbody></table>';
-        container.innerHTML = html;
+        let html = '<table class="admin-table"><thead><tr><th>Naloga</th><th>Možne</th><th>Dosežene</th></tr></thead><tbody>';
+        assessment.tasks.forEach((maxPts, index) => {
+            let val = existingResult && existingResult.achieved[index] !== undefined ? existingResult.achieved[index] : '';
+            html += `<tr><td>${index+1}</td><td>${maxPts}</td><td><input type="number" class="res-input" data-index="${index}" value="${val}" max="${maxPts}"></td></tr>`;
+        });
+        document.getElementById('res-tasks-container').innerHTML = html + '</tbody></table>';
     }
 
     async function saveResult() {
         const assessmentId = parseInt(document.getElementById('res-assessment-select').value);
-        if(!assessmentId) return alert("Izberite preverjanje!");
-        
-        const inputs = document.querySelectorAll('.res-input');
-        const achieved = [];
-        inputs.forEach(inp => achieved.push(inp.value === '' ? 0 : parseInt(inp.value)));
-
+        const achieved = Array.from(document.querySelectorAll('.res-input')).map(i => parseInt(i.value || 0));
         db.results = db.results.filter(r => !(r.studentCode === currentEditStudent.code && r.assessmentId === assessmentId));
-        
-        db.results.push({
-            studentCode: currentEditStudent.code,
-            assessmentId: assessmentId,
-            achieved: achieved
-        });
-
-        await saveDb();
-        alert("Rezultati uspešno shranjeni!");
+        db.results.push({ studentCode: currentEditStudent.code, assessmentId, achieved });
+        await saveDb(); alert("Shranjeno!");
     }
 </script>
 </body>
