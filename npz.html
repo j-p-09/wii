@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nacionalno preverjanje znanja</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #000;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 28px; margin-top: 0; }
+        .hidden { display: none !important; }
+        
+        /* Prijavni zaslon */
+        #login-view { text-align: center; padding: 50px 0; }
+        #login-view input { padding: 10px; font-size: 16px; width: 250px; }
+        button { padding: 10px 15px; font-size: 16px; cursor: pointer; background: #eee; border: 1px solid #ccc; }
+        button:hover { background: #ddd; }
+        button:disabled { background: #e0e0e0; color: #888; cursor: not-allowed; }
+        
+        /* Učenec pogled */
+        .student-info p { margin: 5px 0; font-size: 18px; }
+        .student-table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; font-size: 16px; }
+        .student-table th, .student-table td { border: 1px solid #999; padding: 8px; text-align: center; }
+        .student-table td:first-child { text-align: left; width: 150px; }
+        .student-table .bold-row td { font-weight: bold; background-color: #f2f2f2; }
+        .result-text { font-size: 18px; }
+
+        /* Admin pogled */
+        .admin-nav { margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+        .admin-nav button { margin-right: 5px; }
+        .admin-section h2 { margin-top: 0; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .admin-table th, .admin-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .admin-table th { background: #eee; }
+        .action-btn { font-size: 12px; padding: 5px 10px; margin-right: 5px;}
+        .danger { color: red; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .form-group input, .form-group select { padding: 8px; width: 100%; max-width: 400px; }
+        
+        .logout-btn { float: right; }
+        .saving-indicator { font-size: 12px; color: green; margin-left: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="login-view">
+        <h1>Prijava v sistem</h1>
+        <p>Vnesite šifro:</p>
+        <input type="text" id="login-code" placeholder="Šifra...">
+        <button id="login-btn" onclick="login()" disabled>Nalagam bazo...</button>
+        <p id="login-error" style="color: red; margin-top: 10px;" class="hidden">Šifra ni v sistemu. Dostop zavrnjen.</p>
+    </div>
+
+    <div id="student-view" class="hidden">
+        <button class="logout-btn" onclick="logout()">Odjava</button>
+        <h1>Dosežki nacionalnega preverjanja znanja</h1>
+        
+        <div class="student-info" id="student-info-container">
+            </div>
+
+        <table class="student-table" id="student-results-table">
+            </table>
+
+        <p class="result-text" id="student-percentage"></p>
+    </div>
+
+    <div id="admin-view" class="hidden">
+        <button class="logout-btn" onclick="logout()">Odjava</button>
+        <h1>Skrbniška plošča <span id="saving-text" class="saving-indicator">Shranjujem v bazo...</span></h1>
+        
+        <div class="admin-nav">
+            <button onclick="showAdminTab('ucenci')">Učenci</button>
+            <button onclick="showAdminTab('predmeti')">Predmeti</button>
+            <button onclick="showAdminTab('preverjanja')">Preverjanja</button>
+            <button onclick="showAdminTab('rezultati')">Rezultati</button>
+        </div>
+
+        <div id="tab-ucenci" class="admin-section hidden">
+            <h2>Upravljanje učencev</h2>
+            <button onclick="addStudent()">+ Dodaj učenca</button>
+            <table class="admin-table">
+                <thead><tr><th>Šifra</th><th>Ime</th><th>Priimek</th><th>Akcije</th></tr></thead>
+                <tbody id="table-ucenci"></tbody>
+            </table>
+        </div>
+
+        <div id="tab-predmeti" class="admin-section hidden">
+            <h2>Upravljanje predmetov</h2>
+            <button onclick="addSubject()">+ Dodaj predmet</button>
+            <table class="admin-table">
+                <thead><tr><th>ID</th><th>Ime predmeta</th><th>Akcije</th></tr></thead>
+                <tbody id="table-predmeti"></tbody>
+            </table>
+        </div>
+
+        <div id="tab-preverjanja" class="admin-section hidden">
+            <h2>Upravljanje preverjanj</h2>
+            <button onclick="addAssessment()">+ Dodaj preverjanje</button>
+            <table class="admin-table">
+                <thead><tr><th>ID</th><th>Ime</th><th>Predmet</th><th>Datum</th><th>Nalog (Možne točke)</th><th>Akcije</th></tr></thead>
+                <tbody id="table-preverjanja"></tbody>
+            </table>
+        </div>
+
+        <div id="tab-rezultati" class="admin-section hidden">
+            <h2>Vnos in urejanje rezultatov</h2>
+            <div class="form-group">
+                <label>Vnesite šifro učenca:</label>
+                <input type="text" id="res-student-code" placeholder="npr. TU010100SLO">
+                <button onclick="findStudentForResults()" style="margin-top: 5px;">Išči učenca</button>
+            </div>
+            
+            <div id="res-editor" class="hidden">
+                <h3 id="res-student-name"></h3>
+                <div class="form-group">
+                    <label>Izberi preverjanje:</label>
+                    <select id="res-assessment-select" onchange="loadResultForm()"></select>
+                </div>
+                
+                <div id="res-tasks-container"></div>
+                <button onclick="saveResult()" style="margin-top: 15px; font-weight: bold;">Shrani rezultate</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE POVEZAVA ---
+    const FIREBASE_URL = "https://home-npz-default-rtdb.europe-west1.firebasedatabase.app/npz_db.json";
+    let db = null;
+
+    const defaultData = {
+        students: [{ code: "TU010100SLO", firstName: "Testni", lastName: "Učenec" }],
+        subjects: [{ id: 1, name: "Slovenščina" }],
+        assessments: [{ id: 1, subjectId: 1, name: "Nacionalno preverjanje znanja", date: "1. 1. 2000", tasks: [2, 3, 4, 5, 6, 7, 8, 12, 3, 4, 5, 3] }],
+        results: [{ studentCode: "TU010100SLO", assessmentId: 1, achieved: [2, 1, 2, 3, 4, 5, 6, 10, 2, 1, 2, 0] }]
+    };
+
+    // Inicializacija baze ob zagonu
+    async function initDb() {
+        try {
+            const response = await fetch(FIREBASE_URL);
+            const data = await response.json();
+            
+            if (data) {
+                // Poskrbimo, da imamo vedno prazne sezname, če jih v bazi slučajno ni
+                db = {
+                    students: data.students || [],
+                    subjects: data.subjects || [],
+                    assessments: data.assessments || [],
+                    results: data.results || []
+                };
+            } else {
+                db = defaultData;
+                await saveDb(false); // Shranimo privzete podatke, če je baza prazna
+            }
+            
+            // Omogočimo prijavo
+            const loginBtn = document.getElementById('login-btn');
+            loginBtn.disabled = false;
+            loginBtn.innerText = "Prijava";
+        } catch (error) {
+            console.error("Napaka pri povezavi z bazo:", error);
+            alert("Napaka pri povezavi s podatkovno bazo. Preverite internetno povezavo.");
+        }
+    }
+
+    // Shranjevanje v Firebase
+    async function saveDb(showIndicator = true) {
+        if (showIndicator) document.getElementById('saving-text').style.display = 'inline';
+        try {
+            await fetch(FIREBASE_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(db)
+            });
+            if (showIndicator) {
+                setTimeout(() => { document.getElementById('saving-text').style.display = 'none'; }, 1000);
+            }
+        } catch (error) {
+            console.error("Napaka pri shranjevanju:", error);
+            alert("Podatkov ni bilo mogoče shraniti v spletno bazo!");
+            if (showIndicator) document.getElementById('saving-text').style.display = 'none';
+        }
+    }
+
+    // Poženemo inicializacijo, ko se stran naloži
+    window.onload = initDb;
+
+    // --- PRIJAVA IN NAVIGACIJA ---
+    function login() {
+        const code = document.getElementById('login-code').value.trim();
+        const errorMsg = document.getElementById('login-error');
+        
+        if (code === 'admin') {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('admin-view').classList.remove('hidden');
+            showAdminTab('ucenci');
+            errorMsg.classList.add('hidden');
+        } else {
+            const student = db.students.find(s => s.code === code);
+            if (student) {
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('student-view').classList.remove('hidden');
+                renderStudentView(student);
+                errorMsg.classList.add('hidden');
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+    }
+
+    function logout() {
+        document.getElementById('login-code').value = '';
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('admin-view').classList.add('hidden');
+        document.getElementById('student-view').classList.add('hidden');
+        document.getElementById('res-editor').classList.add('hidden');
+    }
+
+    // --- UČENEC POGLED ---
+    function renderStudentView(student) {
+        const infoContainer = document.getElementById('student-info-container');
+        const table = document.getElementById('student-results-table');
+        const percText = document.getElementById('student-percentage');
+        
+        const result = db.results.find(r => r.studentCode === student.code);
+        
+        if (!result) {
+            infoContainer.innerHTML = `<p>Ime in priimek učenca: <b>${student.firstName} ${student.lastName}</b></p>
+                                       <p>Šifra učenca: <b>${student.code}</b></p>
+                                       <p>Za to šifro še ni vpisanih rezultatov.</p>`;
+            table.innerHTML = '';
+            percText.innerHTML = '';
+            return;
+        }
+
+        const assessment = db.assessments.find(a => a.id == result.assessmentId);
+        const subject = db.subjects.find(s => s.id == assessment.subjectId);
+
+        infoContainer.innerHTML = `
+            <p>Ime in priimek učenca: <b>${student.firstName} ${student.lastName}</b></p>
+            <p>Šifra učenca: <b>${student.code}</b></p>
+            <p>Datum pisanje preizkusa: <b>${assessment.date}</b></p>
+            <p>Predmet pisanja: <b>${subject ? subject.name : 'Neznano'}</b></p>
+        `;
+
+        const possiblePoints = assessment.tasks || [];
+        const achievedPoints = result.achieved || [];
+        let sumPossible = possiblePoints.reduce((a,b)=>a+b, 0);
+        let sumAchieved = achievedPoints.reduce((a,b)=>a+b, 0);
+
+        let thead = '<tr><td>Naloga:</td>';
+        let rowAchieved = '<tr class="bold-row"><td>Dosežene točke:</td>';
+        let rowPossible = '<tr><td>Možne točke:</td>';
+
+        possiblePoints.forEach((pts, index) => {
+            thead += `<td>${index + 1}.</td>`;
+            rowAchieved += `<td>${achievedPoints[index] !== undefined ? achievedPoints[index] : ''}</td>`;
+            rowPossible += `<td>${pts}</td>`;
+        });
+
+        thead += `<td>Skupaj:</td></tr>`;
+        rowAchieved += `<td>${sumAchieved}</td></tr>`;
+        rowPossible += `<td>${sumPossible}</td></tr>`;
+
+        table.innerHTML = thead + rowAchieved + rowPossible;
+        const percentage = Math.round((sumAchieved / sumPossible) * 100);
+        percText.innerHTML = `Na nacionalnem preverjanju znanja ste osvojili skupno <b>${percentage}%</b>.`;
+    }
+
+    // --- ADMIN POGLED & LOGIKA ---
+    function showAdminTab(tabId) {
+        document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById('tab-' + tabId).classList.remove('hidden');
+        
+        if (tabId === 'ucenci') renderAdminStudents();
+        if (tabId === 'predmeti') renderAdminSubjects();
+        if (tabId === 'preverjanja') renderAdminAssessments();
+    }
+
+    // 1. UČENCI
+    function renderAdminStudents() {
+        const tbody = document.getElementById('table-ucenci');
+        tbody.innerHTML = '';
+        if(!db.students) return;
+        db.students.forEach(s => {
+            tbody.innerHTML += `<tr>
+                <td>${s.code}</td><td>${s.firstName}</td><td>${s.lastName}</td>
+                <td><button class="action-btn danger" onclick="deleteStudent('${s.code}')">Izbriši</button></td>
+            </tr>`;
+        });
+    }
+
+    async function addStudent() {
+        const code = prompt("Vnesite novo šifro učenca:");
+        if (!code) return;
+        if (db.students.find(s => s.code === code)) return alert("Šifra že obstaja!");
+        const firstName = prompt("Vnesite ime:");
+        const lastName = prompt("Vnesite priimek:");
+        
+        db.students.push({ code, firstName, lastName });
+        renderAdminStudents();
+        await saveDb();
+    }
+
+    async function deleteStudent(code) {
+        if(!confirm("Res želite izbrisati tega učenca? Izbrisani bodo tudi njegovi rezultati.")) return;
+        db.students = db.students.filter(s => s.code !== code);
+        db.results = db.results.filter(r => r.studentCode !== code);
+        renderAdminStudents();
+        await saveDb();
+    }
+
+    // 2. PREDMETI
+    function renderAdminSubjects() {
+        const tbody = document.getElementById('table-predmeti');
+        tbody.innerHTML = '';
+        if(!db.subjects) return;
+        db.subjects.forEach(s => {
+            tbody.innerHTML += `<tr>
+                <td>${s.id}</td><td>${s.name}</td>
+                <td><button class="action-btn danger" onclick="deleteSubject(${s.id})">Izbriši</button></td>
+            </tr>`;
+        });
+    }
+
+    async function addSubject() {
+        const name = prompt("Vnesite ime predmeta:");
+        if (!name) return;
+        const id = db.subjects.length > 0 ? Math.max(...db.subjects.map(s => s.id)) + 1 : 1;
+        db.subjects.push({ id, name });
+        renderAdminSubjects();
+        await saveDb();
+    }
+
+    async function deleteSubject(id) {
+        db.subjects = db.subjects.filter(s => s.id !== id);
+        renderAdminSubjects();
+        await saveDb();
+    }
+
+    // 3. PREVERJANJA
+    function renderAdminAssessments() {
+        const tbody = document.getElementById('table-preverjanja');
+        tbody.innerHTML = '';
+        if(!db.assessments) return;
+        db.assessments.forEach(a => {
+            const subj = db.subjects.find(s => s.id == a.subjectId);
+            const tasksList = a.tasks ? a.tasks.join(', ') : '';
+            const tasksLen = a.tasks ? a.tasks.length : 0;
+            tbody.innerHTML += `<tr>
+                <td>${a.id}</td><td>${a.name}</td><td>${subj ? subj.name : 'Neznano'}</td><td>${a.date}</td>
+                <td>${tasksLen} nalog (${tasksList})</td>
+                <td><button class="action-btn danger" onclick="deleteAssessment(${a.id})">Izbriši</button></td>
+            </tr>`;
+        });
+    }
+
+    async function addAssessment() {
+        const name = prompt("Ime preverjanja (npr. NPZ Slovenščina):");
+        if(!name) return;
+        let subjText = "Vnesite ID predmeta za to preverjanje:\n";
+        db.subjects.forEach(s => subjText += `${s.id} - ${s.name}\n`);
+        const subjectId = parseInt(prompt(subjText));
+        const date = prompt("Datum preverjanja (npr. 1. 1. 2000):");
+        const tasksStr = prompt("Vnesite možne točke za vsako nalogo, ločene z vejico (npr. 2,3,4,5,6,7,8,12,3,4,5,3):");
+        if(!tasksStr) return;
+
+        const tasks = tasksStr.split(',').map(t => parseInt(t.trim())).filter(t => !isNaN(t));
+        const id = db.assessments.length > 0 ? Math.max(...db.assessments.map(a => a.id)) + 1 : 1;
+        
+        db.assessments.push({ id, subjectId, name, date, tasks });
+        renderAdminAssessments();
+        await saveDb();
+    }
+
+    async function deleteAssessment(id) {
+        db.assessments = db.assessments.filter(a => a.id !== id);
+        renderAdminAssessments();
+        await saveDb();
+    }
+
+    // 4. REZULTATI
+    let currentEditStudent = null;
+
+    function findStudentForResults() {
+        const code = document.getElementById('res-student-code').value.trim();
+        const student = db.students.find(s => s.code === code);
+        const editor = document.getElementById('res-editor');
+        
+        if (!student) {
+            alert("Učenec s to šifro ne obstaja!");
+            editor.classList.add('hidden');
+            return;
+        }
+
+        currentEditStudent = student;
+        document.getElementById('res-student-name').innerText = `Urejanje: ${student.firstName} ${student.lastName}`;
+        editor.classList.remove('hidden');
+
+        const select = document.getElementById('res-assessment-select');
+        select.innerHTML = '<option value="">-- Izberi preverjanje --</option>';
+        if(db.assessments) {
+            db.assessments.forEach(a => {
+                select.innerHTML += `<option value="${a.id}">${a.name} (${a.date})</option>`;
+            });
+        }
+        document.getElementById('res-tasks-container').innerHTML = '';
+    }
+
+    function loadResultForm() {
+        const assessmentId = parseInt(document.getElementById('res-assessment-select').value);
+        const container = document.getElementById('res-tasks-container');
+        if(!assessmentId) {
+            container.innerHTML = ''; return;
+        }
+
+        const assessment = db.assessments.find(a => a.id === assessmentId);
+        const existingResult = db.results.find(r => r.studentCode === currentEditStudent.code && r.assessmentId === assessmentId);
+        
+        let html = '<table class="admin-table"><thead><tr><th>Naloga</th><th>Možne točke</th><th>Dosežene točke</th></tr></thead><tbody>';
+        
+        if(assessment.tasks) {
+            assessment.tasks.forEach((maxPts, index) => {
+                let val = existingResult && existingResult.achieved[index] !== undefined ? existingResult.achieved[index] : '';
+                html += `<tr>
+                    <td>${index + 1}.</td>
+                    <td>${maxPts}</td>
+                    <td><input type="number" class="res-input" data-index="${index}" value="${val}" min="0" max="${maxPts}"></td>
+                </tr>`;
+            });
+        }
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    async function saveResult() {
+        const assessmentId = parseInt(document.getElementById('res-assessment-select').value);
+        if(!assessmentId) return alert("Izberite preverjanje!");
+        
+        const inputs = document.querySelectorAll('.res-input');
+        const achieved = [];
+        inputs.forEach(inp => achieved.push(inp.value === '' ? 0 : parseInt(inp.value)));
+
+        db.results = db.results.filter(r => !(r.studentCode === currentEditStudent.code && r.assessmentId === assessmentId));
+        
+        db.results.push({
+            studentCode: currentEditStudent.code,
+            assessmentId: assessmentId,
+            achieved: achieved
+        });
+
+        await saveDb();
+        alert("Rezultati uspešno shranjeni!");
+    }
+</script>
+</body>
+</html>
