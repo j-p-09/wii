@@ -1,310 +1,380 @@
 <!DOCTYPE html>
 <html lang="sl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Shop - Naročanje</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII Shop - Samopostrežna Naročilnica</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <style>
+        :root {
+            --primary: #3a6ea5;
+            --accent: #00d2ff;
+            --bg: #f8f9fa;
+            --white: #ffffff;
+            --dark: #2d3436;
+            --grad: linear-gradient(135deg, #3a6ea5 0%, #00d2ff 100%);
+        }
 
-<style>
-body {
-    margin:0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg,#1e1e2f,#2a2a40);
-    color:white;
-    overflow:hidden;
-}
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg); color: var(--dark); overflow: hidden; height: 100vh; }
 
-/* WELCOME */
-#welcome {
-    position:absolute;
-    width:100%;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    animation: fadeIn 1s;
-}
+        /* --- DOBRODOŠLICA --- */
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--grad);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; text-align: center; color: white; cursor: pointer;
+        }
+        .welcome-logo { font-size: 80px; font-weight: 800; letter-spacing: -2px; margin-bottom: 20px; text-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .tap-to-start { font-size: 24px; animation: pulse 2s infinite; opacity: 0.8; }
 
-#welcome h1 {
-    font-size:60px;
-    animation: float 2s infinite ease-in-out;
-}
+        /* --- GLAVNI VMESNIK --- */
+        #main-interface { display: none; height: 100vh; flex-direction: column; }
+        
+        header {
+            padding: 20px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; gap: 15px; z-index: 100;
+        }
+        .search-bar {
+            width: 100%; padding: 15px 25px; border-radius: 50px; border: 2px solid #eee;
+            font-size: 18px; transition: all 0.3s;
+        }
+        .search-bar:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(58, 110, 165, 0.2); }
 
-#welcome button {
-    margin-top:30px;
-    padding:20px 40px;
-    font-size:24px;
-    border:none;
-    border-radius:15px;
-    background:#00c3ff;
-    color:white;
-    cursor:pointer;
-}
+        .items-grid {
+            flex: 1; overflow-y: auto; padding: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px; align-content: start;
+        }
 
-/* MAIN */
-#app {
-    display:none;
-    height:100vh;
-    flex-direction:column;
-}
+        .item-card {
+            background: white; border-radius: 20px; padding: 30px 20px;
+            text-align: center; box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #f0f0f0; cursor: pointer;
+            display: flex; flex-direction: column; justify-content: center; min-height: 150px;
+        }
+        .item-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); border-color: var(--accent); }
+        .item-card h3 { font-size: 18px; font-weight: 600; color: var(--primary); }
 
-.topbar {
-    padding:10px;
-    background:#111;
-}
+        /* --- SPODNJI PAS --- */
+        .bottom-nav {
+            background: var(--dark); color: white; padding: 20px 40px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+        }
+        .cart-status { display: flex; align-items: center; gap: 15px; font-size: 20px; }
+        .cart-icon { position: relative; font-size: 30px; }
+        .cart-count { 
+            position: absolute; top: -10px; right: -10px; background: #ff4757;
+            color: white; width: 25px; height: 25px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;
+        }
+        .btn-cancel { background: rgba(255,255,255,0.1); border: none; color: white; padding: 10px 20px; border-radius: 15px; cursor: pointer; }
 
-.search {
-    width:100%;
-    padding:15px;
-    font-size:20px;
-    border-radius:10px;
-    border:none;
-}
+        /* --- MODALNA OKNA --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 500;
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 500px; border-radius: 30px;
+            padding: 40px; position: relative; animation: zoomIn 0.3s;
+        }
+        .qty-controls { display: flex; align-items: center; justify-content: center; gap: 30px; margin: 30px 0; }
+        .qty-btn { 
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            background: #eee; font-size: 24px; cursor: pointer; transition: 0.2s;
+        }
+        .qty-btn:active { transform: scale(0.9); background: var(--accent); color: white; }
+        .btn-add { 
+            width: 100%; padding: 20px; border-radius: 20px; border: none;
+            background: var(--grad); color: white; font-size: 20px; font-weight: bold; cursor: pointer;
+        }
 
-.products {
-    flex:1;
-    overflow:auto;
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
-    gap:15px;
-    padding:15px;
-}
+        /* --- KOŠARICA --- */
+        .cart-modal { display: none; position: fixed; right: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 600; flex-direction: column; animation: slideInRight 0.4s; }
+        .cart-header { padding: 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+        .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
+        .cart-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px; background: #f9f9f9; border-radius: 20px; margin-bottom: 15px;
+        }
+        .cart-footer { padding: 30px; background: #eee; border-top-left-radius: 30px; border-top-right-radius: 30px; }
+        .total-row { display: flex; justify-content: space-between; font-size: 28px; font-weight: 800; margin-bottom: 20px; }
 
-.product {
-    background:#2f2f50;
-    padding:20px;
-    border-radius:15px;
-    text-align:center;
-    font-size:20px;
-    cursor:pointer;
-    transition:0.2s;
-}
+        /* --- USPEH --- */
+        #success-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .order-number { font-size: 100px; font-weight: 900; color: var(--primary); margin: 20px 0; }
 
-.product:hover {
-    transform:scale(1.05);
-    background:#3f3f70;
-}
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
 
-/* BOTTOM BAR */
-.bottom {
-    background:#111;
-    padding:15px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.cart-btn {
-    background:#00c3ff;
-    padding:15px 30px;
-    border-radius:10px;
-    cursor:pointer;
-}
-
-/* MODAL */
-.modal {
-    position:fixed;
-    top:0;left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.7);
-    display:none;
-    justify-content:center;
-    align-items:center;
-}
-
-.modal-box {
-    background:#222;
-    padding:30px;
-    border-radius:20px;
-    text-align:center;
-    width:300px;
-}
-
-.qty {
-    display:flex;
-    justify-content:center;
-    gap:20px;
-    margin:20px;
-}
-
-.qty button {
-    font-size:30px;
-    padding:10px;
-}
-
-/* SUCCESS */
-#success {
-    position:absolute;
-    width:100%;
-    height:100%;
-    display:none;
-    justify-content:center;
-    align-items:center;
-    flex-direction:column;
-}
-
-@keyframes float {
-    0% {transform:translateY(0)}
-    50% {transform:translateY(-10px)}
-    100% {transform:translateY(0)}
-}
-</style>
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+    </style>
 </head>
-
 <body>
 
-<div id="welcome">
-    <h1>👋 Dobrodošli v WII Shopu</h1>
-    <button onclick="start()">ZAČNI NAROČILO</button>
-</div>
-
-<div id="app">
-    <div class="topbar">
-        <input class="search" placeholder="Išči..." oninput="render(this.value)">
+    <div id="welcome-screen" onclick="startOrdering()">
+        <div class="welcome-logo animate__animated animate__fadeInDown">WII SHOP</div>
+        <div class="tap-to-start animate__animated animate__pulse animate__infinite">DOTAKNI SE ZA ZAČETEK</div>
     </div>
 
-    <div class="products" id="products"></div>
+    <div id="main-interface">
+        <header>
+            <h1 style="font-weight: 800; color: var(--primary);">Kaj boš naročil danes?</h1>
+            <input type="text" class="search-bar" placeholder="Išči izdelke (npr. torbica, steklo...)" oninput="filterItems(this.value)">
+        </header>
 
-    <div class="bottom">
-        <button onclick="resetOrder()">❌ Prekliči</button>
-        <div class="cart-btn" onclick="openCart()">🛒 (<span id="count">0</span>)</div>
+        <div class="items-grid" id="items-grid">
+            </div>
+
+        <div class="bottom-nav">
+            <button class="btn-cancel" onclick="cancelOrder()">PREKLIČI</button>
+            <div class="cart-status" onclick="openCart()">
+                <div class="cart-icon">
+                    🛒
+                    <div class="cart-count" id="cart-count">0</div>
+                </div>
+                <span id="cart-total-nav">0.00 WII</span>
+            </div>
+        </div>
     </div>
-</div>
 
-<div class="modal" id="modal"></div>
+    <div id="item-modal" class="modal" onclick="if(event.target==this) closeModal()">
+        <div class="modal-content">
+            <h2 id="modal-item-name" style="font-size: 28px; margin-bottom: 10px;">Ime izdelka</h2>
+            <p id="modal-item-price" style="font-size: 22px; color: var(--accent); font-weight: bold;">0.00 WII</p>
+            
+            <div class="qty-controls">
+                <button class="qty-btn" onclick="updateModalQty(-1)">-</button>
+                <span id="modal-qty" style="font-size: 30px; font-weight: bold; min-width: 40px; text-align: center;">1</span>
+                <button class="qty-btn" onclick="updateModalQty(1)">+</button>
+            </div>
 
-<div id="success">
-    <h1>Naročilo oddano!</h1>
-    <h2 id="orderId"></h2>
-</div>
+            <button class="btn-add" onclick="addToCart()">DODAJ V KOŠARICO</button>
+        </div>
+    </div>
+
+    <div id="cart-view" class="cart-modal">
+        <div class="cart-header">
+            <button onclick="closeCart()" style="background: none; border: none; font-size: 30px;">✕</button>
+            <h2 style="font-weight: 800;">Tvoja košarica</h2>
+            <span></span>
+        </div>
+        <div class="cart-items" id="cart-items-list">
+            </div>
+        <div class="cart-footer">
+            <div class="total-row">
+                <span>SKUPAJ:</span>
+                <span id="cart-grand-total">0.00 WII</span>
+            </div>
+            <button class="btn-add" style="background: var(--dark);" onclick="submitOrder()">ODDAJ NAROČILO</button>
+        </div>
+    </div>
+
+    <div id="success-screen">
+        <h2 style="font-size: 30px;">NAROČILO ODDANO!</h2>
+        <p style="margin-top: 10px; opacity: 0.7;">Tvoja številka naročila je:</p>
+        <div class="order-number animate__animated animate__bounceIn" id="display-order-id">100</div>
+        <p style="max-width: 300px; font-weight: 600;">Prosimo, pojdite do blagajne in povejte to številko.</p>
+        <div style="margin-top: 40px; width: 50px; height: 50px; border: 5px solid #eee; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    </div>
+
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
 <script>
-let db = JSON.parse(localStorage.getItem('wii_db_v3'));
-let cart = [];
+    /* ================= PODATKOVNA BAZA (ISTO KOT BLAGAJNA) ================= */
+    let db = { items: [], orders: [], orderSeq: 100 };
+    let currentCart = [];
+    let selectedItem = null;
+    let modalQty = 1;
 
-function start(){
-    document.getElementById('welcome').style.display='none';
-    document.getElementById('app').style.display='flex';
-    render();
-}
-
-function render(filter=""){
-    let el = document.getElementById('products');
-    el.innerHTML="";
-
-    db.items
-    .filter(i => i.naziv.toLowerCase().includes(filter.toLowerCase()))
-    .forEach(i=>{
-        let d=document.createElement('div');
-        d.className='product';
-        d.innerText=i.naziv;
-        d.onclick=()=>openItem(i);
-        el.appendChild(d);
-    });
-}
-
-function openItem(item){
-    let qty=1;
-
-    modal.innerHTML=`
-    <div class="modal-box">
-        <h2>${item.naziv}</h2>
-        <p>${item.cena} WII</p>
-
-        <div class="qty">
-            <button onclick="change(-1)">-</button>
-            <span id="q">${qty}</span>
-            <button onclick="change(1)">+</button>
-        </div>
-
-        <button onclick="add()">Dodaj</button>
-        <button onclick="closeModal()">Prekliči</button>
-    </div>`;
-
-    modal.style.display='flex';
-
-    window.change=(n)=>{
-        qty=Math.max(1,qty+n);
-        document.getElementById('q').innerText=qty;
+    function loadDB() {
+        const stored = localStorage.getItem('wii_db_v3');
+        if (stored) {
+            db = JSON.parse(stored);
+        }
     }
 
-    window.add=()=>{
-        cart.push({...item, kol:qty});
-        updateCount();
+    function saveDB() {
+        localStorage.setItem('wii_db_v3', JSON.stringify(db));
+    }
+
+    /* ================= NAVIGACIJA ================= */
+    function startOrdering() {
+        loadDB();
+        document.getElementById('welcome-screen').classList.add('animate__animated', 'animate__fadeOutUp');
+        setTimeout(() => {
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('main-interface').style.display = 'flex';
+            renderItems();
+        }, 500);
+    }
+
+    function cancelOrder() {
+        if(confirm("Ali res želiš preklicati naročilo?")) {
+            location.reload();
+        }
+    }
+
+    /* ================= LOGIKA IZDELKOV ================= */
+    function renderItems(filter = '') {
+        const grid = document.getElementById('items-grid');
+        grid.innerHTML = '';
+        
+        const filtered = db.items.filter(it => it.naziv.toLowerCase().includes(filter.toLowerCase()));
+
+        filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'item-card animate__animated animate__fadeIn';
+            card.innerHTML = `<h3>${item.naziv}</h3>`;
+            card.onclick = () => openItemModal(item);
+            grid.appendChild(card);
+        });
+    }
+
+    function filterItems(val) {
+        renderItems(val);
+    }
+
+    /* ================= MODAL ZA ARTIKEL ================= */
+    function openItemModal(item) {
+        selectedItem = item;
+        modalQty = 1;
+        document.getElementById('modal-item-name').innerText = item.naziv;
+        document.getElementById('modal-item-price').innerText = item.cena.toFixed(2) + " WII";
+        document.getElementById('modal-qty').innerText = modalQty;
+        document.getElementById('item-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('item-modal').style.display = 'none';
+    }
+
+    function updateModalQty(diff) {
+        modalQty += diff;
+        if(modalQty < 1) modalQty = 1;
+        document.getElementById('modal-qty').innerText = modalQty;
+    }
+
+    /* ================= KOŠARICA ================= */
+    function addToCart() {
+        const existing = currentCart.find(i => i.koda === selectedItem.koda);
+        if(existing) {
+            existing.kol += modalQty;
+            existing.total = existing.kol * existing.cena;
+        } else {
+            currentCart.push({
+                koda: selectedItem.koda,
+                naziv: selectedItem.naziv,
+                cena: selectedItem.cena,
+                kol: modalQty,
+                popust: 0,
+                total: selectedItem.cena * modalQty
+            });
+        }
+        updateCartUI();
         closeModal();
     }
-}
 
-function closeModal(){
-    modal.style.display='none';
-}
+    function updateCartUI() {
+        const count = currentCart.reduce((sum, item) => sum + item.kol, 0);
+        const total = currentCart.reduce((sum, item) => sum + item.total, 0);
+        
+        document.getElementById('cart-count').innerText = count;
+        document.getElementById('cart-total-nav').innerText = total.toFixed(2) + " WII";
+        document.getElementById('cart-grand-total').innerText = total.toFixed(2) + " WII";
+    }
 
-function updateCount(){
-    document.getElementById('count').innerText=cart.length;
-}
+    function openCart() {
+        const list = document.getElementById('cart-items-list');
+        list.innerHTML = '';
+        
+        currentCart.forEach((item, index) => {
+            const el = document.createElement('div');
+            el.className = 'cart-item';
+            el.innerHTML = `
+                <div style="flex:1">
+                    <div style="font-weight:bold">${item.naziv}</div>
+                    <div style="font-size:14px; color:#666">${item.cena.toFixed(2)} WII / kos</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:15px">
+                    <button class="qty-btn" style="width:35px; height:35px; font-size:16px" onclick="updateCartQty(${index}, -1)">
+                        ${item.kol === 1 ? '🗑️' : '-'}
+                    </button>
+                    <span style="font-weight:bold; min-width:20px; text-align:center">${item.kol}</span>
+                    <button class="qty-btn" style="width:35px; height:35px; font-size:16px" onclick="updateCartQty(${index}, 1)">+</button>
+                </div>
+                <div style="margin-left:20px; font-weight:bold; min-width:70px; text-align:right">
+                    ${item.total.toFixed(2)}
+                </div>
+            `;
+            list.appendChild(el);
+        });
+        
+        document.getElementById('cart-view').style.display = 'flex';
+    }
 
-function openCart(){
-    let total=0;
+    function closeCart() {
+        document.getElementById('cart-view').style.display = 'none';
+    }
 
-    let html=`<div class="modal-box"><h2>Košarica</h2>`;
+    function updateCartQty(index, diff) {
+        currentCart[index].kol += diff;
+        if(currentCart[index].kol <= 0) {
+            currentCart.splice(index, 1);
+        } else {
+            currentCart[index].total = currentCart[index].kol * currentCart[index].cena;
+        }
+        updateCartUI();
+        openCart(); // refresh
+    }
 
-    cart.forEach((i,idx)=>{
-        total+=i.cena*i.kol;
+    /* ================= ODDAJA NAROČILA ================= */
+    function submitOrder() {
+        if(currentCart.length === 0) return;
 
-        html+=`
-        <div>
-            ${i.naziv} x${i.kol}
-            <button onclick="remove(${idx})">🗑</button>
-        </div>`;
-    });
+        loadDB(); // Osveži pred shranjevanjem
+        
+        const orderId = db.orderSeq;
+        const total = currentCart.reduce((sum, item) => sum + item.total, 0);
 
-    html+=`<h3>${total.toFixed(2)} WII</h3>
-    <button onclick="submit()">Oddaj naročilo</button>
-    <button onclick="closeModal()">Nazaj</button>
-    </div>`;
+        const newOrder = {
+            id: orderId,
+            date: new Date().toISOString(),
+            customer: "Samopostrežni Terminal",
+            customerId: null,
+            total: total,
+            items: [...currentCart],
+            status: 'NAROČENO'
+        };
 
-    modal.innerHTML=html;
-    modal.style.display='flex';
-}
+        db.orders.push(newOrder);
+        db.orderSeq++;
+        saveDB();
 
-function remove(i){
-    cart.splice(i,1);
-    openCart();
-    updateCount();
-}
+        // Prikaži uspeh
+        document.getElementById('display-order-id').innerText = orderId;
+        document.getElementById('success-screen').style.display = 'flex';
 
-function submit(){
-    let id = db.orderSeq++;
-
-    db.orders.push({
-        id:id,
-        date:new Date().toISOString(),
-        items:cart.map(i=>({
-            ...i,
-            total:i.cena*i.kol
-        })),
-        total:cart.reduce((a,b)=>a+b.cena*b.kol,0),
-        status:'NAROČENO'
-    });
-
-    localStorage.setItem('wii_db_v3',JSON.stringify(db));
-
-    modal.style.display='none';
-    document.getElementById('app').style.display='none';
-    document.getElementById('success').style.display='flex';
-    document.getElementById('orderId').innerText="Št: "+id;
-
-    setTimeout(()=>{
-        location.reload();
-    },15000);
-}
-
-function resetOrder(){
-    location.reload();
-}
+        // Po 15 sekundah resetiraj
+        setTimeout(() => {
+            location.reload();
+        }, 15000);
+    }
 </script>
-
 </body>
 </html>
