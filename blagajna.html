@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WII Blagajna - Polna Verzija v3 (Naročila)</title>
+
+<!-- FIREBASE SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <style>
     /* RETRO POS STYLING & TIMES NEW ROMAN */
     :root {
@@ -289,41 +294,71 @@
     </div>
 
 <script>
-    /* ================= BAZA PODATKOV (LOCAL STORAGE) ================= */
-    let db = { users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
+    /* ================= FIREBASE SETUP ================= */
+    const firebaseConfig = {
+        databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-    function initDB() {
-        const stored = localStorage.getItem('wii_db_v3');
-        if (stored) {
-            db = JSON.parse(stored);
-            if(!db.giftCards) db.giftCards = [];
-            if(!db.orders) db.orders = [];
-            if(!db.orderSeq) db.orderSeq = 100;
-            db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; });
-        } else {
-            db = {
-                users: [
-                    { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
-                    { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
-                    { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
-                ],
-                items: [
-                    { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
-                    { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
-                ],
-                receipts: [],
-                orders: [],
-                giftCards: [
-                    { code: 'BON10', value: 10 }
-                ],
-                register: { expectedCash: 0 },
-                seq: 3,
-                orderSeq: 100
-            };
-            saveDB();
-        }
+    /* ================= BAZA PODATKOV (FIREBASE SYNC) ================= */
+    let db = { users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
+    let isDbLoaded = false;
+
+    function initDB(callback) {
+        database.ref('wii_db_v3').on('value', (snapshot) => {
+            const stored = snapshot.val();
+            if (stored) {
+                db = stored;
+                // Preprečevanje Firebase izbrisa praznih nizov
+                if(!db.giftCards) db.giftCards = [];
+                if(!db.orders) db.orders = [];
+                if(!db.receipts) db.receipts = [];
+                if(!db.items) db.items = [];
+                if(!db.users) db.users = [];
+                if(!db.orderSeq) db.orderSeq = 100;
+                db.users.forEach(u => { 
+                    if(u.bankBalance === undefined) u.bankBalance = 500; 
+                    if(!u.fines) u.fines = [];
+                });
+                
+                // Osveževanje vmesnika ob zunanjih spremembah, če je odprt
+                if (document.getElementById('view-narocila').classList.contains('active')) {
+                    renderOrdersView('open');
+                }
+            } else {
+                db = {
+                    users: [
+                        { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
+                        { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
+                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
+                    ],
+                    items: [
+                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
+                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
+                    ],
+                    receipts: [],
+                    orders: [],
+                    giftCards: [
+                        { code: 'BON10', value: 10 }
+                    ],
+                    register: { expectedCash: 0 },
+                    seq: 3,
+                    orderSeq: 100
+                };
+                saveDB();
+            }
+            
+            if (!isDbLoaded) {
+                isDbLoaded = true;
+                if (callback) callback();
+            }
+        });
     }
-    function saveDB() { localStorage.setItem('wii_db_v3', JSON.stringify(db)); }
+
+    function saveDB() { 
+        database.ref('wii_db_v3').set(db); 
+    }
 
     /* ================= GLOBALNO STANJE ================= */
     let cart = [];
@@ -1106,7 +1141,13 @@
     }
 
     /* Init */
-    window.onload = () => { initDB(); setDate(); initReceipt(); lockScreen(); };
+    window.onload = () => { 
+        setDate(); 
+        initReceipt(); 
+        initDB(() => {
+            lockScreen(); 
+        });
+    };
 </script>
 </body>
 </html>
