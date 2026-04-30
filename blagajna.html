@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3</title>
+<title>WII Blagajna - Polna Verzija v3 (Naročila)</title>
 <style>
     /* RETRO POS STYLING & TIMES NEW ROMAN */
     :root {
@@ -41,6 +41,7 @@
     }
     input[type="number"] { text-align: right; }
     input:focus { outline: none; background: #ffffcc; }
+    select { padding: 4px; font-size: 16px; font-family: 'Times New Roman', Times, serif; }
 
     /* Reliefni okvirji */
     .box-frame { 
@@ -111,6 +112,12 @@
     .crud-table input { width: 100%; border: none; border-bottom: 1px solid #ccc; }
     .action-btn { font-size: 12px; padding: 2px 5px; margin: 0 2px; }
 
+    /* --- NAROČILA POGLED --- */
+    .orders-layout { display: flex; flex-direction: column; height: 100%; }
+    .orders-tabs { display: flex; gap: 5px; padding: 10px; background: #a9b8c2; }
+    .orders-tabs button { flex: 1; font-size: 18px; padding: 10px; }
+    .orders-workspace { flex: 1; overflow-y: auto; background: white; margin: 10px; padding: 10px; border: 2px inset #808080; }
+
     /* --- MODALNI SISTEM --- */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
     .modal-overlay.active { display: flex; }
@@ -127,6 +134,7 @@
 
     <div class="top-menu">
         <button onclick="switchView('blagajna')">🛒 Blagajna</button>
+        <button onclick="switchView('narocila')">📦 Naročila</button>
         <button onclick="requireManagerAccess()">💼 Manager</button>
         <button onclick="lockScreen()">🔒 Pavza</button>
     </div>
@@ -170,10 +178,22 @@
 
         <div class="bottom-functions">
             <button onclick="applyDiscount()">% Popust</button>
-            <button onclick="applyPromo()">PROMO</button>
+            <button onclick="openFetchOrder()">POKLIČI</button>
             <button onclick="viewCustomerInfo()">👤 Stranka</button>
             <button onclick="applyGiftCard()">🎁 Darilni bon</button>
             <button onclick="openPaymentView()">💳 Plačilo</button>
+        </div>
+    </div>
+
+    <div id="view-narocila" class="view-container">
+        <div class="orders-layout">
+            <div class="orders-tabs">
+                <button onclick="renderOrdersView('open')">📂 ODPRTA NAROČILA</button>
+                <button onclick="renderOrdersView('history')">📜 ZGODOVINA NAROČIL</button>
+            </div>
+            <div class="orders-workspace" id="orders-content">
+                <!-- Vsebina naročil -->
+            </div>
         </div>
     </div>
 
@@ -195,6 +215,7 @@
                 <div class="box-frame pay-methods">
                     <button onclick="selectPaymentMethod('gotovina')" id="btn-gotovina">GOTOVINA</button>
                     <button onclick="selectPaymentMethod('kartica')" id="btn-kartica">KARTICA</button>
+                    <button onclick="selectPaymentMethod('narocilo')" id="btn-narocilo" style="background:#fff3cd;">NAROČILO</button>
                     <button class="hidden" onclick="resetPaymentMethods()" id="btn-nazaj">NAZAJ</button>
                 </div>
             </div>
@@ -228,7 +249,7 @@
                 <button onclick="mgrSkim()">💸 SKIM</button>
                 <button onclick="mgrZaposleni()">👥 ZAPOSLENI</button>
                 <button onclick="mgrArtikli()">📦 ARTIKLI</button>
-                <button onclick="mgrZgodovina()">📜 ZGODOVINA</button>
+                <button onclick="mgrZgodovina()">📜 ZGODOVINA RAČUNOV</button>
                 <button onclick="mgrPlaca()">💼 PLAČA</button>
                 <button onclick="mgrKazni()">⚠️ KAZNI</button>
                 <button onclick="mgrStranke()">🤝 STRANKE</button>
@@ -269,14 +290,16 @@
 
 <script>
     /* ================= BAZA PODATKOV (LOCAL STORAGE) ================= */
-    let db = { users: [], items: [], receipts: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3 };
+    let db = { users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
 
     function initDB() {
         const stored = localStorage.getItem('wii_db_v3');
         if (stored) {
             db = JSON.parse(stored);
             if(!db.giftCards) db.giftCards = [];
-            db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; }); // Default fallback za banko
+            if(!db.orders) db.orders = [];
+            if(!db.orderSeq) db.orderSeq = 100;
+            db.users.forEach(u => { if(u.bankBalance === undefined) u.bankBalance = 500; });
         } else {
             db = {
                 users: [
@@ -289,11 +312,13 @@
                     { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
                 ],
                 receipts: [],
+                orders: [],
                 giftCards: [
                     { code: 'BON10', value: 10 }
                 ],
                 register: { expectedCash: 0 },
-                seq: 3
+                seq: 3,
+                orderSeq: 100
             };
             saveDB();
         }
@@ -304,6 +329,7 @@
     let cart = [];
     let activeCashier = null;
     let activeCustomer = null;
+    let currentOrderId = null; // Spremlja id naročila, ki se trenutno obdeluje
     let paymentState = { total: 0, paid: 0, method: '', inputBuffer: '', paidUserId: null };
     let modalCallback = null;
 
@@ -311,7 +337,9 @@
     function switchView(viewId) {
         document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${viewId}`).classList.add('active');
+        
         if (viewId === 'blagajna') updateCartUI();
+        if (viewId === 'narocila') renderOrdersView('open');
         closeWorkspace(); 
     }
 
@@ -323,6 +351,7 @@
     function initReceipt() {
         document.getElementById('racun-st').innerText = db.seq.toString().padStart(3, '0');
         activeCustomer = null;
+        currentOrderId = null;
         document.getElementById('racun-stranka').innerText = "";
         cart = [{ koda: '', naziv: '', kol: 1, cena: 0, popust: 0, total: 0 }];
         updateCartUI();
@@ -369,6 +398,10 @@
             const btnO = document.createElement('button'); btnO.innerText = 'Potrdi';
             btnO.onclick = () => closeModal(true, activeInput ? activeInput.value : null);
             footer.appendChild(btnC); footer.appendChild(btnO);
+        } else if (type === 'none') {
+            const btnC = document.createElement('button'); btnC.innerText = 'Prekliči / Zapri';
+            btnC.onclick = () => closeModal(false);
+            footer.appendChild(btnC);
         }
     }
 
@@ -391,7 +424,6 @@
 
         cart.forEach((item, index) => {
             if (item.koda !== '' || item.naziv !== '') {
-                // Popust v odstotkih %
                 let popustDecimal = (item.popust || 0) / 100;
                 let rednaCena = item.cena * item.kol;
                 item.total = rednaCena * (1 - popustDecimal);
@@ -417,7 +449,6 @@
         document.getElementById('skupaj-znesek').innerText = totalWii.toFixed(2) + ' WII';
         document.getElementById('skupaj-popust').innerText = totalDiscount.toFixed(2);
 
-        // --- NOVO: SINHRONIZACIJA Z ZASLONOM ZA GOSTE ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'buying',
             cart: cart.filter(i => i.koda !== '' || i.naziv !== ''),
@@ -432,7 +463,6 @@
         
         cart[index][field] = val;
 
-        // Auto-fill in dodajanje nove vrstice
         if (field === 'koda') {
             const found = db.items.find(i => i.koda === val);
             if (found) {
@@ -447,7 +477,6 @@
 
     function voidItem(index) { cart.splice(index, 1); updateCartUI(); }
 
-    function applyPromo() { showModal({title: "Info", message: "Za PROMO ročno nastavi ceno artikla na 0 v tabeli."}); }
     function applyDiscount() {
         showModal({title: "Popust", message: "Vnesi % popusta za celoten nakup:", type: "prompt", inputType: "number", showNumpad: true, onConfirm: (v) => {
             let proc = parseFloat(v);
@@ -458,6 +487,118 @@
         }});
     }
 
+    /* ================= NOVO: NAROČILA - POKLIČI ================= */
+    function openFetchOrder() {
+        let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
+        let listHtml = `<div style="max-height: 180px; overflow-y: auto; text-align: left; border: 1px solid #ccc; padding: 5px; margin-top: 10px; background: white;">`;
+        if (openOrders.length === 0) listHtml += `<i style="padding: 5px;">Ni odprtih naročil.</i>`;
+        openOrders.forEach(o => {
+            listHtml += `<div style="padding: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <span><b>#${o.id}</b> - ${o.total.toFixed(2)} WII (${o.status})</span>
+                <button onclick="loadOrderToRegister(${o.id})" style="font-size:12px; padding: 2px 5px;">Prevzemi</button>
+            </div>`;
+        });
+        listHtml += `</div>`;
+
+        let html = `
+            <div style="margin-bottom: 10px; text-align: left;">
+                Vnesi številko naročila: <input type="number" id="manual-order-id" style="width: 100px;">
+                <button onclick="let v = document.getElementById('manual-order-id').value; if(v) loadOrderToRegister(parseInt(v));">Išči</button>
+            </div>
+            <hr>
+            <b style="display:block; text-align:left; margin-top:5px;">Ali izberi iz seznama odprtih:</b>
+            ${listHtml}
+        `;
+        showModal({title: "Pokliči Naročilo", message: html, isHtml: true, type: "none"});
+    }
+
+    window.loadOrderToRegister = function(id) {
+        let order = db.orders.find(o => o.id === id);
+        if (!order) { alert("Naročilo s to številko ne obstaja!"); return; }
+        if (order.status === 'ODDANO') { alert("To naročilo je že oddano/zaključeno!"); return; }
+        
+        cart = JSON.parse(JSON.stringify(order.items));
+        currentOrderId = id;
+        
+        if (order.customerId) {
+            let c = db.users.find(u => u.id === order.customerId);
+            if (c) { 
+                activeCustomer = c; 
+                document.getElementById('racun-stranka').innerText = c.name; 
+            }
+        }
+        
+        updateCartUI();
+        closeModal(false);
+        showModal({title: "Naloženo", message: `Naročilo #${id} uspešno preneseno na blagajno.`});
+    }
+
+    /* ================= NOVO: NAROČILA - POGLED ================= */
+    window.renderOrdersView = function(type) {
+        let ws = document.getElementById('orders-content');
+        let orders = db.orders.filter(o => type === 'open' ? o.status !== 'ODDANO' : true);
+        
+        let html = `<h3>${type === 'open' ? 'ODPRTA NAROČILA' : 'ZGODOVINA VSEH NAROČIL'}</h3><br>`;
+        html += `<table class="crud-table"><tr><th>Številka</th><th>Datum</th><th>Status</th><th>Znesek</th><th>Račun</th><th>Akcija</th></tr>`;
+        
+        if(orders.length === 0) {
+            html += `<tr><td colspan="6" style="text-align:center;">Ni naročil za prikaz.</td></tr>`;
+        } else {
+            orders.forEach(o => {
+                let d = new Date(o.date).toLocaleString();
+                let racunInfo = o.receiptId ? `#${o.receiptId}` : '-';
+                let style = o.status === 'ODDANO' ? 'color:gray;' : (o.status === 'PLAČANO' ? 'color:green;font-weight:bold;' : 'color:blue;font-weight:bold;');
+                
+                html += `<tr>
+                    <td>${o.id}</td><td>${d}</td><td style="${style}">${o.status}</td><td>${o.total.toFixed(2)} WII</td><td>${racunInfo}</td>
+                    <td><button onclick="manageOrder(${o.id})">Podrobnosti</button></td>
+                </tr>`;
+            });
+        }
+        html += `</table>`;
+        ws.innerHTML = html;
+    }
+
+    window.manageOrder = function(id) {
+        let order = db.orders.find(o => o.id === id);
+        if(!order) return;
+        let ws = document.getElementById('orders-content');
+        
+        let html = `<button onclick="renderOrdersView('open')" style="margin-bottom:10px;">⬅ Nazaj na seznam</button><br>`;
+        html += `<h2>Naročilo #${order.id}</h2>`;
+        html += `<p>Status: <b>${order.status}</b> ` + (order.receiptId ? `(Plačano na blagajni, račun #${order.receiptId})` : ``) + `</p>`;
+        html += `<p>Stranka: ${order.customer || 'Neznana stranka'} | Znesek: ${order.total.toFixed(2)} WII</p><br>`;
+        
+        html += `<div style="margin: 10px 0; padding: 10px; background: #e0e0e0; border: 1px solid #aaa;">
+            <b>Uredi status:</b> 
+            <select id="order-status-select-${order.id}">
+                <option value="NAROČENO" ${order.status==='NAROČENO'?'selected':''}>NAROČENO</option>
+                <option value="PLAČANO" ${order.status==='PLAČANO'?'selected':''}>PLAČANO</option>
+                <option value="ODDANO" ${order.status==='ODDANO'?'selected':''}>ODDANO (Zaključeno)</option>
+            </select>
+            <button onclick="updateOrderStatus(${order.id})">Shrani spremembo</button>
+        </div><br>`;
+        
+        html += `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Kol</th><th>Cena</th><th>Skupaj</th></tr>`;
+        order.items.forEach(it => {
+            html += `<tr><td>${it.koda}</td><td>${it.naziv}</td><td>${it.kol}</td><td>${it.cena.toFixed(2)}</td><td>${it.total.toFixed(2)}</td></tr>`;
+        });
+        html += `</table>`;
+        ws.innerHTML = html;
+    }
+
+    window.updateOrderStatus = function(id) {
+        let order = db.orders.find(o => o.id === id);
+        let sel = document.getElementById(`order-status-select-${id}`);
+        if(order && sel) {
+            order.status = sel.value;
+            saveDB();
+            showModal({title:"Shranjeno", message:"Status naročila je bil uspešno posodobljen."});
+            manageOrder(id);
+        }
+    }
+
+    /* ================= FUNKCIJE STRANKE IN BONOV ================= */
     function selectCustomer() {
         showModal({
             title: "Stranka", message: "Vnesi šifro/ime ali skeniraj kartico:", type: "prompt", inputType: "text",
@@ -471,7 +612,7 @@
                     if(neplacano > 0) {
                         setTimeout(() => showModal({title: "Opozorilo", message: `Stranka ima neplačane kazni v višini ${neplacano} WII!`}), 500);
                     }
-                    updateCartUI(); // Posodobi projekcijo z imenom stranke
+                    updateCartUI();
                 } else {
                     showModal({title: "Napaka", message: "Stranka ni najdena."});
                 }
@@ -543,7 +684,6 @@
         document.getElementById('pay-big-total').innerText = total.toFixed(2);
         resetPaymentMethods(); updatePaymentUI(); switchView('placilo');
 
-        // --- NOVO: SINHRONIZACIJA ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'payment',
             total: total.toFixed(2),
@@ -556,6 +696,7 @@
         if (method === 'gotovina') {
             document.getElementById('btn-gotovina').style.display = 'block';
             document.getElementById('btn-kartica').style.display = 'none';
+            document.getElementById('btn-narocilo').style.display = 'none';
             document.getElementById('btn-nazaj').classList.remove('hidden');
             paymentState.method = 'gotovina';
         } else if (method === 'kartica') {
@@ -571,12 +712,23 @@
                     updatePaymentUI(); 
                 }
             }});
+        } else if (method === 'narocilo') {
+            document.getElementById('btn-gotovina').style.display = 'none';
+            document.getElementById('btn-kartica').style.display = 'none';
+            document.getElementById('btn-narocilo').style.display = 'block';
+            document.getElementById('btn-nazaj').classList.remove('hidden');
+            paymentState.method = 'narocilo';
+            paymentState.paid = paymentState.total; // Skrijemo potrebo po vnosu sredstev za lažji pregled
+            document.getElementById('pay-vracilo').value = "0.00";
+            document.getElementById('pay-ostanek').value = "0.00";
+            updatePaymentUI();
         }
     }
 
     function resetPaymentMethods() {
         document.getElementById('btn-gotovina').style.display = 'block';
         document.getElementById('btn-kartica').style.display = 'block';
+        document.getElementById('btn-narocilo').style.display = 'block';
         document.getElementById('btn-nazaj').classList.add('hidden');
         paymentState.method = '';
     }
@@ -606,7 +758,6 @@
             document.getElementById('pay-vracilo').value = "0.00";
         }
 
-        // --- NOVO: SINHRONIZACIJA ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({
             status: 'payment',
             total: paymentState.total.toFixed(2),
@@ -617,9 +768,31 @@
     }
 
     function finishTransaction() {
-        if (paymentState.paid < paymentState.total) return showModal({title: "Napaka", message: "Račun ni v celoti plačan!"});
-        
         let validItems = cart.filter(i => i.koda !== '' || i.naziv !== '');
+        
+        // NOVO: Če je izbrano "NAROČILO", ustvari neplačano naročilo in ne zaključi računa
+        if (paymentState.method === 'narocilo') {
+            let newOrder = {
+                id: db.orderSeq, date: new Date().toISOString(),
+                customer: activeCustomer ? activeCustomer.name : '',
+                customerId: activeCustomer ? activeCustomer.id : null,
+                total: paymentState.total,
+                items: JSON.parse(JSON.stringify(validItems)),
+                status: 'NAROČENO'
+            };
+            db.orders.push(newOrder);
+            db.orderSeq++; 
+            saveDB();
+            
+            localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
+            
+            showModal({title: "NAROČILO ODDANO", message: `Račun je bil spremenjen v neplačano naročilo.\n\nŠTEVILKA NAROČILA: ${newOrder.id}`, onConfirm: () => {
+                initReceipt(); switchView('blagajna');
+            }});
+            return;
+        }
+
+        if (paymentState.paid < paymentState.total) return showModal({title: "Napaka", message: "Račun ni v celoti plačan!"});
         
         db.receipts.push({
             id: db.seq, date: new Date().toISOString(),
@@ -627,8 +800,17 @@
             customer: activeCustomer ? activeCustomer.name : '',
             customerId: activeCustomer ? activeCustomer.id : null,
             total: paymentState.total, method: paymentState.method,
-            items: JSON.parse(JSON.stringify(validItems)) // shrani vsebino racuna
+            items: JSON.parse(JSON.stringify(validItems)) 
         });
+
+        // NOVO: Če zaključujemo plačilo za POKLICANO naročilo, posodobi njegov status
+        if (currentOrderId !== null) {
+            let orderToUpdate = db.orders.find(o => o.id === currentOrderId);
+            if (orderToUpdate) {
+                orderToUpdate.status = 'PLAČANO';
+                orderToUpdate.receiptId = db.seq;
+            }
+        }
         
         // Beleženje denarja
         if(paymentState.method === 'gotovina') {
@@ -652,7 +834,6 @@
         
         db.seq++; saveDB();
         
-        // --- NOVO: SINHRONIZACIJA (Hvala) ---
         localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
 
         showModal({title: "ZAKLJUČENO", message: "Račun je bil uspešno shranjen.", onConfirm: () => {
@@ -717,7 +898,7 @@
                     let c = db.users.find(u => u.id === activeCashier.id);
                     if(c) { c.salary += diff; saveDB(); }
                 }
-                db.register.expectedCash = 0; saveDB(); // Resetiraj za naslednji dan
+                db.register.expectedCash = 0; saveDB();
                 showModal({title:"Izvid Odjave", message: msg});
             }
         }});
@@ -730,7 +911,7 @@
         }});
     }
 
-    // 5. Storno (Naprano s podrobnostmi)
+    // 5. Storno
     function mgrStorno() {
         showModal({title:"Storno", message:"Vnesi številko računa:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
             let recIndex = db.receipts.findIndex(r => r.id == v);
@@ -807,7 +988,7 @@
         ws.innerHTML = html;
     }
 
-    // 7. Zaposleni / Stranke (CRUD) - DODANO DOBROIMETJE
+    // 7. Zaposleni / Stranke
     function renderUsers(roleFilter, title) {
         let ws = openWorkspace(title);
         let html = `<table class="crud-table"><tr><th>ID/Šifra</th><th>Ime</th><th>Kartica</th><th>Vloga</th><th>Dobroimetje</th><th>Akcija</th></tr>`;
@@ -833,7 +1014,7 @@
     function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); }
     function mgrStranke() { renderUsers('all', 'Stranke in Dobroimetje'); } 
 
-    // 8. Zgodovina - Podrobnosti
+    // 8. Zgodovina Računov
     function mgrZgodovina() {
         let ws = openWorkspace("Zgodovina Računov");
         let html = `<table class="crud-table"><tr><th>Št</th><th>Datum</th><th>Stranka</th><th>Znesek</th><th>Način</th><th>Podrobnosti</th></tr>`;
@@ -898,7 +1079,7 @@
         }});
     }
 
-    // 11. Banka (Stanje na bančnem računu)
+    // 11. Banka
     function mgrBanka() {
         let ws = openWorkspace("Bančni Računi (Kritje na kartici)");
         let html = `<table class="crud-table"><tr><th>Stranka</th><th>Stanje (WII)</th></tr>`;
@@ -909,7 +1090,7 @@
         ws.innerHTML = html;
     }
 
-    // 12. Darilni Boni (CRUD)
+    // 12. Darilni Boni
     function mgrBoni() {
         let ws = openWorkspace("Upravljanje z Darilnimi Boni");
         let html = `<table class="crud-table"><tr><th>Koda Bona</th><th>Vrednost (WII)</th><th>Akcija</th></tr>`;
