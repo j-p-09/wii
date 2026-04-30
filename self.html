@@ -7,6 +7,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
+    <!-- FIREBASE SCRIPTS -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         :root {
             --primary: #3a6ea5;
@@ -65,7 +69,7 @@
             display: flex; justify-content: space-between; align-items: center;
             border-top-left-radius: 30px; border-top-right-radius: 30px;
         }
-        .cart-status { display: flex; align-items: center; gap: 15px; font-size: 20px; }
+        .cart-status { display: flex; align-items: center; gap: 15px; font-size: 20px; cursor: pointer; }
         .cart-icon { position: relative; font-size: 30px; }
         .cart-count { 
             position: absolute; top: -10px; right: -10px; background: #ff4757;
@@ -129,7 +133,7 @@
 
     <div id="welcome-screen" onclick="startOrdering()">
         <div class="welcome-logo animate__animated animate__fadeInDown">WII SHOP</div>
-        <div class="tap-to-start animate__animated animate__pulse animate__infinite">DOTAKNI SE ZA ZAČETEK</div>
+        <div class="tap-to-start animate__animated animate__pulse animate__infinite" id="start-text">NALAGANJE...</div>
     </div>
 
     <div id="main-interface">
@@ -170,7 +174,7 @@
 
     <div id="cart-view" class="cart-modal">
         <div class="cart-header">
-            <button onclick="closeCart()" style="background: none; border: none; font-size: 30px;">✕</button>
+            <button onclick="closeCart()" style="background: none; border: none; font-size: 30px; cursor: pointer;">✕</button>
             <h2 style="font-weight: 800;">Tvoja košarica</h2>
             <span></span>
         </div>
@@ -196,26 +200,54 @@
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
 <script>
-    /* ================= PODATKOVNA BAZA (ISTO KOT BLAGAJNA) ================= */
+    /* ================= FIREBASE SETUP ================= */
+    const firebaseConfig = {
+        databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    /* ================= PODATKOVNA BAZA (FIREBASE SYNC) ================= */
     let db = { items: [], orders: [], orderSeq: 100 };
     let currentCart = [];
     let selectedItem = null;
     let modalQty = 1;
+    let isDbLoaded = false;
 
-    function loadDB() {
-        const stored = localStorage.getItem('wii_db_v3');
-        if (stored) {
-            db = JSON.parse(stored);
-        }
+    window.onload = () => {
+        initDB();
+    };
+
+    function initDB() {
+        database.ref('wii_db_v3').on('value', (snapshot) => {
+            const stored = snapshot.val();
+            if (stored) {
+                db = stored;
+                if (!db.items) db.items = [];
+                if (!db.orders) db.orders = [];
+                if (!db.orderSeq) db.orderSeq = 100;
+
+                // Če je vmesnik že odprt, osveži artikle (v primeru da jih manager posodobi v živo)
+                if (document.getElementById('main-interface').style.display === 'flex') {
+                    renderItems(document.querySelector('.search-bar').value);
+                }
+            }
+            
+            if (!isDbLoaded) {
+                isDbLoaded = true;
+                document.getElementById('start-text').innerText = "DOTAKNI SE ZA ZAČETEK";
+            }
+        });
     }
 
     function saveDB() {
-        localStorage.setItem('wii_db_v3', JSON.stringify(db));
+        database.ref('wii_db_v3').set(db);
     }
 
     /* ================= NAVIGACIJA ================= */
     function startOrdering() {
-        loadDB();
+        if (!isDbLoaded) return; // Počakaj da se baza naloži
+
         document.getElementById('welcome-screen').classList.add('animate__animated', 'animate__fadeOutUp');
         setTimeout(() => {
             document.getElementById('welcome-screen').style.display = 'none';
@@ -346,8 +378,7 @@
     /* ================= ODDAJA NAROČILA ================= */
     function submitOrder() {
         if(currentCart.length === 0) return;
-
-        loadDB(); // Osveži pred shranjevanjem
+        if(!isDbLoaded) return;
         
         const orderId = db.orderSeq;
         const total = currentCart.reduce((sum, item) => sum + item.total, 0);
