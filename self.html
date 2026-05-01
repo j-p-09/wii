@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
-    <!-- FIREBASE SCRIPTS -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -41,11 +40,6 @@
             padding: 20px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             display: flex; flex-direction: column; gap: 15px; z-index: 100;
         }
-        .search-bar {
-            width: 100%; padding: 15px 25px; border-radius: 50px; border: 2px solid #eee;
-            font-size: 18px; transition: all 0.3s;
-        }
-        .search-bar:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(58, 110, 165, 0.2); }
 
         .items-grid {
             flex: 1; overflow-y: auto; padding: 20px;
@@ -63,11 +57,11 @@
         .item-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); border-color: var(--accent); }
         .item-card h3 { font-size: 18px; font-weight: 600; color: var(--primary); }
 
-        /* --- SPODNJI PAS --- */
-        .bottom-nav {
-            background: var(--dark); color: white; padding: 20px 40px;
+        /* --- ZGORNJI PAS (Košarica in preklic) --- */
+        .top-nav {
+            background: var(--dark); color: white; padding: 15px 30px;
             display: flex; justify-content: space-between; align-items: center;
-            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            border-radius: 20px;
         }
         .cart-status { display: flex; align-items: center; gap: 15px; font-size: 20px; cursor: pointer; }
         .cart-icon { position: relative; font-size: 30px; }
@@ -139,22 +133,21 @@
     <div id="main-interface">
         <header>
             <h1 style="font-weight: 800; color: var(--primary);">Kaj boš naročil danes?</h1>
-            <input type="text" class="search-bar" placeholder="Išči izdelke (npr. torbica, steklo...)" oninput="filterItems(this.value)">
+            
+            <div class="top-nav">
+                <button class="btn-cancel" onclick="cancelOrder()">PREKLIČI</button>
+                <div class="cart-status" onclick="openCart()">
+                    <div class="cart-icon">
+                        🛒
+                        <div class="cart-count" id="cart-count">0</div>
+                    </div>
+                    <span id="cart-total-nav">0.00 WII</span>
+                </div>
+            </div>
         </header>
 
         <div class="items-grid" id="items-grid">
             </div>
-
-        <div class="bottom-nav">
-            <button class="btn-cancel" onclick="cancelOrder()">PREKLIČI</button>
-            <div class="cart-status" onclick="openCart()">
-                <div class="cart-icon">
-                    🛒
-                    <div class="cart-count" id="cart-count">0</div>
-                </div>
-                <span id="cart-total-nav">0.00 WII</span>
-            </div>
-        </div>
     </div>
 
     <div id="item-modal" class="modal" onclick="if(event.target==this) closeModal()">
@@ -229,7 +222,7 @@
 
                 // Če je vmesnik že odprt, osveži artikle (v primeru da jih manager posodobi v živo)
                 if (document.getElementById('main-interface').style.display === 'flex') {
-                    renderItems(document.querySelector('.search-bar').value);
+                    renderItems();
                 }
             }
             
