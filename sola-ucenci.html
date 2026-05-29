@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MINDEX - E-Dnevnik za Učence</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <style>
+        /* --- WINDOWS RETRO STIL --- */
+        :root {
+            --win-gray: #d4d0c8;
+            --win-dark: #808080;
+            --win-light: #ffffff;
+            --win-text: #000000;
+            --win-blue: #0a246a;
+        }
+
+        body {
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
+            background-color: var(--win-gray);
+            margin: 0;
+            padding: 10px;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .hidden { display: none !important; }
+        .bold { font-weight: bold; }
+
+        /* Gumbi */
+        .win-btn {
+            background: var(--win-gray);
+            border: 2px solid;
+            border-color: var(--win-light) var(--win-dark) var(--win-dark) var(--win-light);
+            padding: 4px 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .win-btn:active {
+            border-color: var(--win-dark) var(--win-light) var(--win-light) var(--win-dark);
+            transform: translate(1px, 1px);
+        }
+
+        /* Prijava */
+        #login-container {
+            width: 350px;
+            margin: 100px auto;
+            background: #c0c0c0;
+            border: 2px solid #808080;
+            padding: 20px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .login-title {
+            background: var(--win-blue);
+            color: white;
+            padding: 4px;
+            margin: -20px -20px 20px -20px;
+            font-weight: bold;
+        }
+        .login-input {
+            width: 93%;
+            padding: 4px;
+            margin-bottom: 15px;
+            border: 2px inset #808080;
+            background: white;
+        }
+
+        /* Glavna mreža (Layout) */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 15px;
+            height: calc(100vh - 60px);
+        }
+
+        .left-panel {
+            background: white;
+            border: 2px inset white;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            background: white;
+            border: 2px inset white;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        /* Tabele */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            background: #f0f0e8;
+            border: 1px solid #808080;
+            padding: 5px;
+            font-weight: normal;
+        }
+        td {
+            border: 1px solid #d4d0c8;
+            padding: 6px;
+            height: 25px;
+        }
+
+        /* Ocenjevalna tabela specifično */
+        .grade-table th {
+            background: #fff8d0;
+        }
+        .grade-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        /* Barve ocen */
+        .grade-ustno { color: #000000; font-weight: bold; }
+        .grade-pisno { color: #cc0000; font-weight: bold; }
+        .grade-izdelek { color: #0000cc; font-weight: bold; }
+        
+        .grade-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-right: 8px;
+        }
+        .grade-correction {
+            font-size: 9px;
+            color: #cc0000;
+            margin-right: 1px;
+            align-self: flex-end;
+        }
+
+        /* Legenda spodaj */
+        .legend-bar {
+            display: flex;
+            gap: 20px;
+            background: #f0f0e8;
+            padding: 8px;
+            border: 1px solid #808080;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        .legend-item {
+            border: 1px solid #000;
+            padding: 2px 25px;
+            background: white;
+            font-weight: bold;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        /* Header */
+        .user-header {
+            background: #e0e0e0;
+            padding: 8px;
+            border: 1px solid #999;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-container">
+        <div class="login-title">MINDEX - Prijava za učence</div>
+        <label class="bold">Ime in priimek učenca:</label><br>
+        <input type="text" id="student-name" class="login-input" placeholder="npr. Janez Novak"><br>
+        
+        <label class="bold">Razred:</label><br>
+        <input type="text" id="student-class" class="login-input" placeholder="npr. 1.A"><br>
+        
+        <div style="text-align: center;">
+            <button class="win-btn bold" onclick="handleStudentLogin()" style="width: 100px;">POTRDI</button>
+        </div>
+    </div>
+
+    <div id="student-dashboard" class="hidden">
+        <div class="user-header">
+            <div>Učenec: <span id="display-name" class="bold"></span> | Razred: <span id="display-class" class="bold"></span></div>
+            <button class="win-btn mini-btn" onclick="location.reload()">Odjava</button>
+        </div>
+
+        <div class="dashboard-layout">
+            <div class="left-panel">
+                <table class="grade-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" width="30%" style="text-align: left;">Predmet</th>
+                            <th colspan="8">Ocene po sklopih</th>
+                            <th rowspan="2" width="12%">Zaključna ocena</th>
+                        </tr>
+                        <tr>
+                            <th width="12%">A</th>
+                            <th width="3%"></th>
+                            <th width="12%">B</th>
+                            <th width="3%"></th>
+                            <th width="12%">C</th>
+                            <th width="3%"></th>
+                            <th width="12%">D</th>
+                            <th width="3%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="grades-tbody">
+                        </tbody>
+                </table>
+
+                <div class="legend-bar">
+                    <img src="graja.png" alt="X" style="height:16px; display:none;"> <div class="legend-item" style="color: black;">ustno</div>
+                    <div class="legend-item" style="color: red;">pisno</div>
+                    <div class="legend-item" style="color: blue;">izdelek</div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th width="40%">Datum</th>
+                            <th width="35%">Predmet</th>
+                            <th width="25%">Ocena</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- FIREBASE KONFIGURACIJA (Ista baza kot učitelj) ---
+    const firebaseConfig = { databaseURL: "https://mindex-b92ed-default-rtdb.europe-west1.firebasedatabase.app/" };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let globalData = null;
+    let currentStudent = null;
+    let currentClass = null;
+
+    // --- PRIJAVA UČENCA ---
+    function handleStudentLogin() {
+        const inputName = document.getElementById('student-name').value.trim();
+        const inputClass = document.getElementById('student-class').value.trim();
+
+        if (!inputName || !inputClass) {
+            alert("Prosimo, izpolnite obe polji!");
+            return;
+        }
+
+        // Prevzem podatkov iz Firebase
+        database.ref('mindex_db').once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                alert("Baza podatkov je prazna. Učitelj mora najprej ustvariti podatke.");
+                return;
+            }
+
+            globalData = snapshot.val();
+            
+            // Iskanje razreda
+            const foundClass = (globalData.classes || []).find(c => c.name.toLowerCase() === inputClass.toLowerCase());
+            if (!foundClass) {
+                alert("Razred ni bil najden!");
+                return;
+            }
+
+            // Iskanje učenca v tem razredu
+            const foundStudent = (foundClass.students || []).find(s => s.name.toLowerCase() === inputName.toLowerCase());
+            if (!foundStudent) {
+                alert("Učenec v tem razredu ni bil najden!");
+                return;
+            }
+
+            // Uspešna prijava
+            currentStudent = foundStudent;
+            currentClass = foundClass;
+
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('student-dashboard').classList.remove('hidden');
+            document.getElementById('display-name').innerText = currentStudent.name;
+            document.getElementById('display-class').innerText = currentClass.name;
+
+            // Zaženi poslušalca za spremembe v živo (Live sync)
+            startLiveSync();
+        });
+    }
+
+    // --- POSLUŠANJE SPREMEMB V ŽIVO ---
+    function startLiveSync() {
+        database.ref('mindex_db').on('value', snapshot => {
+            if (snapshot.exists()) {
+                globalData = snapshot.val();
+                renderStudentData();
+            }
+        });
+    }
+
+    // Pomodna funkcija za generiranje HTML izgleda posamezne ocene
+    function getGradeHtml(g) {
+        let styleClass = 'grade-ustno';
+        if (g.type === 'PISNO') styleClass = 'grade-pisno';
+        if (g.type === 'IZDELEK') styleClass = 'grade-izdelek';
+
+        if (g.correction) {
+            return `<span class="grade-container" title="Vpisal: ${g.authorName || 'Neznano'}"><span class="grade-correction">${g.value}</span><span class="${styleClass}">${g.correction}</span></span>`;
+        } else {
+            return `<span class="grade-container" title="Vpisal: ${g.authorName || 'Neznano'}"><span class="${styleClass}">${g.value}</span></span>`;
+        }
+    }
+
+    // Kratica predmeta za desno tabelo (vzame prve 3 črke z velikimi)
+    function getSubjectAbbreviation(subjectName) {
+        if(!subjectName) return "";
+        return subjectName.substring(0, 3).toUpperCase();
+    }
+
+    // --- PRIKAZ PODATKOV ---
+    function renderStudentData() {
+        const gradesTbody = document.getElementById('grades-tbody');
+        const historyTbody = document.getElementById('history-tbody');
+        
+        gradesTbody.innerHTML = '';
+        historyTbody.innerHTML = '';
+
+        const allGrades = globalData.grades || [];
+        const allWarnings = globalData.warnings || [];
+        const subjects = globalData.subjects || [];
+
+        // Filtriraj ocene in opozorila samo za trenutnega učenca
+        const studentGrades = allGrades.filter(g => g.studentId === currentStudent.id);
+        const studentWarnings = allWarnings.filter(w => w.studentId === currentStudent.id);
+
+        // 1. ZAPOLNJEVANJE LEVE GLAVNE TABELE (Po predmetih)
+        subjects.forEach(subject => {
+            const tr = document.createElement('tr');
+
+            // Kratica ali polno ime predmeta
+            const tdSubject = `<td><span class="bold">${getSubjectAbbreviation(subject.name)}</span> ${subject.name}</td>`;
+
+            // Pridobivanje ocen za ta predmet
+            const subGrades = studentGrades.filter(g => g.subjectId === subject.id && !g.isFinal);
+            
+            // Razporeditev ocen po sklopih (A, B iz 1. obdobja; C, D iz 2. obdobja)
+            // Sklop A = prva polovica ocen iz 1. obdobja, Sklop B = druga polovica ... itd.
+            const period1Grades = subGrades.filter(g => g.period === 1);
+            const period2Grades = subGrades.filter(g => g.period === 2);
+
+            const mid1 = Math.ceil(period1Grades.length / 2);
+            const gradesA = period1Grades.slice(0, mid1);
+            const gradesB = period1Grades.slice(mid1);
+
+            const mid2 = Math.ceil(period2Grades.length / 2);
+            const gradesC = period2Grades.slice(0, mid2);
+            const gradesD = period2Grades.slice(mid2);
+
+            // Graje/Opozorila
+            const warnP1 = studentWarnings.find(w => w.subjectId === subject.id && w.period === 1);
+            const warnP2 = studentWarnings.find(w => w.subjectId === subject.id && w.period === 2);
+
+            const getWarnIcon = (warn) => {
+                if (!warn) return '';
+                return warn.type === 'x' ? '<img src="nok.png" style="height:14px;" alt="X">' : '<img src="ok.png" style="height:14px;" alt="OK">';
+            };
+
+            // Zaključna ocena
+            const finalGradeObj = studentGrades.find(g => g.subjectId === subject.id && g.isFinal);
+            const finalGradeHtml = finalGradeObj ? `<span class="bold" style="font-size:14px;">${finalGradeObj.value}</span>` : '';
+
+            tr.innerHTML = `
+                ${tdSubject}
+                <td>${gradesA.map(g => getGradeHtml(g)).join('')}</td>
+                <td style="text-align:center;">${getWarnIcon(warnP1)}</td>
+                <td>${gradesB.map(g => getGradeHtml(g)).join('')}</td>
+                <td style="text-align:center;">${getWarnIcon(warnP1)}</td>
+                <td>${gradesC.map(g => getGradeHtml(g)).join('')}</td>
+                <td style="text-align:center;">${getWarnIcon(warnP2)}</td>
+                <td>${gradesD.map(g => getGradeHtml(g)).join('')}</td>
+                <td style="text-align:center;">${getWarnIcon(warnP2)}</td>
+                <td style="text-align:center; background:#fff8d0;">${finalGradeHtml}</td>
+            `;
+            gradesTbody.appendChild(tr);
+        });
+
+        // 2. ZAPOLNJEVANJE DESNE TABELE (Kronološka zgodovina)
+        // Kloniramo in obrnemo vrstni red (najnovejše na vrh)
+        const historyList = [...studentGrades].sort((a, b) => {
+            // Sortiranje po ID-ju (timestamp) padajoče
+            return b.id - a.id;
+        });
+
+        historyList.forEach(g => {
+            const tr = document.createElement('tr');
+            const subjObj = subjects.find(s => s.id === g.subjectId);
+            const subjName = subjObj ? getSubjectAbbreviation(subjObj.name) : 'NEZ';
+            
+            let styleClass = 'grade-ustno';
+            if (g.type === 'PISNO') styleClass = 'grade-pisno';
+            if (g.type === 'IZDELEK') styleClass = 'grade-izdelek';
+
+            // Prikaz v desni tabeli
+            const displayVal = g.isFinal ? `Zaključna: ${g.value}` : (g.correction ? `${g.correction}` : `${g.value}`);
+
+            tr.innerHTML = `
+                <td>${g.date || 'Neznano'}</td>
+                <td class="bold">${subjName}</td>
+                <td class="${styleClass} bold">${displayVal}</td>
+            `;
+            historyTbody.appendChild(tr);
+        });
+    }
+</script>
+</body>
+</html>
