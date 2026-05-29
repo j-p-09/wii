@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="sl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII Sola - E-Dnevnik</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <style>
+        /* --- STIL (WINDOWS RETRO) --- */
+        :root {
+            --win-gray: #d4d0c8;
+            --win-dark: #808080;
+            --win-light: #ffffff;
+            --win-text: #000000;
+            --win-blue: #0a246a;
+            --split-gray: #b0b0b0; 
+        }
+
+        body {
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
+            background-color: var(--win-gray);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        .bold { font-weight: bold; }
+        
+        /* Gumbi */
+        .win-btn {
+            background: var(--win-gray);
+            border: 2px solid;
+            border-color: var(--win-light) var(--win-dark) var(--win-dark) var(--win-light);
+            padding: 4px 12px;
+            cursor: pointer;
+            font-family: inherit;
+            min-width: 70px;
+        }
+        .win-btn:active {
+            border-color: var(--win-dark) var(--win-light) var(--win-light) var(--win-dark);
+            transform: translate(1px, 1px);
+        }
+
+        /* Layout */
+        .layout-container { display: flex; width: 100%; height: 100%; }
+        
+        /* STRANSKI MENI */
+        .sidebar {
+            width: 180px;
+            background: white;
+            border-right: 2px solid black;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            align-items: center; 
+        }
+
+        .sidebar-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-bottom: 10px;
+            width: 150px; 
+            height: auto; 
+            display: block;
+        }
+        
+        .sidebar-btn img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border: 1px solid #ccc;
+        }
+        .sidebar-btn img:active { transform: translate(1px, 1px); }
+
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* Header */
+        .top-header {
+            height: 80px;
+            background: #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid #999;
+        }
+        .app-title { font-size: 48px; font-family: 'Arial', sans-serif; letter-spacing: 2px; font-weight: bold; }
+        .time-info, .session-info { font-weight: bold; font-size: 14px; text-align: center;}
+
+        .content-body { padding: 20px; overflow-y: auto; background: white; height: 100%; }
+
+        /* Login page elements */
+        #login-page { display: flex; width: 100%; height: 100%; background: white; }
+        .login-left { width: 50%; padding: 20px; }
+        .login-right { width: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f0f0f0; border-left: 2px solid #ccc; }
+        
+        .login-box {
+            background: #c0c0c0; padding: 20px; width: 350px;
+            margin-top: 20px; border: 2px solid #808080;
+        }
+        .login-input { width: 90%; padding: 5px; margin-bottom: 10px; border: 2px inset #808080; }
+        .last-login-box {
+            background: #dcdcdc; padding: 10px; margin-top: 20px; width: 350px;
+            border: 1px solid #999; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .login-clock-display { font-size: 80px; font-weight: bold; color: #333; font-family: 'Courier New', Courier, monospace; text-shadow: 2px 2px 4px #aaa; }
+        .login-date-display { font-size: 24px; color: #555; margin-top: 10px; }
+
+        /* Info bar */
+        .info-bar {
+            background: #e0e0e0; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #ccc; font-size: 18px; font-weight: bold;
+        }
+        .logout-icon-btn { cursor: pointer; height: 50px; width: auto; vertical-align: middle; margin-left: 10px; }
+        .logout-icon-btn:hover { opacity: 0.8; }
+
+        /* Gradebook Table */
+        .gradebook-table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid black; }
+        .gradebook-table th { border: 1px solid black; padding: 5px; text-align: center; vertical-align: middle; height: 30px; background: #eee; }
+        .gradebook-table td { border: 1px solid black; text-align: center; vertical-align: middle; height: 40px; padding: 0; }
+        
+        .grade-cell { cursor: pointer; min-width: 40px; height: 100%; position: relative; }
+        .grade-cell:hover:not(.disabled-sector) { background-color: #ffffcc; }
+        
+        .disabled-sector { background-color: #e0e0e0 !important; pointer-events: none; opacity: 0.5; }
+
+        /* Split View Styles */
+        .split-container {
+            display: flex; flex-direction: column; height: 100%; min-height: 46px; width: 100%;
+        }
+        .split-top {
+            flex: 1; background-color: white; border-bottom: 1px dotted #999;
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap; padding: 2px;
+        }
+        .split-bottom {
+            flex: 1; background-color: var(--split-gray);
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap; padding: 2px;
+        }
+        .single-view {
+            display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+            height: 100%; width: 100%; padding: 5px; box-sizing: border-box;
+        }
+
+        /* Grade Styles */
+        .grade-span { margin: 0 3px; position: relative; display: inline-block; cursor: pointer; }
+        .grade-pisno { color: red; font-weight: bold; }
+        .grade-ustno { color: black; font-weight: bold; }
+        .grade-izdelek { color: blue; font-weight: bold; }
+        .grade-correction { font-size: 0.7em; vertical-align: sub; margin-right: 3px; }
+        
+        .icon-img { height: 20px; width: auto; vertical-align: middle; }
+
+        .grade-type-btn { margin: 10px 5px; font-size: 13px; padding: 3px 10px; }
+        .selected-type { background-color: #a0a0a0; border-style: inset; }
+
+        /* --- UNIVERZALNI MODALNI SISTEM --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .win-window {
+            background: var(--win-gray);
+            border: 2px solid;
+            border-color: var(--win-light) var(--win-dark) var(--win-dark) var(--win-light);
+            padding: 3px;
+            width: 450px;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column;
+            position: relative; /* Za dinamično premikanje */
+        }
+        .win-header {
+            background: var(--win-blue); color: white; padding: 4px 6px;
+            font-weight: bold; font-size: 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: move; /* Indikator za premikanje */
+        }
+        .win-close {
+            background: var(--win-gray); color: black; border: 1px outset white;
+            font-size: 12px; line-height: 12px; padding: 2px 4px; cursor: pointer;
+        }
+        .win-close:active { border-style: inset; }
+
+        .win-body {
+            padding: 15px;
+            font-size: 14px;
+            max-height: 400px; overflow-y: auto;
+        }
+        .win-body label { display: block; margin-top: 10px; margin-bottom: 2px; font-weight: bold; }
+        .win-body input[type="text"], .win-body input[type="password"], .win-body input[type="number"], .win-body select { width: 95%; padding: 3px; border: 2px inset #fff; }
+        
+        .win-footer {
+            padding: 10px;
+            text-align: right;
+            border-top: 1px solid #999;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Seznami za admina */
+        .admin-list { list-style: none; padding: 0; border: 2px inset white; background: white; max-height: 150px; overflow-y: auto; margin-bottom: 10px; }
+        .admin-list li { padding: 3px; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; align-items: center; }
+        .admin-list li:hover { background: #e0e0ff; }
+        .mini-btn { font-size: 11px; padding: 1px 4px; margin-left: 3px; }
+
+        .top-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #e0e0e0; padding: 5px; border: 1px solid #999; }
+        
+        .class-btn-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .class-btn-grid button { padding: 10px 20px; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="login-page">
+        <div class="sidebar">
+            <button class="sidebar-btn"><img src="redovalnica_sivo.png" onmouseover="this.src='redovalnica_barve.png'" onmouseout="this.src='redovalnica_sivo.png'" alt="Redovalnica"></button>
+            <button class="sidebar-btn"><img src="profil_sivo.png" onmouseover="this.src='profil_barve.png'" onmouseout="this.src='profil_sivo.png'" alt="Profil"></button>
+            <button class="sidebar-btn"><img src="podatki_sivo.png" onmouseover="this.src='podatki_barve.png'" onmouseout="this.src='podatki_sivo.png'" alt="Podatki"></button>
+            <button class="sidebar-btn"><img src="odjava_sivo.png" onmouseover="this.src='odjava_barve.png'" onmouseout="this.src='odjava_sivo.png'" alt="Odjava"></button>
+            <button class="sidebar-btn"><img src="domov_sivo.png" onmouseover="this.src='domov_barve.png'" onmouseout="this.src='domov_sivo.png'" alt="Domov"></button>
+        </div>
+        
+        <div class="login-left">
+            <h1 class="app-title" style="margin-top:0;">WII Sola</h1>
+            <h2>Podatki:</h2>
+            <div style="background: #dcdcdc; padding: 10px; margin-bottom: 20px; width: 350px; border: 1px solid gray;">
+                Številka licence: <span class="bold">WII-shop</span><br>
+                IP naslov naprave: <span class="bold" id="login-ip">192.168.1.100</span>
+            </div>
+
+            <h2>Prijava v sistem:</h2>
+            <div class="login-box">
+                <input type="text" id="login-username" class="login-input" placeholder="Uporabniško ime"><br>
+                <input type="password" id="login-password" class="login-input" placeholder="Geslo"><br>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button class="win-btn bold" onclick="handleLogin()">POTRDI</button>
+                </div>
+            </div>
+
+            <h2>Zadnja prijava kot:</h2>
+            <div class="last-login-box">
+                <div style="font-size: 13px;">
+                    Uporabnik: <span id="last-login-user" class="bold"></span><br>
+                    Datum: <span id="last-login-time" class="bold"></span>
+                </div>
+                <button class="win-btn bold" onclick="fillLastLogin()">Uporabi</button>
+            </div>
+        </div>
+        
+        <div class="login-right">
+            <div id="login-clock" class="login-clock-display">00:00:00</div>
+            <div id="login-date" class="login-date-display">1. 1. 2024</div>
+        </div>
+    </div>
+
+    <div id="dashboard-page" class="layout-container hidden">
+        <div class="sidebar">
+            <button class="sidebar-btn" onclick="openRedovalnicaMenu()"><img src="redovalnica_sivo.png" onmouseover="this.src='redovalnica_barve.png'" onmouseout="this.src='redovalnica_sivo.png'" alt="Redovalnica"></button>
+            <button class="sidebar-btn" onclick="showProfile()"><img src="profil_sivo.png" onmouseover="this.src='profil_barve.png'" onmouseout="this.src='profil_sivo.png'" alt="Profil"></button>
+            <button class="sidebar-btn" onclick="checkAdminAndShowData()"><img src="podatki_sivo.png" onmouseover="this.src='podatki_barve.png'" onmouseout="this.src='podatki_sivo.png'" alt="Podatki"></button>
+            <button class="sidebar-btn" onclick="handleLogout()"><img src="odjava_sivo.png" onmouseover="this.src='odjava_barve.png'" onmouseout="this.src='odjava_sivo.png'" alt="Odjava"></button>
+            <button class="sidebar-btn" onclick="showPage('home')"><img src="domov_sivo.png" onmouseover="this.src='domov_barve.png'" onmouseout="this.src='domov_sivo.png'" alt="Domov"></button>
+        </div>
+
+        <div class="main-content">
+            <div class="top-header">
+                <div class="session-info">
+                    Seja poteče čez:<br>
+                    <span id="session-timer" class="bold"></span>
+                </div>
+                <div class="app-title">WII Sola</div>
+                <div class="time-info">
+                    Ura je:<br>
+                    <span id="clock" class="bold"></span>
+                </div>
+            </div>
+
+            <div class="info-bar">
+                <div>
+                    Pozdravljeni, <br>
+                    <span id="teacher-name-display" style="text-transform: uppercase;"></span>
+                </div>
+                <img src="odjava_ikona_barvno.png" class="logout-icon-btn" onclick="handleLogout()" alt="Odjava" onerror="this.style.display='none'">
+            </div>
+
+            <div id="content-area" class="content-body">
+                <div id="view-home" class="view-section hidden">
+                    <div style="text-align: center; margin-top: 50px;">
+                        <h2>Dobrodošli v e-dnevnik WII Sola</h2>
+                        <p>Izberite akcijo v levem meniju.</p>
+                    </div>
+                </div>
+
+                <div id="view-redovalnica" class="view-section hidden">
+                    <div class="top-toolbar">
+                        <div>
+                            <button class="win-btn" onclick="showPage('home')" title="Nazaj domov"><span style="font-size:16px;">&#11013;</span> NAZAJ</button>
+                            <span id="redovalnica-naslov" style="font-weight:bold; margin-left:15px; font-size:18px;"></span>
+                        </div>
+                        <button class="win-btn" onclick="openSectorSettings()" title="Nastavitve sektorjev"><span style="font-size:16px;">&#9881;</span> NASTAVITVE</button>
+                    </div>
+
+                    <div id="redovalnica-container">
+                        </div>
+
+                    <div id="redovalnica-controls" style="margin-top: 10px;" class="hidden">
+                        Izberi način vnosa:
+                        <button class="win-btn btn-pisno grade-type-btn" onclick="setGradeType('PISNO')">PISNO</button>
+                        <button class="win-btn btn-ustno grade-type-btn" onclick="setGradeType('USTNO')">USTNO</button>
+                        <button class="win-btn btn-izdelek grade-type-btn" onclick="setGradeType('IZDELEK')">IZDELEK</button>
+                        <hr>
+                        <button class="win-btn" onclick="openBulkEntry()">MNOŽIČNO VPIŠI</button>
+                    </div>
+                </div>
+
+                <div id="view-podatki" class="view-section hidden">
+                    <h3>Administracija podatkov</h3>
+                    <div class="win-border" style="padding: 10px; margin-bottom: 10px; border: 2px inset white; background: #e8e8e8;">
+                        <h4>SEZNAM UČITELJEV</h4>
+                        <ul id="list-teachers" class="admin-list"></ul>
+                        <button class="win-btn" onclick="addTeacher()">Dodaj učitelja</button>
+                    </div>
+                    <div class="win-border" style="padding: 10px; margin-bottom: 10px; border: 2px inset white; background: #e8e8e8;">
+                        <h4>SEZNAM PREDMETOV</h4>
+                        <ul id="list-subjects" class="admin-list"></ul>
+                        <button class="win-btn" onclick="addSubject()">Dodaj predmet</button>
+                    </div>
+                    <div class="win-border" style="padding: 10px; margin-bottom: 10px; border: 2px inset white; background: #e8e8e8;">
+                        <h4>SEZNAM RAZREDOV</h4>
+                        <ul id="list-classes" class="admin-list"></ul>
+                        <button class="win-btn" onclick="addClass()">Dodaj razred</button>
+                    </div>
+                    
+                    <button class="win-btn" style="background: #ffcccc;" onclick="resetAllData()">PONASTAVI VSE (Reset)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-container"></div>
+
+<script>
+/**
+ * WII SOLA APLIKACIJA - SPREMENJENA LOGIKA
+ */
+
+// --- FIREBASE SETUP ---
+const firebaseConfig = { databaseURL: "https://wii-sola-default-rtdb.europe-west1.firebasedatabase.app/" };
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+const DEFAULT_ADMIN = { id: 1, name: 'Administrator', username: 'ADMIN', password: 'ADMIN', role: 'admin', sessionTimeout: 30 };
+let db = {
+    users: [DEFAULT_ADMIN],
+    classes: [], 
+    subjects: [], 
+    grades: [], 
+    warnings: [], 
+    lastLogin: { user: '', time: '' },
+    sectorSettings: {} // Beleži onemogočene sektorje: { "classId_subjectId": { A: true, B: true, C: false, D: true } }
+};
+
+let currentState = {
+    user: null,
+    selectedGradeType: 'USTNO', 
+    selectedClassId: null,
+    selectedSubjectId: null,
+    viewMode: 'RAZREDNI', // RAZREDNI ali OSEBNI
+    sessionInterval: null,
+    sessionTime: 0 
+};
+
+// --- MODALNI SISTEM Z MOŽNOSTJO PREMIKANJA ---
+function closeModal() {
+    document.getElementById('modal-container').innerHTML = '';
+}
+
+function showModal(title, htmlContent, buttons = []) {
+    const container = document.getElementById('modal-container');
+    
+    let btnsHtml = '';
+    if (buttons.length === 0) {
+        buttons = [{ label: 'V redu', onClick: closeModal }];
+    }
+    
+    buttons.forEach((btn, index) => {
+        btnsHtml += `<button class="win-btn" id="modal-btn-${index}">${btn.label}</button>`;
+    });
+
+    container.innerHTML = `
+        <div class="modal-overlay" id="modal-bg">
+            <div class="win-window" id="draggable-window">
+                <div class="win-header" id="draggable-header">
+                    <span>${title}</span>
+                    <span class="win-close" id="modal-x-close">X</span>
+                </div>
+                <div class="win-body">
+                    ${htmlContent}
+                </div>
+                <div class="win-footer">
+                    ${btnsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modal-x-close').onclick = closeModal;
+    
+    // Zapiranje ob kliku na ozadje (če ni ravno okno za vnos ocene, da se ne zapre pomotoma)
+    document.getElementById('modal-bg').addEventListener('mousedown', function(e) {
+        if(e.target === this) {
+            // closeModal(); // Odkomentiraj, če želiš zapiranje s klikom ven
+        }
+    });
+
+    buttons.forEach((btn, index) => {
+        document.getElementById(`modal-btn-${index}`).onclick = function() {
+            if (btn.onClick) btn.onClick();
+            if (btn.shouldClose !== false) closeModal();
+        };
+    });
+
+    makeDraggable(document.getElementById('draggable-window'), document.getElementById('draggable-header'));
+}
+
+function makeDraggable(win, header) {
+    let isDragging = false, offsetX = 0, offsetY = 0;
+    header.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.clientX - win.getBoundingClientRect().left;
+        offsetY = e.clientY - win.getBoundingClientRect().top;
+        win.style.position = 'absolute';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        win.style.left = (e.clientX - offsetX) + 'px';
+        win.style.top = (e.clientY - offsetY) + 'px';
+    });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+}
+
+function customAlert(message) {
+    showModal("Obvestilo", `<p>${message}</p>`, [{label: 'V redu', onClick: closeModal}]);
+}
+
+function customConfirm(message, onConfirm) {
+    showModal("Potrditev", `<p>${message}</p>`, [
+        { label: 'Potrdi', onClick: onConfirm },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+}
+
+function customPrompt(message, onResult) {
+    const html = `<label>${message}</label><input type="text" id="prompt-input" autofocus>`;
+    showModal("Vnos podatka", html, [
+        { 
+            label: 'Potrdi', 
+            onClick: () => {
+                const val = document.getElementById('prompt-input').value;
+                onResult(val);
+            }
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+    setTimeout(() => document.getElementById('prompt-input').focus(), 100);
+}
+
+// --- INIT & FIREBASE SYNC ---
+function init() {
+    database.ref('wii_sola_db').once('value').then(snapshot => {
+        if(snapshot.exists()) {
+            let data = snapshot.val();
+            db = { ...db, ...data };
+            if(!db.users) db.users = [DEFAULT_ADMIN];
+            if(!db.classes) db.classes = [];
+            if(!db.subjects) db.subjects = [];
+            if(!db.grades) db.grades = [];
+            if(!db.warnings) db.warnings = [];
+            if(!db.sectorSettings) db.sectorSettings = {};
+            if(!db.lastLogin) db.lastLogin = { user: '', time: '' };
+        } else {
+            saveDB();
+        }
+        
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        if(db.lastLogin && db.lastLogin.user) {
+            document.getElementById('last-login-user').innerText = db.lastLogin.user;
+            document.getElementById('last-login-time').innerText = db.lastLogin.time;
+        }
+    }).catch(err => {
+        console.error("Firebase napaka:", err);
+    });
+}
+
+function saveDB() {
+    database.ref('wii_sola_db').set(db);
+}
+
+// --- CLOCK & SESSION ---
+function updateClock() {
+    const now = new Date();
+    const tStr = now.toLocaleTimeString('sl-SI');
+    const dStr = now.toLocaleDateString('sl-SI');
+    
+    const clockEl = document.getElementById('clock');
+    if (clockEl) clockEl.innerText = tStr;
+
+    const loginClock = document.getElementById('login-clock');
+    if (loginClock) loginClock.innerText = tStr;
+    const loginDate = document.getElementById('login-date');
+    if (loginDate) loginDate.innerText = dStr;
+}
+
+function startSessionTimer() {
+    const minutes = currentState.user.sessionTimeout || 15;
+    currentState.sessionTime = minutes * 60;
+    
+    if (currentState.sessionInterval) clearInterval(currentState.sessionInterval);
+    
+    currentState.sessionInterval = setInterval(() => {
+        currentState.sessionTime--;
+        if (currentState.sessionTime <= 0) {
+            handleLogout();
+            showModal("Obvestilo", `<span>Seja je potekla, potrebna je ponovna prijava.</span>`, [{label: 'V redu', onClick: closeModal}]);
+        } else {
+            const h = Math.floor(currentState.sessionTime / 3600);
+            const m = Math.floor((currentState.sessionTime % 3600) / 60);
+            const s = currentState.sessionTime % 60;
+            document.getElementById('session-timer').innerText = 
+                `${h.toString().padStart(2,'0')} : ${m.toString().padStart(2,'0')} : ${s.toString().padStart(2,'0')}`;
+        }
+    }, 1000);
+}
+
+// --- LOGIN / LOGOUT ---
+function handleLogin() {
+    const u = document.getElementById('login-username').value;
+    const p = document.getElementById('login-password').value;
+    
+    const user = db.users.find(x => x.username === u && x.password === p);
+    
+    if (user) {
+        currentState.user = user;
+        db.lastLogin = { user: u, time: new Date().toLocaleString('sl-SI') };
+        saveDB();
+        
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('dashboard-page').classList.remove('hidden');
+        document.getElementById('teacher-name-display').innerText = user.name;
+        
+        startSessionTimer();
+        showPage('home');
+    } else {
+        customAlert("Napačno uporabniško ime ali geslo!");
+    }
+}
+
+function handleLogout() {
+    currentState.user = null;
+    clearInterval(currentState.sessionInterval);
+    document.getElementById('dashboard-page').classList.add('hidden');
+    document.getElementById('login-page').classList.remove('hidden');
+    document.getElementById('last-login-user').innerText = db.lastLogin.user;
+    document.getElementById('last-login-time').innerText = db.lastLogin.time;
+    document.getElementById('login-username').value = "";
+    document.getElementById('login-password').value = "";
+}
+
+function fillLastLogin() {
+    if(db.lastLogin.user) document.getElementById('login-username').value = db.lastLogin.user;
+}
+
+// --- NAVIGATION ---
+function showPage(pageId) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+    if (pageId === 'home') document.getElementById('view-home').classList.remove('hidden');
+    if (pageId === 'redovalnica') {
+        document.getElementById('view-redovalnica').classList.remove('hidden');
+    }
+    if (pageId === 'podatki') {
+        document.getElementById('view-podatki').classList.remove('hidden');
+        renderAdminLists();
+    }
+}
+
+function showProfile() {
+    if (!currentState.user) return;
+    const u = currentState.user;
+    
+    const html = `
+        <div style="line-height: 1.6;">
+            Ime in priimek: <span class="bold">${u.name}</span><br>
+            Uporabniško ime: <span class="bold">${u.username}</span><br>
+            Geslo: <span class="bold"><input type="text" id="profile-pass" value="${u.password}" style="width:120px"></span><br>
+            Zadnja prijava: <span class="bold">${db.lastLogin.time}</span><br>
+            Številka licence: <span class="bold">WII-shop</span><br>
+            Dovoljen čas seje: <span class="bold">${u.sessionTimeout || 15} min</span>
+        </div>
+    `;
+    
+    showModal("Osebni profil", html, [
+        { 
+            label: 'Shrani geslo', 
+            onClick: () => {
+                const newPass = document.getElementById('profile-pass').value;
+                currentState.user.password = newPass;
+                const idx = db.users.findIndex(us => us.id === currentState.user.id);
+                if(idx !== -1) db.users[idx].password = newPass;
+                saveDB();
+                customAlert("Geslo posodobljeno!");
+            }
+        },
+        { label: 'Zapri', onClick: closeModal }
+    ]);
+}
+
+// --- ADMIN LOGIC ---
+function checkAdminAndShowData() {
+    const html = `<label>Vpiši ADMIN geslo:</label><input type="password" id="admin-auth-pass">`;
+    showModal("Admin prijava", html, [
+        {
+            label: 'Potrdi',
+            onClick: () => {
+                const val = document.getElementById('admin-auth-pass').value;
+                if (val === "ADMIN") {
+                    closeModal();
+                    showPage('podatki');
+                } else {
+                    customAlert("Napačno geslo!");
+                }
+            },
+            shouldClose: false
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+}
+
+function renderAdminLists() {
+    const tList = document.getElementById('list-teachers');
+    tList.innerHTML = db.users.map(u => 
+        `<li>
+            <span>${u.name} (${u.role === 'admin' ? 'ADMIN' : 'Učitelj'})</span>
+            <div>
+                <button class="win-btn mini-btn" onclick="editTeacher(${u.id})">Uredi</button>
+                <button class="win-btn mini-btn" onclick="deleteUser(${u.id})">X</button>
+            </div>
+         </li>`
+    ).join('');
+
+    const sList = document.getElementById('list-subjects');
+    sList.innerHTML = db.subjects.map(s => 
+        `<li>${s.name} <button class="win-btn mini-btn" onclick="deleteSubject(${s.id})">X</button></li>`
+    ).join('');
+
+    const cList = document.getElementById('list-classes');
+    cList.innerHTML = db.classes.map(c => 
+        `<li>${c.name} <div><button class="win-btn mini-btn" onclick="manageClass(${c.id})">Uredi</button> <button class="win-btn mini-btn" onclick="deleteClass(${c.id})">X</button></div></li>`
+    ).join('');
+}
+
+function addTeacher() { openTeacherModal(); }
+function editTeacher(id) { const user = db.users.find(u => u.id === id); if(user) openTeacherModal(user); }
+function openTeacherModal(user = null) {
+    const isEdit = !!user;
+    const html = `
+        <label>Ime in priimek:</label><input type="text" id="t-name" value="${isEdit ? user.name : ''}">
+        <label>Uporabniško ime:</label><input type="text" id="t-user" value="${isEdit ? user.username : ''}">
+        <label>Geslo:</label><input type="text" id="t-pass" value="${isEdit ? user.password : ''}">
+        <label>Čas seje (min):</label><input type="number" id="t-time" value="${isEdit ? (user.sessionTimeout || 15) : '15'}">
+    `;
+    showModal(isEdit ? "Urejanje učitelja" : "Dodajanje učitelja", html, [
+        {
+            label: 'Shrani',
+            onClick: () => {
+                const name = document.getElementById('t-name').value;
+                const username = document.getElementById('t-user').value;
+                const password = document.getElementById('t-pass').value;
+                const timeout = parseInt(document.getElementById('t-time').value) || 15;
+                if(!name || !username || !password) return customAlert("Vsa polja so obvezna!");
+
+                if (isEdit) {
+                    const idx = db.users.findIndex(u => u.id === user.id);
+                    db.users[idx] = { ...db.users[idx], name, username, password, sessionTimeout: timeout };
+                } else {
+                    db.users.push({ id: Date.now(), name, username, password, sessionTimeout: timeout, role: 'teacher' });
+                }
+                saveDB(); renderAdminLists(); closeModal();
+            },
+            shouldClose: false
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+}
+function deleteUser(id) {
+    const u = db.users.find(x => x.id === id);
+    if(u.role === 'admin') return customAlert("Admina ni mogoče izbrisati!");
+    customConfirm("Res želiš izbrisati tega uporabnika?", () => { db.users = db.users.filter(x => x.id !== id); saveDB(); renderAdminLists(); closeModal(); });
+}
+
+function addClass() {
+    customPrompt("Ime razreda (npr. 1.A):", (name) => {
+        if(name) { db.classes.push({ id: Date.now(), name, students: [], assignments: [] }); saveDB(); renderAdminLists(); closeModal(); }
+    });
+}
+function deleteClass(id) { customConfirm("Izbrišem razred?", () => { db.classes = db.classes.filter(c => c.id !== id); saveDB(); renderAdminLists(); closeModal(); }); }
+
+function addSubject() {
+    customPrompt("Ime predmeta:", (name) => {
+        if(name) { db.subjects.push({ id: Date.now(), name }); saveDB(); renderAdminLists(); closeModal(); }
+    });
+}
+function deleteSubject(id) { customConfirm("Izbrišem predmet?", () => { db.subjects = db.subjects.filter(s => s.id !== id); saveDB(); renderAdminLists(); closeModal(); }); }
+
+function manageClass(classId) {
+    const cls = db.classes.find(c => c.id === classId);
+    if(!cls.assignments) cls.assignments = [];
+    if(!cls.students) cls.students = [];
+
+    let sHtml = cls.students.map(s => `<li>${s.name} <button class="win-btn mini-btn" onclick="removeStudent(${classId}, ${s.id})">X</button></li>`).join('');
+    
+    let aHtml = cls.assignments.map((a, idx) => {
+        const t = db.users.find(u => u.id === a.teacherId)?.name || 'Neznan učitelj';
+        const p = db.subjects.find(sub => sub.id === a.subjectId)?.name || 'Neznan predmet';
+        return `<li>${t} -> ${p} <button class="win-btn mini-btn" onclick="removeAssignment(${classId}, ${idx})">X</button></li>`;
+    }).join('');
+
+    const html = `
+        <h5>Seznam učencev</h5>
+        <ul class="admin-list">${sHtml}</ul>
+        <button class="win-btn mini-btn" onclick="addStudent(${classId})">Dodaj učenca</button>
+        <hr>
+        <h5>Dodeljeni učitelji in predmeti</h5>
+        <ul class="admin-list">${aHtml}</ul>
+        <button class="win-btn mini-btn" onclick="addAssignment(${classId})">Dodaj dodelitev</button>
+    `;
+
+    showModal(`Urejanje: ${cls.name}`, html, [
+        { label: 'Zapri', onClick: closeModal }
+    ]);
+}
+
+window.addStudent = function(cId) {
+    customPrompt("Ime in priimek učenca:", (sName) => {
+        if (sName) {
+            const cls = db.classes.find(c => c.id === cId);
+            cls.students.push({ id: Date.now(), name: sName, username: sName.toLowerCase().replace(/\s/g, ''), password: '123', access: true });
+            saveDB();
+        }
+        manageClass(cId);
+    });
+};
+window.removeStudent = function(cId, sId) {
+    const c = db.classes.find(x => x.id === cId);
+    c.students = c.students.filter(x => x.id !== sId);
+    saveDB(); manageClass(cId);
+};
+
+window.addAssignment = function(cId) {
+    const tOpts = db.users.filter(u=>u.role!=='admin').map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    const sOpts = db.subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    
+    const html = `
+        <label>Učitelj:</label><select id="as-teacher">${tOpts}</select>
+        <label>Predmet:</label><select id="as-subject">${sOpts}</select>
+    `;
+    closeModal();
+    setTimeout(() => {
+        showModal("Nova dodelitev", html, [
+            {
+                label: 'Dodaj',
+                onClick: () => {
+                    const tId = parseInt(document.getElementById('as-teacher').value);
+                    const sId = parseInt(document.getElementById('as-subject').value);
+                    if(tId && sId) {
+                        const cls = db.classes.find(c => c.id === cId);
+                        cls.assignments.push({ teacherId: tId, subjectId: sId });
+                        saveDB();
+                    }
+                    manageClass(cId);
+                },
+                shouldClose: false
+            },
+            { label: 'Prekliči', onClick: () => manageClass(cId) }
+        ]);
+    }, 100);
+};
+window.removeAssignment = function(cId, index) {
+    const cls = db.classes.find(c => c.id === cId);
+    cls.assignments.splice(index, 1);
+    saveDB(); manageClass(cId);
+};
+
+function resetAllData() {
+    customConfirm("POZOR! To bo izbrisalo VSE podatke. Nadaljujem?", () => {
+        database.ref('wii_sola_db').remove().then(() => location.reload());
+    });
+}
+
+// --- REDOVALNICA (DINAMIČNA OKNA IN SEKTORJI ABCD) ---
+
+function openRedovalnicaMenu() {
+    if(db.classes.length === 0) return customAlert("Ni vnesenih razredov!");
+    
+    let classBtns = db.classes.map(c => `<button class="win-btn" onclick="selectClassForRedovalnica(${c.id})">${c.name}</button>`).join('');
+    let html = `
+        <label>Pogled:</label>
+        <select id="redovalnica-pogled" style="margin-bottom:15px; padding:5px; font-size:14px; font-weight:bold;">
+            <option value="RAZREDNI">RAZREDNI (Urejanje določenega predmeta za vse učence)</option>
+            <option value="OSEBNI">OSEBNI (Pogled vseh predmetov za izbranega učenca)</option>
+        </select>
+        <hr>
+        <label>Izberi razred:</label>
+        <div class="class-btn-grid">${classBtns}</div>
+    `;
+    showModal("Redovalnica - Izbira", html, [{label: 'Prekliči', onClick: closeModal}]);
+}
+
+function selectClassForRedovalnica(classId) {
+    const mode = document.getElementById('redovalnica-pogled').value;
+    currentState.selectedClassId = classId;
+    currentState.viewMode = mode;
+    const cls = db.classes.find(c => c.id === classId);
+    closeModal();
+    
+    if (mode === 'RAZREDNI') {
+        const assignments = cls.assignments || [];
+        const mySubjects = assignments.filter(a => a.teacherId === currentState.user.id);
+        
+        if (mySubjects.length === 0 && currentState.user.role !== 'admin') {
+            return customAlert(`V razredu ${cls.name} ne učite nobenega predmeta.`);
+        }
+        
+        // Admin vidi vse, učitelj pa samo svoje predmete v tem razredu
+        const subjectsToShow = currentState.user.role === 'admin' ? db.subjects : mySubjects.map(a => db.subjects.find(s=>s.id===a.subjectId));
+        
+        if (subjectsToShow.length === 0) return customAlert("Ni predmetov na voljo.");
+
+        let subBtns = subjectsToShow.map(s => {
+            if(!s) return '';
+            return `<button class="win-btn" onclick="openGradebookRazredni(${s.id})">${s.name}</button>`;
+        }).join('');
+        
+        showModal(`Izberi predmet (${cls.name})`, `<div class="class-btn-grid">${subBtns}</div>`, [
+            {label: 'Nazaj', onClick: openRedovalnicaMenu}
+        ]);
+    } else {
+        // Pogled OSEBNI
+        openGradebookOsebni();
+    }
+}
+
+function setGradeType(type) {
+    currentState.selectedGradeType = type;
+    document.querySelectorAll('.grade-type-btn').forEach(b => b.classList.remove('selected-type'));
+    document.querySelector(`.btn-${type.toLowerCase()}`).classList.add('selected-type');
+}
+
+function isSectorDisabled(classId, subjectId, sector) {
+    const key = `${classId}_${subjectId}`;
+    if (!db.sectorSettings) db.sectorSettings = {};
+    if (db.sectorSettings[key] && db.sectorSettings[key][sector] === false) return true;
+    return false;
+}
+
+// -- POGLED RAZREDNI --
+function openGradebookRazredni(subjectId) {
+    currentState.selectedSubjectId = subjectId;
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    const sub = db.subjects.find(s => s.id === subjectId);
+    
+    closeModal();
+    showPage('redovalnica');
+    document.getElementById('redovalnica-naslov').innerText = `RAZRED: ${cls.name} | PREDMET: ${sub.name}`;
+    document.getElementById('redovalnica-controls').classList.remove('hidden');
+    
+    renderRazredniTable();
+}
+
+function renderRazredniTable() {
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    const subId = currentState.selectedSubjectId;
+    const container = document.getElementById('redovalnica-container');
+    
+    if(!cls.students || cls.students.length === 0) {
+        container.innerHTML = `<p>V tem razredu ni učencev.</p>`;
+        return;
+    }
+
+    let thead = `<tr>
+        <th width="16%">Učenec</th>
+        <th width="16%">A</th><th width="3%">!</th>
+        <th width="16%">B</th><th width="3%">!</th>
+        <th width="16%">C</th><th width="3%">!</th>
+        <th width="16%">D</th><th width="3%">!</th>
+        <th width="8%">Končna</th>
+    </tr>`;
+    
+    let tbody = '';
+    const sectors = ['A', 'B', 'C', 'D'];
+
+    cls.students.forEach(student => {
+        let row = `<tr><td>${student.name}</td>`;
+        
+        sectors.forEach(sec => {
+            const disabled = isSectorDisabled(cls.id, subId, sec);
+            const classStr = disabled ? 'grade-cell disabled-sector' : 'grade-cell';
+            const onclickGrade = disabled ? '' : `onclick="addNewGrade(${student.id}, ${subId}, '${sec}')"`;
+            const onclickWarn = disabled ? '' : `onclick="handleWarning(${student.id}, ${subId}, '${sec}')"`;
+            
+            row += `<td class="${classStr}" ${onclickGrade}>${renderCellContent(student.id, subId, sec)}</td>`;
+            row += `<td class="${classStr}" ${onclickWarn}>${getWarnHtml(student.id, subId, sec)}</td>`;
+        });
+
+        row += `<td class="grade-cell" onclick="addFinalGrade(${student.id}, ${subId})">${getFinalHtml(student.id, subId)}</td></tr>`;
+        tbody += row;
+    });
+
+    container.innerHTML = `<table class="gradebook-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+// -- POGLED OSEBNI --
+function openGradebookOsebni() {
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    closeModal();
+    showPage('redovalnica');
+    document.getElementById('redovalnica-naslov').innerText = `RAZRED: ${cls.name} | OSEBNI POGLED`;
+    document.getElementById('redovalnica-controls').classList.add('hidden'); // V osebnem pogledu skrijemo množični vnos in tipe
+    
+    let stuOpts = (cls.students || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    
+    let html = `
+        <div style="margin-bottom:10px;">
+            <label style="font-weight:bold; margin-right:10px;">Izberi učenca:</label>
+            <select id="osebni-student-sel" onchange="renderOsebniTable()" style="padding:5px; font-size:14px; min-width:200px;">
+                ${stuOpts}
+            </select>
+        </div>
+        <div id="osebni-table-container"></div>
+    `;
+    document.getElementById('redovalnica-container').innerHTML = html;
+    
+    if(cls.students && cls.students.length > 0) renderOsebniTable();
+}
+
+function renderOsebniTable() {
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    const stuSel = document.getElementById('osebni-student-sel');
+    if(!stuSel || !stuSel.value) return;
+    const studentId = parseInt(stuSel.value);
+    
+    const container = document.getElementById('osebni-table-container');
+    
+    let thead = `<tr>
+        <th width="16%">Predmet</th>
+        <th width="16%">A</th><th width="3%">!</th>
+        <th width="16%">B</th><th width="3%">!</th>
+        <th width="16%">C</th><th width="3%">!</th>
+        <th width="16%">D</th><th width="3%">!</th>
+        <th width="8%">Končna</th>
+    </tr>`;
+    
+    let tbody = '';
+    const sectors = ['A', 'B', 'C', 'D'];
+
+    db.subjects.forEach(sub => {
+        // Preveri, če ta učitelj uči ta predmet v tem razredu
+        const assignments = cls.assignments || [];
+        const isMySubject = currentState.user.role === 'admin' || assignments.some(a => a.teacherId === currentState.user.id && a.subjectId === sub.id);
+        
+        let row = `<tr><td>${sub.name}</td>`;
+        
+        sectors.forEach(sec => {
+            const disabledGlobal = isSectorDisabled(cls.id, sub.id, sec);
+            // Onemogočimo celico, če sektor je globalno izključen ali če učitelj ne uči predmeta
+            const disabled = disabledGlobal || !isMySubject;
+            
+            const classStr = disabled ? 'grade-cell disabled-sector' : 'grade-cell';
+            const onclickGrade = (!disabled && isMySubject) ? `onclick="addNewGrade(${studentId}, ${sub.id}, '${sec}')"` : '';
+            const onclickWarn = (!disabled && isMySubject) ? `onclick="handleWarning(${studentId}, ${sub.id}, '${sec}')"` : '';
+            
+            row += `<td class="${classStr}" ${onclickGrade}>${renderCellContent(studentId, sub.id, sec)}</td>`;
+            row += `<td class="${classStr}" ${onclickWarn}>${getWarnHtml(studentId, sub.id, sec)}</td>`;
+        });
+
+        const onclickFinal = isMySubject ? `onclick="addFinalGrade(${studentId}, ${sub.id})"` : '';
+        row += `<td class="${isMySubject ? 'grade-cell' : 'grade-cell disabled-sector'}" ${onclickFinal}>${getFinalHtml(studentId, sub.id)}</td></tr>`;
+        tbody += row;
+    });
+
+    container.innerHTML = `<table class="gradebook-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+// -- POMOŽNE FUNKCIJE ZA IZRIS OCEN --
+function renderCellContent(studentId, subjectId, period) {
+    const allGrades = db.grades.filter(g => g.studentId === studentId && g.subjectId === subjectId && g.period === period && !g.isFinal);
+    let h = '';
+    allGrades.forEach(g => {
+        let cls = g.type === 'PISNO' ? 'grade-pisno' : (g.type === 'IZDELEK' ? 'grade-izdelek' : 'grade-ustno');
+        let val = g.correction ? `<span class="${cls}"><span class="grade-correction">${g.value}</span>${g.correction}</span>` : `<span class="${cls}">${g.value}</span>`;
+        const tooltip = `Vpisal: ${g.authorName || 'Neznano'}\nDatum: ${g.date || 'Neznano'}`;
+        h += `<span class="grade-span" title="${tooltip}" onclick="editGrade(${g.id}); event.stopPropagation();">${val}</span>`;
+    });
+    return `<div class="single-view">${h}</div>`;
+}
+
+function getWarnHtml(studentId, subjectId, period) {
+    const w = db.warnings.find(x => x.studentId === studentId && x.subjectId === subjectId && x.period === period);
+    if(!w) return '';
+    return w.type === 'x' ? '<span style="color:red; font-weight:bold;">X</span>' : '<span style="color:green; font-weight:bold;">✓</span>';
+}
+
+function getFinalHtml(studentId, subjectId) {
+    const g = db.grades.find(x => x.studentId === studentId && x.subjectId === subjectId && x.isFinal);
+    if(!g) return '';
+    const tooltip = `Vpisal: ${g.authorName || 'Neznano'}\nDatum: ${g.date || 'Neznano'}`;
+    return `<span title="${tooltip}" onclick="editFinalGrade(${g.id}); event.stopPropagation();" style="cursor:pointer; font-weight:bold;">${g.value}</span>`;
+}
+
+// -- VNOS, UREJANJE OCEN IN GRAJ --
+function refreshActiveTable() {
+    if(currentState.viewMode === 'RAZREDNI') renderRazredniTable();
+    else renderOsebniTable();
+}
+
+function addNewGrade(studentId, subjectId, period) {
+    const type = currentState.selectedGradeType || 'USTNO';
+    const html = `<label>Vpiši oceno (${type}):</label><input type="text" id="new-grade-val" style="width: 60px;" autofocus>`;
+    showModal(`Vnos ocene (Sektor ${period})`, html, [
+        {
+            label: 'Potrdi',
+            onClick: () => {
+                const val = document.getElementById('new-grade-val').value;
+                if(val) {
+                    db.grades.push({ 
+                        id: Date.now(), studentId, subjectId, period, type, value: val, correction: null, isFinal: false,
+                        authorId: currentState.user.id, authorName: currentState.user.name, date: new Date().toLocaleDateString('sl-SI')
+                    });
+                    saveDB(); refreshActiveTable(); closeModal();
+                }
+            },
+            shouldClose: false
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+    setTimeout(() => { document.getElementById('new-grade-val').addEventListener("keyup", (e) => { if(e.key === "Enter") document.getElementById('modal-btn-0').click(); }); }, 100);
+}
+
+function editGrade(gradeId) {
+    const grade = db.grades.find(g => g.id === gradeId);
+    const info = `<div style="font-size:11px; margin-bottom:10px; color:#555;">Vpisal: ${grade.authorName || '?'}, dne: ${grade.date || '?'}</div>`;
+    const html = `
+        ${info}
+        <label>Ocena:</label><input type="text" id="eg-val" value="${grade.value}" style="width:50px">
+        <label>Popravek:</label><input type="text" id="eg-corr" value="${grade.correction || ''}" style="width:50px">
+    `;
+    showModal("Urejanje ocene", html, [
+        {
+            label: 'Shrani',
+            onClick: () => {
+                const val = document.getElementById('eg-val').value;
+                const corr = document.getElementById('eg-corr').value;
+                const idx = db.grades.findIndex(g => g.id === gradeId);
+                if(!val) db.grades.splice(idx, 1);
+                else { db.grades[idx].value = val; db.grades[idx].correction = corr ? corr : null; }
+                saveDB(); refreshActiveTable(); closeModal();
+            },
+            shouldClose: false
+        }
+    ]);
+}
+
+function handleWarning(studentId, subjectId, period) {
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    const student = cls.students.find(s => s.id === studentId);
+    const existing = db.warnings.find(w => w.studentId === studentId && w.subjectId === subjectId && w.period === period);
+
+    if (!existing) {
+        const msg = `Želite učencu <span class="bold">${student.name}</span> zabeležiti grajo (X) v sektorju ${period}?`;
+        customConfirm(msg, () => {
+            db.warnings.push({ studentId, subjectId, period, type: 'x' });
+            saveDB(); refreshActiveTable(); closeModal();
+        });
+    } else {
+        const html = `<p>Želite spremeniti v opravljeno (✓) ali grajo izbrisati?</p>`;
+        showModal("Urejanje graje", html, [
+            { label: 'Spremeni v ✓', onClick: () => { existing.type = 'check'; saveDB(); refreshActiveTable(); closeModal(); } },
+            { label: 'Izbriši', onClick: () => { db.warnings = db.warnings.filter(w => w !== existing); saveDB(); refreshActiveTable(); closeModal(); } },
+            { label: 'Zapri', onClick: closeModal }
+        ]);
+    }
+}
+
+function addFinalGrade(studentId, subjectId) {
+    const existing = db.grades.find(g => g.studentId === studentId && g.subjectId === subjectId && g.isFinal);
+    if(existing) return;
+    const html = `<label>Končna ocena:</label><input type="text" id="final-val" style="width:50px" autofocus>`;
+    showModal("Končna ocena", html, [
+        {
+            label: 'Potrdi',
+            onClick: () => {
+                const val = document.getElementById('final-val').value;
+                if(val) {
+                    db.grades.push({ 
+                        id: Date.now(), studentId, subjectId, isFinal: true, value: val, type: 'FINAL',
+                        authorId: currentState.user.id, authorName: currentState.user.name, date: new Date().toLocaleDateString('sl-SI')
+                    });
+                    saveDB(); refreshActiveTable(); closeModal();
+                }
+            },
+            shouldClose: false
+        }
+    ]);
+    setTimeout(() => { document.getElementById('final-val').addEventListener("keyup", (e) => { if(e.key === "Enter") document.getElementById('modal-btn-0').click(); }); }, 100);
+}
+
+function editFinalGrade(gradeId) {
+    const g = db.grades.find(x => x.id === gradeId);
+    const html = `<label>Končna ocena:</label><input type="text" id="ef-val" value="${g.value}" style="width:50px">`;
+    showModal("Uredi končno", html, [
+        {
+            label: 'Shrani',
+            onClick: () => {
+                const val = document.getElementById('ef-val').value;
+                const idx = db.grades.findIndex(x => x.id === gradeId);
+                if(!val) db.grades.splice(idx, 1);
+                else db.grades[idx].value = val;
+                saveDB(); refreshActiveTable(); closeModal();
+            },
+            shouldClose: false
+        }
+    ]);
+}
+
+function openSectorSettings() {
+    if(!currentState.selectedClassId || currentState.viewMode !== 'RAZREDNI') {
+        return customAlert("Nastavitve so na voljo samo v razrednem pogledu za posamezen predmet.");
+    }
+    const cId = currentState.selectedClassId;
+    const sId = currentState.selectedSubjectId;
+    const key = `${cId}_${sId}`;
+    
+    if(!db.sectorSettings) db.sectorSettings = {};
+    const sets = db.sectorSettings[key] || { A: true, B: true, C: true, D: true };
+
+    const checkHtml = (sec) => `
+        <label style="display:flex; align-items:center; font-weight:normal; margin-bottom:10px;">
+            <input type="checkbox" id="set-sec-${sec}" ${sets[sec] !== false ? 'checked' : ''} style="width:auto; margin-right:10px;">
+            Omogoči sektor ${sec}
+        </label>
+    `;
+
+    const html = `
+        <p>Izberite, kateri sektorji so aktivni in omogočeni za vpisovanje:</p>
+        ${checkHtml('A')}
+        ${checkHtml('B')}
+        ${checkHtml('C')}
+        ${checkHtml('D')}
+    `;
+
+    showModal("Nastavitve sektorjev", html, [
+        {
+            label: 'Shrani',
+            onClick: () => {
+                db.sectorSettings[key] = {
+                    A: document.getElementById('set-sec-A').checked,
+                    B: document.getElementById('set-sec-B').checked,
+                    C: document.getElementById('set-sec-C').checked,
+                    D: document.getElementById('set-sec-D').checked
+                };
+                saveDB(); refreshActiveTable(); closeModal();
+            },
+            shouldClose: false
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+}
+
+function openBulkEntry() {
+    const cls = db.classes.find(c => c.id === currentState.selectedClassId);
+    if(!cls || !cls.students) return;
+
+    let rows = cls.students.map(s => 
+        `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span>${s.name}</span><input type="text" class="bulk-inp" data-sid="${s.id}" style="width:50px;">
+         </div>`
+    ).join('');
+    
+    const html = `
+        <label>Tip:</label>
+        <select id="bulk-type"><option value="USTNO">USTNO</option><option value="PISNO">PISNO</option><option value="IZDELEK">IZDELEK</option></select>
+        <label>Sektor:</label>
+        <select id="bulk-per"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+        <div style="max-height:200px; overflow-y:auto; border:1px solid #999; padding:5px; margin-top:10px; background:#fff;">${rows}</div>
+    `;
+
+    showModal("Množični vpis", html, [
+        {
+            label: 'Shrani',
+            onClick: () => {
+                const type = document.getElementById('bulk-type').value;
+                const per = document.getElementById('bulk-per').value;
+                const now = new Date().toLocaleDateString('sl-SI');
+                
+                // Preveri, če je sektor morda onemogočen
+                if(isSectorDisabled(currentState.selectedClassId, currentState.selectedSubjectId, per)) {
+                    customAlert(`Sektor ${per} je onemogočen v nastavitvah.`);
+                    return;
+                }
+
+                document.querySelectorAll('.bulk-inp').forEach(inp => {
+                    const val = inp.value.trim();
+                    const sid = parseInt(inp.getAttribute('data-sid'));
+                    if(val) {
+                        db.grades.push({ 
+                            id: Date.now() + Math.random(), studentId: sid, subjectId: currentState.selectedSubjectId, 
+                            period: per, type, value: val, correction: null, isFinal: false,
+                            authorId: currentState.user.id, authorName: currentState.user.name, date: now
+                        });
+                    }
+                });
+                saveDB(); refreshActiveTable(); closeModal();
+            },
+            shouldClose: false
+        },
+        { label: 'Prekliči', onClick: closeModal }
+    ]);
+}
+
+init();
+</script>
+
+</body></html>
