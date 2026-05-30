@@ -148,7 +148,7 @@
         }
         .single-view {
             display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-            height: 100%; width: 100%; padding: 5px; box-sizing: border-box;
+            height: 100%; width: 100%; padding: 5px; box-sizing: border-box; position: relative;
         }
 
         /* Grade Styles */
@@ -218,6 +218,31 @@
         
         .class-btn-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
         .class-btn-grid button { padding: 10px 20px; font-size: 14px; font-weight: bold; }
+
+        /* Novi stili za hiter vnos in označevanje */
+        .inline-grade-input {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            background-color: #b0b0b0;
+            border: none;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            outline: none;
+        }
+        .inline-grade-input:focus {
+            background-color: #fff;
+        }
+        .grade-highlight {
+            background-color: #c8f7c5 !important;
+            padding: 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -901,10 +926,10 @@ function renderRazredniTable() {
 
     let thead = `<tr>
         <th width="16%">Učenec</th>
-        <th width="16%">A</th><th width="3%">!</th>
-        <th width="16%">B</th><th width="3%">!</th>
-        <th width="16%">C</th><th width="3%">!</th>
-        <th width="16%">D</th><th width="3%">!</th>
+        <th width="16%">A</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">B</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">C</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">D</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
         <th width="8%">Končna</th>
     </tr>`;
     
@@ -917,7 +942,7 @@ function renderRazredniTable() {
         sectors.forEach(sec => {
             const disabled = isSectorDisabled(cls.id, subId, sec);
             const classStr = disabled ? 'grade-cell disabled-sector' : 'grade-cell';
-            const onclickGrade = disabled ? '' : `onclick="addNewGrade(${student.id}, ${subId}, '${sec}')"`;
+            const onclickGrade = '';
             const onclickWarn = disabled ? '' : `onclick="handleWarning(${student.id}, ${subId}, '${sec}')"`;
             
             row += `<td class="${classStr}" ${onclickGrade}>${renderCellContent(student.id, subId, sec)}</td>`;
@@ -965,10 +990,10 @@ function renderOsebniTable() {
     
     let thead = `<tr>
         <th width="16%">Predmet</th>
-        <th width="16%">A</th><th width="3%">!</th>
-        <th width="16%">B</th><th width="3%">!</th>
-        <th width="16%">C</th><th width="3%">!</th>
-        <th width="16%">D</th><th width="3%">!</th>
+        <th width="16%">A</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">B</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">C</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
+        <th width="16%">D</th><th width="3%"><img src="graja.png" style="height:16px; width:auto; vertical-align:middle;"></th>
         <th width="8%">Končna</th>
     </tr>`;
     
@@ -988,7 +1013,7 @@ function renderOsebniTable() {
             const disabled = disabledGlobal || !isMySubject;
             
             const classStr = disabled ? 'grade-cell disabled-sector' : 'grade-cell';
-            const onclickGrade = (!disabled && isMySubject) ? `onclick="addNewGrade(${studentId}, ${sub.id}, '${sec}')"` : '';
+            const onclickGrade = '';
             const onclickWarn = (!disabled && isMySubject) ? `onclick="handleWarning(${studentId}, ${sub.id}, '${sec}')"` : '';
             
             row += `<td class="${classStr}" ${onclickGrade}>${renderCellContent(studentId, sub.id, sec)}</td>`;
@@ -1009,17 +1034,57 @@ function renderCellContent(studentId, subjectId, period) {
     let h = '';
     allGrades.forEach(g => {
         let cls = g.type === 'PISNO' ? 'grade-pisno' : (g.type === 'IZDELEK' ? 'grade-izdelek' : 'grade-ustno');
-        let val = g.correction ? `<span class="${cls}"><span class="grade-correction">${g.value}</span>${g.correction}</span>` : `<span class="${cls}">${g.value}</span>`;
+        let hlClass = g.isUnsaved ? ' grade-highlight' : '';
+        let val = g.correction ? `<span class="${cls} ${hlClass}"><span class="grade-correction">${g.value}</span>${g.correction}</span>` : `<span class="${cls} ${hlClass}">${g.value}</span>`;
         const tooltip = `Vpisal: ${g.authorName || 'Neznano'}\nDatum: ${g.date || 'Neznano'}`;
         h += `<span class="grade-span" title="${tooltip}" onclick="editGrade(${g.id}); event.stopPropagation();">${val}</span>`;
     });
+    
+    h += `<input type="text" class="inline-grade-input" onkeyup="handleInlineGradeSubmit(event, ${studentId}, ${subjectId}, '${period}')" onclick="event.stopPropagation();">`;
     return `<div class="single-view">${h}</div>`;
+}
+
+function handleInlineGradeSubmit(event, studentId, subjectId, period) {
+    if (event.key === 'Enter') {
+        const val = event.target.value.trim();
+        if (!val) return;
+        
+        const type = currentState.selectedGradeType || 'USTNO';
+        const gradeId = Date.now() + Math.random();
+        
+        db.grades.push({ 
+            id: gradeId, 
+            studentId, 
+            subjectId, 
+            period, 
+            type, 
+            value: val, 
+            correction: null, 
+            isFinal: false,
+            authorId: currentState.user.id, 
+            authorName: currentState.user.name, 
+            date: new Date().toLocaleDateString('sl-SI'),
+            isUnsaved: true
+        });
+        
+        event.target.value = '';
+        refreshActiveTable();
+        
+        setTimeout(() => {
+            const idx = db.grades.findIndex(g => g.id === gradeId);
+            if (idx !== -1) {
+                delete db.grades[idx].isUnsaved;
+            }
+            saveDB();
+            refreshActiveTable();
+        }, 4000);
+    }
 }
 
 function getWarnHtml(studentId, subjectId, period) {
     const w = db.warnings.find(x => x.studentId === studentId && x.subjectId === subjectId && x.period === period);
     if(!w) return '';
-    return w.type === 'x' ? '<span style="color:red; font-weight:bold;">X</span>' : '<span style="color:green; font-weight:bold;">✓</span>';
+    return w.type === 'x' ? '<img src="nok.png" style="height:16px; width:auto; vertical-align:middle;">' : '<img src="ok.png" style="height:16px; width:auto; vertical-align:middle;">';
 }
 
 function getFinalHtml(studentId, subjectId) {
@@ -1088,21 +1153,22 @@ function handleWarning(studentId, subjectId, period) {
     const existing = db.warnings.find(w => w.studentId === studentId && w.subjectId === subjectId && w.period === period);
 
     if (!existing) {
-        const msg = `Želite učencu <span class="bold">${student.name}</span> zabeležiti grajo (X) v sektorju ${period}?`;
+        const msg = `Želite učencu <span class="bold">${student.name}</span> zabeležiti grajo v sektorju ${period}?`;
         customConfirm(msg, () => {
             db.warnings.push({ studentId, subjectId, period, type: 'x' });
             saveDB(); refreshActiveTable(); closeModal();
         });
     } else {
-        const html = `<p>Želite spremeniti v opravljeno (✓) ali grajo izbrisati?</p>`;
+        const html = `<p>Želite spremeniti v opravljeno ali grajo izbrisati?</p>`;
         showModal("Urejanje graje", html, [
-            { label: 'Spremeni v ✓', onClick: () => { existing.type = 'check'; saveDB(); refreshActiveTable(); closeModal(); } },
+            { label: 'Spremeni v OK', onClick: () => { existing.type = 'check'; saveDB(); refreshActiveTable(); closeModal(); } },
             { label: 'Izbriši', onClick: () => { db.warnings = db.warnings.filter(w => w !== existing); saveDB(); refreshActiveTable(); closeModal(); } },
             { label: 'Zapri', onClick: closeModal }
         ]);
     }
 }
 
+// -- DODAJANJE KONČNE OCENE --
 function addFinalGrade(studentId, subjectId) {
     const existing = db.grades.find(g => g.studentId === studentId && g.subjectId === subjectId && g.isFinal);
     if(existing) return;
