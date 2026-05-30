@@ -246,8 +246,8 @@
                 
                 <div class="legend-container">
                     <div class="legend-row">
-                        <span><span class="warn-x">✘</span> ni opravil vseh obveznosti sklopa pozitivno</span>
-                        <span><span class="warn-check">✔</span> naknadno opravil vse obveznosti sklopa pozitivno</span>
+                        <span><img src="nok.png" alt="✘" style="width:16px; height:16px; vertical-align:middle; margin-right:5px;"> ni opravil vseh obveznosti sklopa pozitivno</span>
+                        <span><img src="ok.png" alt="✔" style="width:16px; height:16px; vertical-align:middle; margin-right:5px;"> naknadno opravil vse obveznosti sklopa pozitivno</span>
                     </div>
                     <div class="legend-box">
                         <div class="legend-item" style="color: black;">ustno</div>
@@ -473,26 +473,39 @@ function renderGradeTable() {
 function renderHistoryTable() {
     const sId = currentSession.studentId;
     
-    // Filtriraj vse ocene in jih razvrsti padajoče glede na id (id je Date.now(), torej od najnovejše)
-    let myGrades = db.grades.filter(g => g.studentId === sId && !g.isFinal);
-    myGrades.sort((a, b) => b.id - a.id);
+    // Filtriraj redne ocene (brez zaključnih)
+    let myGrades = db.grades.filter(g => g.studentId === sId && !g.isFinal).map(g => ({ ...g, isWarning: false }));
+    
+    // Filtriraj graje (tip 'x'), ki se štejejo kot ocena za stransko tabelo
+    let myWarnings = db.warnings.filter(w => w.studentId === sId && w.type === 'x').map(w => ({ ...w, isWarning: true }));
+    
+    // Združi oboje skupaj
+    let combinedHistory = [...myGrades, ...myWarnings];
+    
+    // Razvrsti padajoče glede na id (timestamp vnosa)
+    combinedHistory.sort((a, b) => b.id - a.id);
 
-    let rows = myGrades.map(g => {
-        // Poišči kratico predmeta (npr. prve 3 črke)
-        let sub = db.subjects.find(s => s.id === g.subjectId);
+    let rows = combinedHistory.map(item => {
+        let sub = db.subjects.find(s => s.id === item.subjectId);
         let subName = sub ? sub.name.substring(0,3).toUpperCase() : '???';
         
-        // Zberi pravo barvo
-        let cls = g.type === 'PISNO' ? 'grade-pisno' : (g.type === 'IZDELEK' ? 'grade-izdelek' : 'grade-ustno');
-        
-        // Zgradi izpis ocene s popravkom, če obstaja
-        let valHtml = g.correction 
-            ? `<span class="${cls}"><span class="grade-correction">${g.value}</span>${g.correction}</span>` 
-            : `<span class="${cls}">${g.value}</span>`;
+        let valHtml = '';
+        if (item.isWarning) {
+            // Če je graja (x), prikaži sliko nok.png
+            valHtml = `<img src="nok.png" alt="✘" style="width:16px; height:16px; vertical-align:middle;">`;
+        } else {
+            // Izbira barve glede na tip ocene
+            let cls = item.type === 'PISNO' ? 'grade-pisno' : (item.type === 'IZDELEK' ? 'grade-izdelek' : 'grade-ustno');
+            
+            // Izpis ocene s popravkom, če obstaja
+            valHtml = item.correction 
+                ? `<span class="${cls}"><span class="grade-correction">${item.value}</span>${item.correction}</span>` 
+                : `<span class="${cls}">${item.value}</span>`;
+        }
 
         return `
             <tr>
-                <td>${g.date || ''}</td>
+                <td>${item.date || ''}</td>
                 <td>${subName}</td>
                 <td>${valHtml}</td>
             </tr>
@@ -500,7 +513,7 @@ function renderHistoryTable() {
     }).join('');
 
     if (rows === '') {
-        rows = `<tr><td colspan="3" style="color:#777;">Ni vpisanih ocen.</td></tr>`;
+        rows = `<tr><td colspan="3" style="color:#777;">Ni vpisanih ocen ali graj.</td></tr>`;
     }
 
     document.getElementById('history-tbody').innerHTML = rows;
@@ -521,7 +534,9 @@ function renderCellContent(studentId, subjectId, period) {
 function getWarnHtml(studentId, subjectId, period) {
     const w = db.warnings.find(x => x.studentId === studentId && x.subjectId === subjectId && x.period === period);
     if(!w) return '';
-    return w.type === 'x' ? '<span class="warn-x">✘</span>' : '<span class="warn-check">✔</span>';
+    return w.type === 'x' 
+        ? '<img src="nok.png" alt="✘" style="width:16px; height:16px; vertical-align:middle;">' 
+        : '<img src="ok.png" alt="✔" style="width:16px; height:16px; vertical-align:middle;">';
 }
 
 function getFinalHtml(studentId, subjectId) {
