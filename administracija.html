@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII Shop Administracija 3.0</title>
+    <title>WII Shop Administracija 3.1</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap');
 
@@ -199,7 +199,7 @@
     <header id="main-header" style="display: none;">
         <div class="logo-container" style="display: flex; align-items: center; font-size: 1.2em; font-weight: bold; letter-spacing: 1px;">
             <img src="logo_administracija.png" alt="WII SHOP LOGO" style="height: 35px; margin-right: 15px;">
-            WII SHOP ADMIN 3.0
+            WII SHOP ADMIN 3.1
         </div>
         <div class="header-info">
             <div id="live-clock">00:00:00</div>
@@ -257,9 +257,14 @@
 
             <div id="sec-place" class="page-section">
                 <h2>Plače zaposlenih</h2>
+                <div class="card" style="background: #f8fafc;">
+                    <div class="form-group" style="max-width:300px;">
+                        <label>Izberi datum za prikaz plače:</label>
+                        <input type="date" id="place-datum-filter" onchange="NaloziInIzracunajPlace()">
+                    </div>
+                </div>
                 <div id="place-direktor-izbira" class="card" style="display:none; background:#f0fdf4;">
                     <h3 style="margin-top:0;">Urejanje podatkov in ur (Direktor)</h3>
-                    <p style="font-size:0.9em; color:#666;">Sistem samodejno sešteva razliko med časom Prihoda in Odhoda. Tu določaš postavko in evidentiraš izplačilo.</p>
                     <div class="form-row">
                         <div class="form-group"><label>Izberi zaposlenega</label><select id="place-zaposleni-select" onchange="OsveziPodatkeOPlaciZaposlenega()"></select></div>
                         <div class="form-group"><label>Postavka na minuto (€)</label><input type="number" id="place-PostavkaMin" step="0.01"></div>
@@ -272,7 +277,7 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Zaposleni</th><th>Postavka / min</th><th>Opravljene ure (V živo)</th><th>Skupaj zaslužek</th><th>Že plačano</th><th>Ostalo neplačano</th></tr></thead>
+                        <thead><tr><th>Zaposleni</th><th>Postavka / min</th><th>Ure na izbran dan</th><th>Zaslužek dneva</th><th>Že plačano</th><th>Ostalo neplačano (Pretekli dnevi)</th></tr></thead>
                         <tbody id="tbl-place"></tbody>
                     </table>
                 </div>
@@ -342,11 +347,12 @@
 
             <div id="sec-administracijapaketov" class="page-section">
                 <h2>Administracija oddaje (Poročila poštarjev)</h2>
+                
+                <div class="card" style="background:#e0f2fe; border: 2px solid #000;">
+                    <div id="admin-paketi-mesecna-statistika" style="font-size: 1.2em; font-weight: bold; font-family: 'JetBrains Mono', monospace;">Pošiljke ta mesec: /</div>
+                </div>
+
                 <div class="card">
-                    <div class="form-row">
-                        <div class="form-group"><label>Prikaz za datum (izbriši za vse)</label><input type="date" id="admin-paketi-datum" onchange="NaloziAdministracijoPaketov()"></div>
-                    </div>
-                    <hr style="border:0; border-top:2px solid #000; margin: 15px 0;">
                     <div class="form-row">
                         <div class="form-group"><label>Zap. št.</label><input type="text" id="ap-zap-st"></div>
                         <div class="form-group"><label>Pošiljatelj</label><input type="text" id="ap-posiljatelj"></div>
@@ -358,11 +364,16 @@
                     </div>
                     <button class="btn" onclick="DodajAdministracijoPaketa()">Dodaj v poročilo</button>
                 </div>
+
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Datum</th><th>Zap. št.</th><th>Pošiljatelj</th><th>Št. Paketa</th><th>Oddano</th><th>Poštar</th><th>Briši</th></tr></thead>
                         <tbody id="tbl-admin-paketi"></tbody>
                     </table>
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <div class="form-group" style="max-width:300px;"><label>Filtriraj poročila po datumu:</label><input type="date" id="admin-paketi-datum" onchange="NaloziAdministracijoPaketov()"></div>
                 </div>
             </div>
 
@@ -457,6 +468,25 @@
                 <div class="msg-grid" id="grid-zapiski" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));"></div>
             </div>
 
+            <div id="sec-povprasevanje" class="page-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:15px;">
+                    <h2 style="border:none; margin:0; padding:0;">Zunanja Povpraševanja (Mail predal)</h2>
+                    <button id="btn-povp-dir-view" class="btn btn-warning" style="display:none;" onclick="ToggleDirektorPovpView()">Uredi vse Maile (Direktor)</button>
+                </div>
+                <div class="form-row">
+                    <div class="card" style="flex:1; height: fit-content;">
+                        <h3 style="margin-top:0;">📥 Nova Pošta</h3>
+                        <div class="form-group"><label>Zadeva</label><input type="text" id="povp-zadeva" placeholder="Npr. Povpraševanje za dostavo..."></div>
+                        <div class="form-group"><label>Vsebina Maila</label><textarea id="povp-vsebina" rows="6" placeholder="Napiši vsebino sporočila..."></textarea></div>
+                        <button class="btn btn-success" style="width:100%;" onclick="PosljiNovoPovprasevanje()">Pošlji Tajnici</button>
+                    </div>
+                    <div style="flex:2;">
+                        <h3>Prejeti Maili v predalu</h3>
+                        <div class="msg-grid" id="povp-predal-lista"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="sec-omeni" class="page-section">
                 <h2>Moj Profil</h2>
                 <div class="card" style="max-width: 500px;">
@@ -498,7 +528,7 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Ime</th><th>Username</th><th>Geslo/PIN</th><th>Postavka</th><th>Akcija</th></tr></thead>
+                        <thead><tr><th>Ime</th><th>Username</th><th>Geslo/PIN</th><th>Vloga</th><th>Postavka</th><th>Akcija</th></tr></thead>
                         <tbody id="tbl-zaposleni"></tbody>
                     </table>
                 </div>
@@ -531,11 +561,18 @@
         let vsiZaposleni = {};
         
         let aktivnaStranId = "loginacija";
-        let odprtPogovorKey = null; // za real-time chat
-        let zadnjiCasPogovorov = {}; // sledenje neprebranim 
-        let lokalniZapiski = {}; // globalna hramba za modal urejanje
+        let odprtPogovorKey = null;
+        let odprtoPovprasevanjeKey = null;
+        let zadnjiCasPogovorov = {}; 
+        let zadnjiCasPovprasevanj = {};
+        let lokalniZapiski = {}; 
+        let lokalniTz = {};
         let lokalnaBazaPaketov = {};
-        
+        let dirPovpViewMode = false; // Pogled direktorja na maile
+
+        // Cache objekti za nevidno osveževanje (anti-flicker)
+        let htmlCache = {};
+
         const VSE_STRANI = [
             { id: "loginacija", naslov: "REG. DEL. ČASA", icon: "🕒" },
             { id: "place", naslov: "PLAČE ZAPOSLENIH", icon: "💰" },
@@ -548,6 +585,7 @@
             { id: "telefon", naslov: "TELEFON & ZAPIS.", icon: "📞" },
             { id: "komunikacija", naslov: "POGOVORI", icon: "✉️" },
             { id: "zapiski", naslov: "MOJI ZAPISKI", icon: "📝" },
+            { id: "povprasevanje", naslov: "POVPRAŠEVANJE", icon: "📥" },
             { id: "omeni", naslov: "MOJ PROFIL", icon: "👤" },
             { id: "dostop", naslov: "PRAVICE (Dir)", icon: "🔐" },
             { id: "zaposleni", naslov: "KADRI (Dir)", icon: "👥" },
@@ -558,40 +596,46 @@
             NastaviUro(); setInterval(NastaviUro, 1000);
             InicijalizirajDirektorja();
             document.getElementById('admin-paketi-datum').valueAsDate = new Date();
+            document.getElementById('place-datum-filter').valueAsDate = new Date();
             
-            // Real-time polling sistem
-            setInterval(GlobalniTick, 4000); 
+            // Polling interval brez zatikanja strani
+            setInterval(GlobalniTick, 3000); 
         };
 
-        // BEEP ZVOK (Generiran, da ne rabimo zunanjih fajlov)
+        // DALJŠI ZVOČNI SIGNAL (0.55 sekunde)
         function PredvajajPisk() {
             try {
                 let ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let osc = ctx.createOscillator(); let gain = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(580, ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
                 osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); osc.stop(ctx.currentTime + 0.15);
+                osc.start(); osc.stop(ctx.currentTime + 0.55);
             } catch(e) {}
         }
 
         async function GlobalniTick() {
             if(!trenutniUporabnik || document.getElementById('main-container').style.display === 'none') return;
             
-            // 1. Preverimo nova sporočila v ozadju
+            // Preverjanje neprebranih obvestil v ozadju
             PreveriNovaSporocilaSistemsko();
+            PreveriNovaPovprasevanjaSistemsko();
 
-            // 2. Osvežimo tisto stran, na kateri smo trenutno
+            // Osveževanje aktivnih tabel samo ob dejanski spremembi
             if(aktivnaStranId === 'komunikacija') NaloziSporocila();
+            else if(aktivnaStranId === 'povprasevanje') NaloziPovprasevanjaPredal();
             else if(aktivnaStranId === 'urnik' && !document.getElementById('global-modal').style.display.includes('flex')) PrikaziKoledar();
             else if(aktivnaStranId === 'loginacija') NaloziLoginacijo();
             else if(aktivnaStranId === 'paketi') NaloziPaketeTable(true);
             else if(aktivnaStranId === 'zapiski') NaloziZapiske();
             else if(aktivnaStranId === 'administracijapaketov') NaloziAdministracijoPaketov();
 
-            // 3. Če imamo odprto okno s pogovorom
+            // Osveževanje odprtih pogovorov znotraj modalnih oken v realnem času
             if(odprtPogovorKey && document.getElementById('global-modal').style.display.includes('flex')) {
                 OsveziOdprtPogovorZnotrajModala();
+            }
+            if(odprtoPovprasevanjeKey && document.getElementById('global-modal').style.display.includes('flex')) {
+                OsveziOdprtoPovprasevanjeZnotrajModala();
             }
         }
 
@@ -605,7 +649,7 @@
                 let res = await fetch(`${FIREBASE_BASE_URL}/zaposleni/direktor.json`);
                 let data = await res.json();
                 if(!data) {
-                    let dir = { ime: "JAŠA PETRINJAK", username: "009", password: "009", postavka: 1.00, isDirektor: true, pravice: {} };
+                    let dir = { ime: "JAŠA PETRINJAK", username: "009", password: "009", postavka: 1.00, isDirektor: true, isTajnik: false, pravice: {} };
                     VSE_STRANI.forEach(s => dir.pravice[s.id] = true);
                     await fetch(`${FIREBASE_BASE_URL}/zaposleni/direktor.json`, { method: 'PUT', body: JSON.stringify(dir) });
                     await fetch(`${FIREBASE_BASE_URL}/banka/direktor.json`, { method: 'PUT', body: JSON.stringify({ ime: "JAŠA PETRINJAK", pin: "009", stanje: 999999 }) });
@@ -632,16 +676,17 @@
                 document.getElementById('login-page').style.display = 'none';
                 document.getElementById('main-header').style.display = 'flex';
                 document.getElementById('main-container').style.display = 'flex';
-                document.getElementById('user-display').innerText = `Prijavljen: ${found.ime}`;
+                document.getElementById('user-display').innerText = `Prijavljen: ${found.ime} ${found.isTajnik?'(TAJNIK)':''}`;
                 document.getElementById('blagajnik-ime').innerText = `Blagajnik: ${found.ime}`;
                 
-                // Naložimo lokalno stanje neprebranih
                 try{ zadnjiCasPogovorov = JSON.parse(localStorage.getItem(`ogledSporocil_${trenutniUporabnik.username}`)) || {}; }catch(e){}
+                try{ zadnjiCasPovprasevanj = JSON.parse(localStorage.getItem(`ogledPovp_${trenutniUporabnik.username}`)) || {}; }catch(e){}
                 
+                if(trenutniUporabnik.isDirektor) document.getElementById('btn-povp-dir-view').style.display = 'block';
+
                 IzrisiNavigacijo(); NaloziIzbireZaposlenih();
                 PreklopiNaStran(NajdiPrvoDovoljenoStran());
                 OsveziVsePodatkovneTabele();
-                PreveriNovaSporocilaSistemsko();
             } else {
                 document.getElementById('login-alert').innerHTML = `<div style="color:red; margin-bottom:15px; font-weight:bold; font-family:'JetBrains Mono';">Napaka: Napačno ime ali geslo!</div>`;
             }
@@ -654,7 +699,7 @@
             VSE_STRANI.forEach(stran => {
                 if(trenutniUporabnik.isDirektor || (trenutniUporabnik.pravice && trenutniUporabnik.pravice[stran.id])) {
                     let btn = document.createElement('button');
-                    let badgeHTML = stran.id === 'komunikacija' ? `<div class="badge-noti" id="nav-noti-komunikacija"></div>` : '';
+                    let badgeHTML = (stran.id === 'komunikacija' || stran.id === 'povprasevanje') ? `<div class="badge-noti" id="nav-noti-${stran.id}"></div>` : '';
                     btn.innerHTML = `<span class="ikona">${stran.icon}${badgeHTML}</span> <span class="naslov-menija">${stran.naslov}</span>`;
                     btn.id = `btn-nav-${stran.id}`; btn.onclick = () => PreklopiNaStran(stran.id);
                     nav.appendChild(btn);
@@ -680,6 +725,7 @@
             if(stranId === 'banka') OsveziBanko();
             if(stranId === 'urnik') PrikaziKoledar();
             if(stranId === 'komunikacija') NaloziSporocila();
+            if(stranId === 'povprasevanje') NaloziPovprasevanjaPredal();
         }
 
         function NaloziIzbireZaposlenih() {
@@ -703,25 +749,34 @@
         function ZpriModal(force) { 
             if(force===true || force.target.id==='global-modal') {
                 document.getElementById('global-modal').style.display='none';
-                odprtPogovorKey = null; // Resetiramo da global tick ne polla modala
+                odprtPogovorKey = null;
+                odprtoPovprasevanjeKey = null;
             }
         }
 
-        /* ================= 1. LOGINACIJA & PLAČE ================= */
+        /* Safe cache renderer to stop flicker */
+        function PosodobiElementVarno(id, html) {
+            if(htmlCache[id] === html) return; 
+            htmlCache[id] = html;
+            let el = document.getElementById(id);
+            if(el) el.innerHTML = html;
+        }
+
+        /* ================= PLAČE PO DATUMIH & HISTORIČNO ================= */
         async function ZabeleziLoginacijo(dogodek) {
-            let sifra = document.getElementById('log-sifra').value.trim();
+            let logSifraEl = document.getElementById('log-sifra');
+            let sifra = logSifraEl.value.trim();
             if(!sifra) { alert("Vnesite šifro!"); return; }
             let izvajalec = Object.values(vsiZaposleni).find(z => z.password === sifra);
             if(!izvajalec) { alert("Napačna šifra!"); return; }
 
             let isoNow = new Date().toISOString();
             await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method: 'POST', body: JSON.stringify({ ime: izvajalec.ime, username: izvajalec.username, dogodek: dogodek, isoTime: isoNow }) });
-            document.getElementById('log-sifra').value = ""; NaloziLoginacijo();
+            logSifraEl.value = ""; NaloziLoginacijo();
         }
 
         async function NaloziLoginacijo() {
             let res = await fetch(`${FIREBASE_BASE_URL}/loginacija.json`); let data = await res.json() || {};
-            let tbody = document.getElementById('tbl-loginacija'); let stara = tbody.innerHTML; tbody.innerHTML = "";
             if(trenutniUporabnik.isDirektor) document.getElementById('admin-loginacija-controls').style.display = 'block';
 
             let arr = Object.keys(data).map(k => ({key: k, ...data[k]})).sort((a,b) => new Date(b.isoTime) - new Date(a.isoTime));
@@ -732,7 +787,7 @@
                     <td>${trenutniUporabnik.isDirektor ? `<button class="btn btn-warning" style="padding:4px 8px; font-size:11px;" onclick="UrediZapisLoginacije('${d.key}', '${d.isoTime}', '${d.dogodek}')">Uredi</button> <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="BrisiZapisLoginacije('${d.key}')">X</button>` : '/'}</td>
                 </tr>`;
             });
-            if(stara !== html) tbody.innerHTML = html; // Prepreči flickeranje med tipkanjem šifre
+            PosodobiElementVarno('tbl-loginacija', html);
         }
 
         function UrediZapisLoginacije(key, isoTime, staridog) {
@@ -747,25 +802,33 @@
         }
 
         async function BrisiZapisLoginacije(key) { if(confirm("Brišem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija/${key}.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
-        async function PobrisiVsoLoginacijo() { if(confirm("POZOR! S tem se izbrišejo vsi zapisi. Nadaljujem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
+        async function PobrisiVsoLoginacijo() { if(confirm("POZOR! Izbris vseh zapisov. Nadaljujem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
 
-        function IzracunajSkupneMinute(logDataArr, username, samoDanes = false) {
+        function IzracunajSkupneMinute(logDataArr, username, filterDatumStr = null) {
             let userLogs = logDataArr.filter(x => x.username === username).sort((a,b) => new Date(a.isoTime) - new Date(b.isoTime));
-            if(samoDanes) { let today = new Date().toDateString(); userLogs = userLogs.filter(x => new Date(x.isoTime).toDateString() === today); }
+            if(filterDatumStr) {
+                userLogs = userLogs.filter(x => new Date(x.isoTime).toDateString() === new Date(filterDatumStr).toDateString());
+            }
             let totalMinutes = 0; let lastStart = null;
             userLogs.forEach(l => {
                 if(l.dogodek === "Prihod na delo" || l.dogodek === "Prihod iz pavze") lastStart = new Date(l.isoTime);
                 else if ((l.dogodek === "Odhod domov" || l.dogodek === "Pavza") && lastStart) { totalMinutes += (new Date(l.isoTime) - lastStart) / 60000; lastStart = null; }
             });
-            if(lastStart) totalMinutes += (new Date() - lastStart) / 60000;
+            if(lastStart) {
+                let zdaj = new Date();
+                if(!filterDatumStr || zdaj.toDateString() === new Date(filterDatumStr).toDateString()) {
+                    totalMinutes += (zdaj - lastStart) / 60000;
+                }
+            }
             return totalMinutes;
         }
 
         async function NaloziInIzracunajPlace() {
+            let filterDatum = document.getElementById('place-datum-filter').value;
             let resLog = await fetch(`${FIREBASE_BASE_URL}/loginacija.json`); let logsRaw = await resLog.json() || {};
             let logDataArr = Object.keys(logsRaw).map(k => logsRaw[k]);
             let resPlace = await fetch(`${FIREBASE_BASE_URL}/place_nastavitve.json`); let pSet = await resPlace.json() || {};
-            let tbody = document.getElementById('tbl-place'); tbody.innerHTML = "";
+            let html = "";
 
             if(trenutniUporabnik.isDirektor) {
                 document.getElementById('place-direktor-izbira').style.display = 'block';
@@ -777,9 +840,15 @@
 
             for(let k in vsiZaposleni) {
                 let zap = vsiZaposleni[k]; let nastavitve = pSet[k] || { postavkaMin: zap.postavka || 0.15, placano: 0, neplacano: 0 };
-                let minute = IzracunajSkupneMinute(logDataArr, zap.username); let zasluzek = minute * nastavitve.postavkaMin;
-                tbody.innerHTML += `<tr><td><strong>${zap.ime}</strong></td><td>${nastavitve.postavkaMin} €/min</td><td>${Math.floor(minute/60)}h ${Math.floor(minute%60)}m</td><td><strong style="color:var(--success-color);">${zasluzek.toFixed(2)} €</strong></td><td>${nastavitve.placano || 0} €</td><td><span style="color:var(--danger-color);">${nastavitve.neplacano || 0} €</span></td></tr>`;
+                let minuteIzbranDan = IzracunajSkupneMinute(logDataArr, zap.username, filterDatum);
+                let zasluzekDneva = minuteIzbranDan * nastavitve.postavkaMin;
+                
+                // Prikaz zgodovinskega neplačanega dolga
+                let ostaloNeplacano = nastavitve.neplacano || 0;
+
+                html += `<tr><td><strong>${zap.ime}</strong></td><td>${nastavitve.postavkaMin} €/min</td><td>${Math.floor(minuteIzbranDan/60)}h ${Math.floor(minuteIzbranDan%60)}m</td><td><strong style="color:var(--success-color);">${zasluzekDneva.toFixed(2)} €</strong></td><td>${nastavitve.placano || 0} €</td><td><span style="color:var(--danger-color); font-weight:bold;">${ostaloNeplacano} €</span></td></tr>`;
             }
+            PosodobiElementVarno('tbl-place', html);
         }
 
         async function OsveziPodatkeOPlaciZaposlenega() {
@@ -797,18 +866,17 @@
             NaloziInIzracunajPlace(); NaloziVseZaposlene();
         }
 
-        /* ================= 2. PAKETI ================= */
+        /* ================= PAKETI ================= */
         async function NaloziPaketeTable(vOzadju = false) {
             let res = await fetch(`${FIREBASE_BASE_URL}/paketi_baza.json`); lokalnaBazaPaketov = await res.json() || {};
             let isciEl = document.getElementById('iscipaket-id');
-            // Če je v ozadju in up. nekaj tipka, pustimo pri miru
             if(vOzadju && isciEl === document.activeElement) return; 
             IsciPaketList(); 
         }
 
         function IsciPaketList() {
             let query = document.getElementById('iscipaket-id').value.toLowerCase().trim();
-            let tbody = document.getElementById('tbl-vsi-paketi'); let html="";
+            let html="";
             let arr = Object.keys(lokalnaBazaPaketov).map(k=>({key:k, ...lokalnaBazaPaketov[k]})).reverse();
             
             arr.forEach(p => {
@@ -822,7 +890,7 @@
                     html += `<tr class="clickable-row" onclick="OdpriUrejanjePaketa('${p.key}')"><td><strong>${p.stPaketa}</strong></td><td>${p.posiljatelj}</td><td>${p.prejemnik}</td><td>${p.vrsta} (${p.velikost})</td><td><span class="badge ${statColor}">${p.status||'Sprejeto'}</span></td></tr>`;
                 }
             });
-            tbody.innerHTML = html;
+            PosodobiElementVarno('tbl-vsi-paketi', html);
         }
 
         function OdpriUrejanjePaketa(key) {
@@ -848,7 +916,7 @@
             }
         }
 
-        /* ================= 3. ODDAJA IN RAČUNI ================= */
+        /* ================= ODDAJA IN RAČUNI ================= */
         function IzracunajSkupajBlagajna() {
             let c = parseFloat(document.getElementById('blag-cena').value)||0; let p = parseFloat(document.getElementById('blag-postnina').value)||0;
             document.getElementById('blag-skupaj-prikaz').innerText = (c+p).toFixed(2);
@@ -879,33 +947,35 @@
 
         async function NaloziRacune() {
             let res = await fetch(`${FIREBASE_BASE_URL}/racuni.json`); let data = await res.json() || {};
-            let tbody = document.getElementById('tbl-racuni'); tbody.innerHTML = "";
+            let html = "";
             Object.keys(data).map(k=>({key:k,...data[k]})).reverse().forEach(r => {
                 let stat = r.status==='STORNO' ? `<span style="color:red;font-weight:bold;">STORNO</span>` : `<span style="color:green;font-weight:bold;">VELJAVEN</span>`;
-                tbody.innerHTML += `<tr><td><strong>${r.stRacuna}</strong></td><td>${r.stPaketa}</td><td><strong>${r.znesek.toFixed(2)} €</strong></td><td>${r.tipPlacila}</td><td>${r.blagajnik}</td><td>${stat}</td><td>${r.status!=='STORNO'?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="StornirajRacun('${r.key}')">Storno</button>`:'/'}</td></tr>`;
+                html += `<tr><td><strong>${r.stRacuna}</strong></td><td>${r.stPaketa}</td><td><strong>${r.znesek.toFixed(2)} €</strong></td><td>${r.tipPlacila}</td><td>${r.blagajnik}</td><td>${stat}</td><td>${r.status!=='STORNO'?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="StornirajRacun('${r.key}')">Storno</button>`:'/'}</td></tr>`;
             });
+            PosodobiElementVarno('tbl-racuni', html);
         }
         async function StornirajRacun(key) { if(confirm("Storniram?")) { await fetch(`${FIREBASE_BASE_URL}/racuni/${key}/status.json`, {method:'PUT', body:JSON.stringify("STORNO")}); NaloziRacune(); } }
 
-        /* ================= 4. KOLEDAR (URNIK) ================= */
+        /* ================= KOLEDAR (ANTI-FLICKER) ================= */
         let calDate = new Date();
         async function PrikaziKoledar() {
             let leto = calDate.getFullYear(); let mesec = calDate.getMonth();
             document.getElementById('cal-month-year').innerText = calDate.toLocaleString('sl-SI', { month: 'long', year: 'numeric' }).toUpperCase();
             let prviDan = new Date(leto, mesec, 1).getDay(); if(prviDan===0) prviDan=7;
             let stDni = new Date(leto, mesec+1, 0).getDate();
-            let grid = document.getElementById('cal-days-grid'); grid.innerHTML = "";
-            for(let i=1; i<prviDan; i++) grid.innerHTML += `<div class="calendar-day" style="background:#f1f5f9;"></div>`;
             
             let res = await fetch(`${FIREBASE_BASE_URL}/urnik.json`); let evData = await res.json() || {};
             let eventi = Object.keys(evData).map(k=>({key:k, ...evData[k]}));
 
+            let html = "";
+            for(let i=1; i<prviDan; i++) html += `<div class="calendar-day" style="background:#f1f5f9;"></div>`;
             for(let d=1; d<=stDni; d++) {
                 let polniDatum = `${leto}-${(mesec+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
                 let dnevniEv = eventi.filter(e => e.datum.startsWith(polniDatum));
                 let evHtml = dnevniEv.map(e => `<div class="cal-event" onclick="event.stopPropagation(); OdpriUrejanjeSestanka('${e.key}')">${e.naslov}</div>`).join('');
-                grid.innerHTML += `<div class="calendar-day" onclick="OdpriNovSestanek('${polniDatum}')"><div class="date-num">${d}</div>${evHtml}</div>`;
+                html += `<div class="calendar-day" onclick="OdpriNovSestanek('${polniDatum}')"><div class="date-num">${d}</div>${evHtml}</div>`;
             }
+            PosodobiElementVarno('cal-days-grid', html);
         }
         function PremakniMesec(d) { calDate.setMonth(calDate.getMonth() + d); PrikaziKoledar(); }
 
@@ -924,10 +994,9 @@
         async function PosodobiSestanek(key) { await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`, { method:'PUT', body:JSON.stringify({naslov:document.getElementById('urnik-ed-n').value, datum:document.getElementById('urnik-ed-d').value, opis:document.getElementById('urnik-ed-o').value}) }); ZpriModal(true); PrikaziKoledar(); }
         async function BrisiSestanekKoledar(key) { await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`, {method:'DELETE'}); ZpriModal(true); PrikaziKoledar(); }
 
-        /* ================= 6. KOMUNIKACIJA (Real Time) ================= */
+        /* ================= KOMUNIKACIJA (INTERNA) ================= */
         async function PreveriNovaSporocilaSistemsko() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); 
-            let d = await res.json() || {};
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); let d = await res.json() || {};
             let imaNovo = false;
 
             Object.keys(d).forEach(k => {
@@ -935,8 +1004,7 @@
                 if(p.udelezenci && p.udelezenci.includes(trenutniUporabnik.username)) {
                     let spArr = p.sporocila ? Object.values(p.sporocila) : [];
                     let lastTime = spArr.length > 0 ? spArr[spArr.length-1].isoTime : p.zacetek;
-                    let mojZadnji = zadnjiCasPogovorov[k] || "0";
-                    if(new Date(lastTime) > new Date(mojZadnji) && (!spArr.length || spArr[spArr.length-1].od !== trenutniUporabnik.username)) {
+                    if(new Date(lastTime) > new Date(zadnjiCasPogovorov[k] || "0") && (!spArr.length || spArr[spArr.length-1].od !== trenutniUporabnik.username)) {
                         imaNovo = true;
                     }
                 }
@@ -945,10 +1013,9 @@
             let notiBadge = document.getElementById('nav-noti-komunikacija');
             if(notiBadge) notiBadge.style.display = imaNovo ? 'block' : 'none';
 
-            // Zvok samo, če je novo stanje, ki ga še nismo registrirali kot pisk
-            if(imaNovo && !window.zvocnoOpozorjeno) {
-                PredvajajPisk(); window.zvocnoOpozorjeno = true;
-            } else if (!imaNovo) { window.zvocnoOpozorjeno = false; }
+            if(imaNovo && !window.zvocnoOpozorjenoInternal) {
+                PredvajajPisk(); window.zvocnoOpozorjenoInternal = true;
+            } else if (!imaNovo) { window.zvocnoOpozorjenoInternal = false; }
         }
 
         async function PosljiSporocilo() {
@@ -969,7 +1036,7 @@
 
         async function NaloziSporocila() {
             let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); let d = await res.json() || {};
-            let posoda = document.getElementById('kom-prejeto'); posoda.innerHTML="";
+            let html = "";
             
             Object.keys(d).map(k=>({key:k,...d[k]})).sort((a,b)=>new Date(b.zacetek)-new Date(a.zacetek)).forEach(p => {
                 if(p.udelezenci && p.udelezenci.includes(trenutniUporabnik.username)) {
@@ -979,18 +1046,19 @@
                     if(new Date(lastTime) > new Date(zadnjiCasPogovorov[p.key] || "0") && (!spArr.length || spArr[spArr.length-1].od !== trenutniUporabnik.username)) isUnread = true;
 
                     let imena = p.udelezenci.map(u => { let zap = Object.values(vsiZaposleni).find(z => z.username === u); return zap ? zap.ime : u; }).join(', ');
-                    posoda.innerHTML += `<div class="msg-item ${isUnread?'neprebrano':''}" onclick="OdpriPogovor('${p.key}')">
+                    html += `<div class="msg-item ${isUnread?'neprebrano':''}" onclick="OdpriPogovor('${p.key}')">
                         <div class="msg-header"><span>${new Date(lastTime).toLocaleString('sl-SI')}</span><span>👥 ${p.udelezenci.length}</span></div>
                         <div class="msg-title" style="margin-bottom:5px;">${p.zadeva}</div>
                         <div style="font-size:0.75em; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${imena}</div>
                     </div>`;
                 }
             });
+            PosodobiElementVarno('kom-prejeto', html);
         }
 
         async function OdpriPogovor(key) {
             odprtPogovorKey = key;
-            zadnjiCasPogovorov[key] = new Date().toISOString(); ShraniZadnjeOglede(); PreveriNovaSporocilaSistemsko(); NaloziSporocila(); // umakne badge prebrano
+            zadnjiCasPogovorov[key] = new Date().toISOString(); ShraniZadnjeOglede(); PreveriNovaSporocilaSistemsko(); NaloziSporocila();
             
             let res = await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`); let p = await res.json(); if(!p) return;
             let imena = p.udelezenci.map(u => { let zap = Object.values(vsiZaposleni).find(z => z.username === u); return zap ? zap.ime : u; }).join(', ');
@@ -1025,21 +1093,20 @@
                     <div style="white-space:pre-wrap; font-size:0.9em;">${s.vsebina}</div>
                 </div>`;
             });
-            // Da ne scrolamo dol, če ni novih sporočil, preverimo dolžino starega innerHTML
             if(co.innerHTML !== html) { co.innerHTML = html; setTimeout(() => { co.scrollTop = co.scrollHeight; }, 50); }
         }
 
         async function OdgovoriNaPogovor(key) {
             let vseb = document.getElementById('chat-nova-vsebina').value.trim(); if(!vseb) return;
-            document.getElementById('chat-nova-vsebina').value = ""; // takoj počistimo okno
+            document.getElementById('chat-nova-vsebina').value = "";
             await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}/sporocila.json`, { method:'POST', body:JSON.stringify({ od: trenutniUporabnik.username, odIme: trenutniUporabnik.ime, vsebina: vseb, isoTime: new Date().toISOString() }) });
             OsveziOdprtPogovorZnotrajModala(); NaloziSporocila(); 
         }
 
-        async function BrisiPogovor(key) { if(confirm("Izbrišem celoten pogovor za VSE udeležence?")) { await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziSporocila(); } }
+        async function BrisiPogovor(key) { if(confirm("Izbrišem celoten pogovor?")) { await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziSporocila(); } }
         function ShraniZadnjeOglede() { localStorage.setItem(`ogledSporocil_${trenutniUporabnik.username}`, JSON.stringify(zadnjiCasPogovorov)); }
 
-        /* ================= 7. ZAPISKI (Popravljeno) ================= */
+        /* ================= ZAPISKI (Z UREJANJEM) ================= */
         async function DodajZapisek() {
             let n = document.getElementById('zapisek-naslov').value; let v = document.getElementById('zapisek-vsebina').value; let d = document.getElementById('zapisek-deli').value;
             if(!n) return;
@@ -1048,16 +1115,17 @@
         }
         async function NaloziZapiske() {
             let res = await fetch(`${FIREBASE_BASE_URL}/zapiski.json`); lokalniZapiski = await res.json() || {};
-            let gr = document.getElementById('grid-zapiski'); gr.innerHTML="";
+            let html = "";
             Object.keys(lokalniZapiski).map(k=>({key:k,...lokalniZapiski[k]})).sort((a,b)=>new Date(b.isoTime)-new Date(a.isoTime)).forEach(z => {
                 if(z.avtor === trenutniUporabnik.username || z.deliZ === trenutniUporabnik.username) {
                     let iz = z.avtor === trenutniUporabnik.username ? '(Moj)' : `(Od: ${z.avtorIme})`;
-                    gr.innerHTML += `<div class="msg-item" onclick="BeriZapisek('${z.key}')">
+                    html += `<div class="msg-item" onclick="BeriZapisek('${z.key}')">
                         <div class="msg-header"><span>${new Date(z.isoTime).toLocaleDateString('sl-SI')}</span><span>${iz}</span></div>
                         <div class="msg-title">${z.naslov}</div>
                     </div>`;
                 }
             });
+            PosodobiElementVarno('grid-zapiski', html);
         }
         function BeriZapisek(key) {
             let z = lokalniZapiski[key];
@@ -1078,54 +1146,205 @@
         }
         async function BrisiZapisek(key) { if(confirm("Izbrišem zapisek?")) {await fetch(`${FIREBASE_BASE_URL}/zapiski/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziZapiske();} }
 
-        /* ================= 8. OSTALO & PROFIL ================= */
+        /* ================= NEW PAGE: POVPRAŠEVANJA (MAILI) ================= */
+        function ToggleDirektorPovpView() {
+            dirPovpViewMode = !dirPovpViewMode;
+            document.getElementById('btn-povp-dir-view').innerText = dirPovpViewMode ? "Preklopi v navaden predal" : "Uredi vse Maile (Direktor)";
+            NaloziPovprasevanjaPredal();
+        }
+
+        async function PosljiNovoPovprasevanje() {
+            let zad = document.getElementById('povp-zadeva').value.trim();
+            let vseb = document.getElementById('povp-vsebina').value.trim();
+            if(!zad || !vseb) { alert("Vnesi zadevo in vsebino!"); return; }
+
+            let mail = {
+                zadeva: zad, vsebina: vseb, odUsername: trenutniUporabnik.username, odIme: trenutniUporabnik.ime,
+                dodeljeno: "tajnik", status: "novo", isoTime: new Date().toISOString()
+            };
+            await fetch(`${FIREBASE_BASE_URL}/povprasevanja.json`, { method: 'POST', body: JSON.stringify(mail) });
+            document.getElementById('povp-zadeva').value = ""; document.getElementById('povp-vsebina').value = "";
+            alert("Mail uspešno poslan na tajništvo!"); NaloziPovprasevanjaPredal();
+        }
+
+        async function PreveriNovaPovprasevanjaSistemsko() {
+            let res = await fetch(`${FIREBASE_BASE_URL}/povprasevanja.json`); let data = await res.json() || {};
+            let imaNovo = false;
+
+            Object.keys(data).forEach(k => {
+                let m = data[k];
+                let mojZadnji = zadnjiCasPovprasevanj[k] || "0";
+                if(new Date(m.isoTime) > new Date(mojZadnji)) {
+                    if(trenutniUporabnik.isTajnik && m.dodeljeno === "tajnik" && m.status === "novo") imaNovo = true;
+                    if(m.dodeljeno === trenutniUporabnik.username && m.status === "posredovano_novo") imaNovo = true;
+                }
+            });
+
+            let badg = document.getElementById('nav-noti-povprasevanje');
+            if(badg) badg.style.display = imaNovo ? 'block' : 'none';
+            if(imaNovo && !window.zvocnoOpozorjenoMail) { PredvajajPisk(); window.zvocnoOpozorjenoMail = true; }
+            else if (!imaNovo) { window.zvocnoOpozorjenoMail = false; }
+        }
+
+        async function NaloziPovprasevanjaPredal() {
+            let res = await fetch(`${FIREBASE_BASE_URL}/povprasevanja.json`); let data = await res.json() || {};
+            let html = "";
+            let arr = Object.keys(data).map(k=>({key:k, ...data[k]})).sort((a,b)=> new Date(b.isoTime) - new Date(a.isoTime));
+
+            arr.forEach(m => {
+                let vidno = false;
+                if(dirPovpViewMode && trenutniUporabnik.isDirektor) vidno = true;
+                else if(trenutniUporabnik.isTajnik && m.dodeljeno === "tajnik") vidno = true;
+                else if(m.dodeljeno === trenutniUporabnik.username) vidno = true;
+                else if(m.odUsername === trenutniUporabnik.username) vidno = true;
+
+                if(vidno) {
+                    let isUnread = false;
+                    if(trenutniUporabnik.isTajnik && m.dodeljeno === "tajnik" && m.status === "novo") isUnread = true;
+                    if(m.dodeljeno === trenutniUporabnik.username && m.status === "posredovano_novo") isUnread = true;
+
+                    let statBadge = `<span class="badge badge-blue">Predal: ${m.dodeljeno.toUpperCase()}</span>`;
+                    if(m.status === 'odgovorjeno') statBadge = `<span class="badge badge-success">Odgovorjeno</span>`;
+
+                    html += `<div class="msg-item ${isUnread?'neprebrano':''}" onclick="OdpriPovprasevanje('${m.key}')">
+                        <div class="msg-header"><span>${new Date(m.isoTime).toLocaleString('sl-SI')}</span><span>Od: ${m.odIme}</span></div>
+                        <div class="msg-title">${m.zadeva}</div>
+                        <div style="margin-top:5px;">${statBadge}</div>
+                    </div>`;
+                }
+            });
+            PosodobiElementVarno('povp-predal-lista', html);
+        }
+
+        async function OdpriPovprasevanje(key) {
+            odprtoPovprasevanjeKey = key;
+            zadnjiCasPovprasevanj[key] = new Date().toISOString(); localStorage.setItem(`ogledPovp_${trenutniUporabnik.username}`, JSON.stringify(zadnjiCasPovprasevanj));
+            
+            let res = await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}.json`); let m = await res.json();
+            if(m.status === 'novo' && trenutniUporabnik.isTajnik) { await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/status.json`, {method:'PUT', body:JSON.stringify('prebrano')}); }
+            if(m.status === 'posredovano_novo' && m.dodeljeno === trenutniUporabnik.username) { await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/status.json`, {method:'PUT', body:JSON.stringify('posredovano_prebrano')}); }
+            
+            NaloziPovprasevanjaPredal(); PreveriNovaPovprasevanjaSistemsko();
+
+            let optsZaposleni = "<option value=''>-- izberi zaposlenega --</option>";
+            for(let k in vsiZaposleni) { optsZaposleni += `<option value="${vsiZaposleni[k].username}">${vsiZaposleni[k].ime}</option>`; }
+
+            OdpriModal(`<h3>Pismo / Mail: ${m.zadeva}</h3>
+                <div style="background:#f8fafc; padding:15px; border:1px solid #000; margin-bottom:15px; font-size:0.95em; white-space:pre-wrap;"><strong>Od: ${m.odIme}</strong>\n\n${m.vsebina}</div>
+                
+                ${m.odgovor ? `<div style="background:#f0fdf4; padding:10px; border:1px dashed green; margin-bottom:15px; font-size:0.9em;"><strong>Odgovor / Opomba:</strong><br>${m.odgovor}</div>` : ''}
+
+                <div class="form-group"><label>Napiši odgovor ali interno opombo</label><textarea id="povp-modal-odg" rows="3"></textarea></div>
+                <button class="btn btn-success" style="margin-bottom:15px; width:100%;" onclick="OdgovoriNaPovp('${key}')">Shrani odgovor / odgovori</button>
+                
+                ${(trenutniUporabnik.isTajnik || trenutniUporabnik.isDirektor) ? `
+                    <div style="background:#f1f5f9; padding:12px; border:2px solid #000; margin-top:10px;">
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">Preusmeri / Posreduj mail sodelavcu:</label>
+                        <select id="povp-modal-preusmeri" style="width:100%; margin-bottom:10px;">${optsZaposleni}</select>
+                        <button class="btn btn-warning" style="width:100%;" onclick="PreusmeriPovp('${key}')">Preusmeri pismo</button>
+                    </div>
+                ` : ''}
+
+                ${trenutniUporabnik.isDirektor ? `<button class="btn btn-danger" style="width:100%; margin-top:15px;" onclick="BrisiPovp('${key}')">Izbriši mail (Direktor)</button>` : ''}
+            `);
+        }
+
+        async function OsveziOdprtoPovprasevanjeZnotrajModala() {
+            if(!odprtoPovprasevanjeKey) return;
+            zadnjiCasPovprasevanj[odprtoPovprasevanjeKey] = new Date().toISOString(); localStorage.setItem(`ogledPovp_${trenutniUporabnik.username}`, JSON.stringify(zadnjiCasPovprasevanj));
+        }
+
+        async function OdgovoriNaPovp(key) {
+            let txt = document.getElementById('povp-modal-odg').value.trim(); if(!txt) return;
+            await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/odgovor.json`, { method:'PUT', body:JSON.stringify(txt) });
+            await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/status.json`, { method:'PUT', body:JSON.stringify('odgovorjeno') });
+            ZpriModal(true); NaloziPovprasevanjaPredal();
+        }
+
+        async function PreusmeriPovp(key) {
+            let komu = document.getElementById('povp-modal-preusmeri').value; if(!komu) return;
+            await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/dodeljeno.json`, { method:'PUT', body:JSON.stringify(komu) });
+            await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}/status.json`, { method:'PUT', body:JSON.stringify('posredovano_novo') });
+            ZpriModal(true); NaloziPovprasevanjaPredal();
+        }
+
+        async function BrisiPovp(key) { if(confirm("Izbrišem ta zunanji mail?")) { await fetch(`${FIREBASE_BASE_URL}/povprasevanja/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziPovprasevanjaPredal(); } }
+
+        /* ================= MOJ PROFIL & STATISTIKE ================= */
         async function IzracunajOMeniPodatke() {
             document.getElementById('om-ime').innerText = trenutniUporabnik.ime; document.getElementById('om-username').innerText = trenutniUporabnik.username;
             document.getElementById('om-postavka').innerText = trenutniUporabnik.postavka || 0.15;
             let resLog = await fetch(`${FIREBASE_BASE_URL}/loginacija.json`); let logsRaw = await resLog.json() || {};
-            let m = IzracunajSkupneMinute(Object.values(logsRaw), trenutniUporabnik.username, true); 
+            let m = IzracunajSkupneMinute(Object.values(logsRaw), trenutniUporabnik.username, new Date().toISOString().split('T')[0]); 
             document.getElementById('om-zasluzek').innerText = ((m * (trenutniUporabnik.postavka || 0.15)).toFixed(2)) + ' €';
         }
 
-        // --- ADMINISTRACIJA PAKETOV (Popravljeno) ---
+        /* ================= ADMINISTRACIJA PAKETOV ================= */
         async function DodajAdministracijoPaketa() {
             let d = document.getElementById('admin-paketi-datum').value || new Date().toISOString().split('T')[0];
             let obj = { datum:d, zapSt:document.getElementById('ap-zap-st').value, posiljatelj:document.getElementById('ap-posiljatelj').value, stPaketa:document.getElementById('ap-st-paketa').value, oddano:document.getElementById('ap-oddano').value, postar:document.getElementById('ap-postar').value };
             await fetch(`${FIREBASE_BASE_URL}/admin_oddaja.json`, {method:'POST', body:JSON.stringify(obj)});
             ['ap-zap-st','ap-posiljatelj','ap-st-paketa','ap-postar'].forEach(id=>document.getElementById(id).value=""); NaloziAdministracijoPaketov();
         }
+        
         async function NaloziAdministracijoPaketov() {
             let idat = document.getElementById('admin-paketi-datum').value;
+            let izbranMesec = idat ? idat.substring(0, 7) : new Date().toISOString().substring(0, 7); // YYYY-MM
+            
             let res = await fetch(`${FIREBASE_BASE_URL}/admin_oddaja.json`); let data = await res.json() || {};
-            let tbody = document.getElementById('tbl-admin-paketi'); tbody.innerHTML="";
+            let html="";
+            let stevecMesecnihPaketov = 0;
             
             Object.keys(data).map(k=>({key:k, ...data[k]})).sort((a,b)=> new Date(b.datum) - new Date(a.datum)).forEach(p => { 
+                // Seštevanje paketov poslanih v izbranem mesecu
+                if(p.datum && p.datum.startsWith(izbranMesec)) {
+                    stevecMesecnihPaketov++;
+                }
+
                 if(!idat || p.datum === idat) {
-                    tbody.innerHTML += `<tr><td>${p.datum}</td><td>${p.zapSt}</td><td>${p.posiljatelj}</td><td>${p.stPaketa}</td><td><span class="badge ${p.oddano==='DA'?'badge-success':'badge-danger'}">${p.oddano}</span></td><td>${p.postar}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/admin_oddaja/${p.key}.json',{method:'DELETE'}).then(NaloziAdministracijoPaketov)">X</button></td></tr>`;
+                    html += `<tr><td>${p.datum}</td><td>${p.zapSt}</td><td>${p.posiljatelj}</td><td>${p.stPaketa}</td><td><span class="badge ${p.oddano==='DA'?'badge-success':'badge-danger'}">${p.oddano}</span></td><td>${p.postar}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/admin_oddaja/${p.key}.json',{method:'DELETE'}).then(NaloziAdministracijoPaketov)">X</button></td></tr>`;
                 }
             });
+            
+            let sloMeseci = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            let mIndeks = parseInt(izbranMesec.substring(5, 7)) - 1;
+            document.getElementById('admin-paketi-mesecna-statistika').innerText = `Pošiljke v mesecu (${sloMeseci[mIndeks]}): ${stevecMesecnihPaketov} paketov`;
+            PosodobiElementVarno('tbl-admin-paketi', html);
         }
 
-        // --- VSTOPI ---
+        /* ================= EVIDENCA VSTOPOV ================= */
         async function DodajVstop() { await fetch(`${FIREBASE_BASE_URL}/vstopi.json`, {method:'POST', body:JSON.stringify({kdo:document.getElementById('vstop-kdo').value, od:document.getElementById('vstop-od').value, do:document.getElementById('vstop-do').value})}); document.getElementById('vstop-kdo').value=""; NaloziVstopi(); }
         async function NaloziVstopi() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/vstopi.json`); let d = await res.json() || {}; let tbody = document.getElementById('tbl-vstopi'); tbody.innerHTML="";
-            Object.keys(d).forEach(k => { let v=d[k]; tbody.innerHTML+=`<tr><td>${v.kdo}</td><td>${new Date(v.od).toLocaleString('sl-SI')}</td><td>${v.do?new Date(v.do).toLocaleString('sl-SI'):'Še tu'}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/vstopi/${k}.json',{method:'DELETE'}).then(NaloziVstopi)">X</button></td></tr>`; });
+            let res = await fetch(`${FIREBASE_BASE_URL}/vstopi.json`); let d = await res.json() || {}; let html="";
+            Object.keys(d).forEach(k => { let v=d[k]; html+=`<tr><td>${v.kdo}</td><td>${new Date(v.od).toLocaleString('sl-SI')}</td><td>${v.do?new Date(v.do).toLocaleString('sl-SI'):'Še tu'}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/vstopi/${k}.json',{method:'DELETE'}).then(NaloziVstopi)">X</button></td></tr>`; });
+            PosodobiElementVarno('tbl-vstopi', html);
         }
 
-        // --- TELEFON & ZAPISNIKI ---
+        /* ================= TELEFONI IN ZAPISI (POPRAVLJENO KLIKANJE) ================= */
         async function DodajTelefonZapisnik() {
             let vrsta = document.getElementById('tz-vrsta').value; let kdo = document.getElementById('tz-kdo').value; let kdaj = document.getElementById('tz-kdaj').value; let kaj = document.getElementById('tz-kaj').value;
             if(!kdo||!kdaj||!kaj) return; await fetch(`${FIREBASE_BASE_URL}/${vrsta}.json`, { method:'POST', body:JSON.stringify({kdo:kdo, kdaj:kdaj, kaj:kaj}) }); ['tz-kdo','tz-kdaj','tz-kaj'].forEach(id=>document.getElementById(id).value=""); NaloziTelefoneZapisnike();
         }
         async function NaloziTelefoneZapisnike() {
-            let tbody = document.getElementById('tbl-telefoni-zapisniki'); tbody.innerHTML = "";
             let rt = await fetch(`${FIREBASE_BASE_URL}/telefon.json`); let dt = await rt.json() || {}; let rz = await fetch(`${FIREBASE_BASE_URL}/zapisnik.json`); let dz = await rz.json() || {}; let arr = [];
-            Object.keys(dt).forEach(k=> arr.push({key:k, tip:'Telefon', c:dt[k]})); Object.keys(dz).forEach(k=> arr.push({key:k, tip:'Živo', c:dz[k]}));
-            arr.sort((a,b)=> new Date(b.c.kdaj) - new Date(a.c.kdaj)).forEach(x => { let badge = x.tip==='Telefon'?'badge-warning':'badge-blue'; tbody.innerHTML += `<tr class="clickable-row" onclick="OdpriModal('<h3>${x.tip}</h3><p><strong>Z:</strong> ${x.c.kdo}</p><p>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</p><hr><p style=\\'white-space:pre-wrap;\\'>${x.c.kaj}</p>')"><td><span class="badge ${badge}">${x.tip}</span></td><td>${x.c.kdo}</td><td>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</td></tr>`; });
+            lokalniTz = {}; 
+            
+            Object.keys(dt).forEach(k=> { arr.push({key:k, tip:'Telefon', c:dt[k]}); lokalniTz['Telefon_'+k] = dt[k]; }); 
+            Object.keys(dz).forEach(k=> { arr.push({key:k, tip:'Živo', c:dz[k]}); lokalniTz['Živo_'+k] = dz[k]; });
+            
+            let html = "";
+            arr.sort((a,b)=> new Date(b.c.kdaj) - new Date(a.c.kdaj)).forEach(x => { 
+                let badge = x.tip==='Telefon'?'badge-warning':'badge-blue'; 
+                html += `<tr class="clickable-row" onclick="OdpriOgledTz('${x.tip}', '${x.key}')"><td><span class="badge ${badge}">${x.tip}</span></td><td>${x.c.kdo}</td><td>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</td></tr>`; 
+            });
+            PosodobiElementVarno('tbl-telefoni-zapisniki', html);
+        }
+        function OdpriOgledTz(tip, key) {
+            let vnos = lokalniTz[tip + '_' + key]; if(!vnos) return;
+            OdpriModal(`<h3>Pregled zapisa: ${tip}</h3><p><strong>Sodelujoči:</strong> ${vnos.kdo}</p><p><strong>Čas:</strong> ${new Date(vnos.kdaj).toLocaleString('sl-SI')}</p><hr style="border:1px solid #000;"><p style="white-space:pre-wrap; background:#f8fafc; padding:10px; border:1px solid #ccc;"><strong>Vsebina/Opombe:</strong><br>${vnos.kaj}</p>`);
         }
 
-        // --- PRAVICE IN ZAPOSLENI (Direktor) ---
+        /* ================= UPRAVLJANJE KADROV & TAJNICA (DIR) ================= */
         function IzrisiDostopStran() {
             let sel = document.getElementById('dostop-izbira-zaposleni'); let cur = sel.value; sel.innerHTML = "<option value=''>-- izberi --</option>";
             for(let k in vsiZaposleni) if(!vsiZaposleni[k].isDirektor) sel.innerHTML+=`<option value="${k}">${vsiZaposleni[k].ime}</option>`;
@@ -1134,13 +1353,37 @@
         }
         function PrikaziPraviceZaposlenega() { let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return; VSE_STRANI.forEach(s => { let e=document.getElementById(`chk-pravica-${s.id}`); if(e) e.checked = vsiZaposleni[k].pravice?.[s.id]||false; }); }
         async function ShraniPraviceDostopa() { let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return; let p = {}; VSE_STRANI.forEach(s=>{let e=document.getElementById(`chk-pravica-${s.id}`); if(e) p[s.id]=e.checked;}); await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}/pravice.json`, {method:'PUT', body:JSON.stringify(p)}); alert("Shranjeno!"); NaloziVseZaposlene(); }
-        async function DodajZaposlenega() { let ime = document.getElementById('zap-vnos-ime').value; let pos = parseFloat(document.getElementById('zap-vnos-postavka').value)||0.15; let un = document.getElementById('zap-vnos-username').value; let pas = document.getElementById('zap-vnos-password').value; if(!ime||!un||!pas) return; let res = await fetch(`${FIREBASE_BASE_URL}/zaposleni.json`, {method:'POST', body:JSON.stringify({ime:ime, username:un, password:pas, postavka:pos, isDirektor:false, pravice:{loginacija:true, omeni:true, komunikacija:true, zapiski:true}})}); let j = await res.json(); await fetch(`${FIREBASE_BASE_URL}/banka/${j.name}.json`, {method:'PUT', body:JSON.stringify({ime:ime, pin:pas, stanje:50.0})}); ['zap-vnos-ime','zap-vnos-username','zap-vnos-password'].forEach(id=>document.getElementById(id).value=""); NaloziZaposleneTabela(); OsveziBanko(); }
-        function NaloziZaposleneTabela() { let tb=document.getElementById('tbl-zaposleni'); tb.innerHTML=""; for(let k in vsiZaposleni) { let z=vsiZaposleni[k]; tb.innerHTML+=`<tr><td>${z.ime} ${z.isDirektor?'<span style="color:var(--accent-color);">(Dir)</span>':''}</td><td>${z.username}</td><td>${z.password}</td><td><strong>${z.postavka||0.15} €</strong> ${trenutniUporabnik.isDirektor ? `<button class="btn btn-warning" style="padding:2px 6px; font-size:10px; margin-left:10px;" onclick="SpremeniPostavkoGlobalno('${k}', '${z.ime}', ${z.postavka||0.15})">Uredi</button>` : ''}</td><td>${!z.isDirektor?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="BrisiZaposlenega('${k}')">X</button>`:'/'}</td></tr>`; } }
+        
+        async function DodajZaposlenega() { 
+            let ime = document.getElementById('zap-vnos-ime').value; let pos = parseFloat(document.getElementById('zap-vnos-postavka').value)||0.15; let un = document.getElementById('zap-vnos-username').value; let pas = document.getElementById('zap-vnos-password').value; if(!ime||!un||!pas) return; 
+            let res = await fetch(`${FIREBASE_BASE_URL}/zaposleni.json`, {method:'POST', body:JSON.stringify({ime:ime, username:un, password:pas, postavka:pos, isDirektor:false, isTajnik:false, pravice:{loginacija:true, omeni:true, komunikacija:true, zapiski:true, povprasevanje:true}})}); 
+            let j = await res.json(); await fetch(`${FIREBASE_BASE_URL}/banka/${j.name}.json`, {method:'PUT', body:JSON.stringify({ime:ime, pin:pas, stanje:50.0})}); ['zap-vnos-ime','zap-vnos-username','zap-vnos-password'].forEach(id=>document.getElementById(id).value=""); NaloziZaposleneTabela(); OsveziBanko(); 
+        }
+        
+        function NaloziZaposleneTabela() { 
+            let html=""; 
+            for(let k in vsiZaposleni) { 
+                let z=vsiZaposleni[k]; 
+                let vlogaGumb = z.isDirektor ? 'DIREKTOR' : `<button class="btn ${z.isTajnik?'btn-success':'btn-warning'}" style="padding:2px 6px; font-size:11px;" onclick="DoločiZaTajnika('${k}')">${z.isTajnik?'TAJNIK ✔':'Določi za tajnika'}</button>`;
+                html+=`<tr><td>${z.ime}</td><td>${z.username}</td><td>${z.password}</td><td>${vlogaGumb}</td><td><strong>${z.postavka||0.15} €</strong> <button class="btn btn-warning" style="padding:2px 6px; font-size:10px; margin-left:10px;" onclick="SpremeniPostavkoGlobalno('${k}', '${z.ime}', ${z.postavka||0.15})">Uredi</button></td><td>${!z.isDirektor?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="BrisiZaposlenega('${k}')">X</button>`:'/'}</td></tr>`; 
+            } 
+            PosodobiElementVarno('tbl-zaposleni', html);
+        }
+        
+        async function DoločiZaTajnika(izbraniKey) {
+            for(let k in vsiZaposleni) {
+                let vloga = (k === izbraniKey);
+                await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}/isTajnik.json`, {method:'PUT', body: vloga});
+            }
+            alert("Tajnik uspešno posodobljen!");
+            await NaloziVseZaposlene(); NaloziZaposleneTabela();
+        }
+
         function SpremeniPostavkoGlobalno(zapKey, ime, staraPostavka) { let nova = prompt(`Nova minutna postavka za ${ime} (€/min)`, staraPostavka); if(nova !== null && !isNaN(nova) && nova !== "") { fetch(`${FIREBASE_BASE_URL}/zaposleni/${zapKey}/postavka.json`, {method:'PUT', body: parseFloat(nova)}).then(() => fetch(`${FIREBASE_BASE_URL}/place_nastavitve/${zapKey}/postavkaMin.json`, {method:'PUT', body: parseFloat(nova)})).then(() => { NaloziVseZaposlene().then(() => { NaloziZaposleneTabela(); NaloziInIzracunajPlace(); }); }); } }
         async function BrisiZaposlenega(k) { if(confirm("Brišem?")) { await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}.json`,{method:'DELETE'}); await fetch(`${FIREBASE_BASE_URL}/banka/${k}.json`,{method:'DELETE'}); NaloziVseZaposlene().then(NaloziZaposleneTabela); } }
 
-        // --- BANKA ---
-        async function OsveziBanko() { let res = await fetch(`${FIREBASE_BASE_URL}/banka.json`); let data = await res.json() || {}; let sel = document.getElementById('banka-zaposleni-select'); let cur=sel.value; sel.innerHTML="<option value=''>-- izberi --</option>"; let tb = document.getElementById('tbl-banka'); tb.innerHTML=""; for(let k in data) { sel.innerHTML+=`<option value="${k}">${data[k].ime}</option>`; tb.innerHTML+=`<tr><td><strong>${data[k].ime}</strong></td><td><code>${data[k].pin}</code></td><td style="color:var(--success-color);font-weight:bold;">${(data[k].stanje||0).toFixed(2)} €</td></tr>`; } if(cur) sel.value=cur; PrikaziTrenutnoStanjeBanke(); }
+        /* ================= BANKA ================= */
+        async function OsveziBanko() { let res = await fetch(`${FIREBASE_BASE_URL}/banka.json`); let data = await res.json() || {}; let sel = document.getElementById('banka-zaposleni-select'); let cur=sel.value; sel.innerHTML="<option value=''>-- izberi --</option>"; let html=""; for(let k in data) { sel.innerHTML+=`<option value="${k}">${data[k].ime}</option>`; html+=`<tr><td><strong>${data[k].ime}</strong></td><td><code>${data[k].pin}</code></td><td style="color:var(--success-color);font-weight:bold;">${(data[k].stanje||0).toFixed(2)} €</td></tr>`; } if(cur) sel.value=cur; PrikaziTrenutnoStanjeBanke(); PosodobiElementVarno('tbl-banka', html); }
         async function PrikaziTrenutnoStanjeBanke() { let k=document.getElementById('banka-zaposleni-select').value; if(k) { let r=await fetch(`${FIREBASE_BASE_URL}/banka/${k}.json`); document.getElementById('banka-stanje-input').value = (await r.json()).stanje; } }
         async function PosodobiStanjeVBanki() { let k=document.getElementById('banka-zaposleni-select').value; await fetch(`${FIREBASE_BASE_URL}/banka/${k}/stanje.json`, {method:'PUT', body:parseFloat(document.getElementById('banka-stanje-input').value)||0}); OsveziBanko(); }
     </script>
