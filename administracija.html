@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WII Shop Administracija 2.0</title>
+    <title>WII Shop Administracija 3.0</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap');
 
         :root {
-            --primary-color: #1e293b; /* Temno modra/siva */
+            /* Retro-Moderne barve in sence (Neobrutalism stil) */
+            --primary-color: #0f172a; 
             --secondary-color: #334155;
-            --accent-color: #3b82f6; /* Modra */
+            --accent-color: #3b82f6; 
             --accent-hover: #2563eb;
             --danger-color: #ef4444;
             --success-color: #10b981;
             --warning-color: #f59e0b;
-            --bg-color: #f1f5f9;
+            --bg-color: #f4f0eb; /* Retro bež ozadje */
             --card-bg: #ffffff;
             --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --border-radius: 8px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --text-muted: #475569;
+            --border-color: #000000; /* Močne črne obrobe */
+            --border-radius: 4px; /* Manj zaobljeno za retro filing */
+            --shadow: 4px 4px 0px rgba(0, 0, 0, 1); /* Trda senca */
         }
 
         body {
@@ -38,54 +39,68 @@
         /* Modals */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;
         }
         .modal-content {
-            background: white; padding: 25px; border-radius: var(--border-radius);
-            width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            background: var(--card-bg); padding: 25px; border-radius: var(--border-radius);
+            border: 2px solid var(--border-color);
+            width: 90%; max-width: 500px; box-shadow: 8px 8px 0px rgba(0,0,0,1);
             position: relative;
         }
         .close-modal {
-            position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);
+            position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-main); font-weight: bold;
         }
 
         /* Header */
         header {
-            background-color: var(--primary-color);
-            color: white;
+            background-color: var(--card-bg);
+            color: var(--text-main);
             padding: 12px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 2px solid var(--border-color);
             z-index: 10;
         }
 
         .header-info { display: flex; align-items: center; gap: 20px; }
-        #live-clock { font-weight: 600; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; letter-spacing: 1px; }
+        #live-clock { font-family: 'JetBrains Mono', monospace; font-weight: bold; background: #e2e8f0; padding: 6px 12px; border: 2px solid #000; box-shadow: 2px 2px 0px #000;}
 
         /* Login */
         #login-page {
             max-width: 420px; margin: 10vh auto; background: var(--card-bg); padding: 40px;
-            border-radius: var(--border-radius); box-shadow: var(--shadow); text-align: center;
+            border: 2px solid var(--border-color); border-radius: var(--border-radius); box-shadow: var(--shadow); text-align: center;
         }
-        #login-page h2 { margin-bottom: 25px; color: var(--primary-color); border: none; }
+        #login-page h2 { margin-bottom: 25px; color: var(--primary-color); border: none; font-family: 'JetBrains Mono', monospace; }
 
         /* Main Layout */
         #main-container { display: flex; flex: 1; overflow: hidden; }
         
+        /* SIDEBAR - Razširljiv */
         nav {
-            width: 260px; background-color: var(--card-bg); border-right: 1px solid var(--border-color);
-            display: flex; flex-direction: column; padding-top: 10px; overflow-y: auto;
+            width: 60px; /* Skrčeno privzeto */
+            background-color: var(--card-bg); border-right: 2px solid var(--border-color);
+            display: flex; flex-direction: column; padding-top: 10px; overflow-y: auto; overflow-x: hidden;
+            transition: width 0.3s ease; white-space: nowrap; z-index: 5;
+        }
+        nav:hover {
+            width: 260px; /* Razširjeno ob hoverju */
         }
         nav button {
-            background: none; border: none; color: var(--text-main); padding: 14px 20px;
+            background: none; border: none; color: var(--text-main); padding: 14px 18px;
             text-align: left; font-size: 14px; font-weight: 600; cursor: pointer;
-            transition: all 0.2s; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px;
+            border-left: 4px solid transparent; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #e2e8f0;
         }
+        nav button span.ikona { font-size: 1.2em; min-width: 25px; display: inline-block; position: relative;}
+        nav button span.naslov-menija { opacity: 0; transition: opacity 0.2s ease; }
+        nav:hover button span.naslov-menija { opacity: 1; }
+        
         nav button:hover, nav button.active {
-            background-color: var(--bg-color); border-left: 4px solid var(--accent-color); color: var(--accent-color);
+            background-color: #f1f5f9; border-left: 4px solid var(--accent-color); color: var(--accent-color);
         }
+
+        /* Notifikacijska pika na meniju */
+        .badge-noti { position: absolute; top: -5px; right: -5px; background: red; width: 10px; height: 10px; border-radius: 50%; border: 1px solid black; display: none; }
 
         main { flex: 1; padding: 30px; overflow-y: auto; box-sizing: border-box; }
 
@@ -94,25 +109,24 @@
         .page-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        h2 { margin-top: 0; padding-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid var(--border-color); font-size: 1.5em; }
+        h2 { margin-top: 0; padding-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid var(--border-color); font-size: 1.8em; font-family: 'JetBrains Mono', monospace;}
         h3 { color: var(--secondary-color); margin-top: 25px; margin-bottom: 15px; }
 
         /* Forms */
         .card {
             background: var(--card-bg); border-radius: var(--border-radius); padding: 20px;
-            box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 20px;
+            box-shadow: var(--shadow); border: 2px solid var(--border-color); margin-bottom: 20px;
         }
 
         .form-group { margin-bottom: 18px; display: flex; flex-direction: column; }
-        .form-group label { margin-bottom: 6px; font-weight: 600; font-size: 0.9em; color: var(--secondary-color); }
+        .form-group label { margin-bottom: 6px; font-weight: bold; font-size: 0.9em; color: var(--primary-color); }
         
         input, select, textarea {
-            padding: 12px; border: 1px solid var(--border-color); border-radius: 6px;
-            font-size: 14px; font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; background-color: #f8fafc;
+            padding: 12px; border: 2px solid var(--border-color); border-radius: var(--border-radius);
+            font-size: 14px; font-family: inherit; transition: all 0.2s; background-color: #fff;
         }
         input:focus, select:focus, textarea:focus {
-            outline: none; border-color: var(--accent-color); background-color: white;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            outline: none; background-color: #f8fafc; box-shadow: 2px 2px 0px #000; transform: translate(-2px, -2px);
         }
 
         .form-row { display: flex; gap: 20px; }
@@ -120,53 +134,57 @@
 
         /* Buttons */
         button.btn {
-            background-color: var(--accent-color); color: white; border: none; padding: 12px 20px;
-            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;
-            transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+            background-color: var(--accent-color); color: white; border: 2px solid var(--border-color); padding: 12px 20px;
+            border-radius: var(--border-radius); cursor: pointer; font-weight: bold; font-size: 14px;
+            transition: all 0.1s; box-shadow: 3px 3px 0px #000; display: inline-flex; justify-content: center; align-items: center; gap: 8px; text-transform: uppercase;
         }
-        button.btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+        button.btn:hover { background-color: var(--accent-hover); transform: translate(1px, 1px); box-shadow: 2px 2px 0px #000; }
+        button.btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px #000; }
+        
         button.btn-danger { background-color: var(--danger-color); }
         button.btn-danger:hover { background-color: #dc2626; }
         button.btn-success { background-color: var(--success-color); }
         button.btn-success:hover { background-color: #059669; }
-        button.btn-warning { background-color: var(--warning-color); color: #fff;}
+        button.btn-warning { background-color: var(--warning-color); color: #000;}
         button.btn-warning:hover { background-color: #d97706; }
 
         /* Tables */
-        .table-container { background: white; border-radius: var(--border-radius); box-shadow: var(--shadow); overflow-x: auto; border: 1px solid var(--border-color); }
+        .table-container { background: white; border-radius: var(--border-radius); box-shadow: var(--shadow); overflow-x: auto; border: 2px solid var(--border-color); }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 14px 20px; border-bottom: 1px solid var(--border-color); }
-        th { background-color: #f8fafc; color: var(--secondary-color); font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
+        th, td { padding: 14px 20px; border-bottom: 2px solid var(--border-color); }
+        th { background-color: #e2e8f0; color: var(--primary-color); font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid #000;}
         tr:last-child td { border-bottom: none; }
         tr:hover td { background-color: #f1f5f9; cursor: default; }
         .clickable-row { cursor: pointer !important; transition: background 0.2s; }
         .clickable-row:hover { background-color: #e2e8f0 !important; }
 
         /* Calendar */
-        .calendar { background: white; border-radius: var(--border-radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--border-color); }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--primary-color); color: white; font-weight: bold; }
-        .calendar-header button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
-        .calendar-header button:hover { background: rgba(255,255,255,0.3); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-color); }
-        .calendar-day-name { background: #f8fafc; text-align: center; padding: 10px; font-weight: bold; font-size: 0.85em; color: var(--text-muted); }
+        .calendar { background: white; border-radius: var(--border-radius); box-shadow: var(--shadow); overflow: hidden; border: 2px solid var(--border-color); }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--primary-color); color: white; font-weight: bold; font-family:'JetBrains Mono', monospace; }
+        .calendar-header button { background: white; border: 2px solid black; color: black; padding: 5px 15px; font-weight: bold; cursor: pointer; box-shadow: 2px 2px 0px #000;}
+        .calendar-header button:active { box-shadow: 0px 0px 0px #000; transform: translate(2px, 2px); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--border-color); border-top: 2px solid #000;}
+        .calendar-day-name { background: #e2e8f0; text-align: center; padding: 10px; font-weight: bold; font-size: 0.85em; color: var(--primary-color); }
         .calendar-day { background: white; min-height: 100px; padding: 10px; display: flex; flex-direction: column; gap: 5px; cursor: pointer; transition: background 0.2s; }
         .calendar-day:hover { background: #f8fafc; }
-        .calendar-day .date-num { font-weight: bold; align-self: flex-end; color: var(--text-muted); font-size: 0.9em; }
-        .cal-event { background: var(--accent-color); color: white; padding: 3px 6px; border-radius: 4px; font-size: 0.75em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .calendar-day .date-num { font-weight: bold; align-self: flex-end; color: var(--text-muted); font-size: 0.9em; font-family:'JetBrains Mono';}
+        .cal-event { background: var(--accent-color); color: white; padding: 4px 6px; border: 1px solid #000; border-radius: 2px; font-size: 0.75em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* Badges */
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block; }
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge { padding: 4px 8px; border: 1px solid #000; border-radius: 4px; font-size: 0.75em; font-weight: bold; display: inline-block; box-shadow: 2px 2px 0px rgba(0,0,0,0.2);}
+        .badge-success { background: #10b981; color: #fff; }
+        .badge-warning { background: #f59e0b; color: #000; }
+        .badge-danger { background: #ef4444; color: #fff; }
+        .badge-blue { background: #3b82f6; color: #fff; }
 
         /* Messages Grid */
-        .msg-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .msg-item { padding: 15px; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: white; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
-        .msg-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--accent-color); }
-        .msg-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85em; color: var(--text-muted); }
-        .msg-title { font-weight: bold; font-size: 1.1em; color: var(--text-main); }
+        .msg-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .msg-item { padding: 15px; border: 2px solid var(--border-color); border-radius: var(--border-radius); background: white; cursor: pointer; box-shadow: var(--shadow); position: relative;}
+        .msg-item:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #000; }
+        .msg-item.neprebrano { background: #fffbeb; border-color: #f59e0b; }
+        .msg-item.neprebrano::after { content:'NOVO'; position:absolute; top:-10px; right:-10px; background:red; color:white; font-size:10px; font-weight:bold; padding:2px 6px; border:2px solid #000; border-radius:10px; box-shadow: 2px 2px 0px #000;}
+        .msg-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85em; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;}
+        .msg-title { font-weight: bold; font-size: 1.1em; color: var(--text-main); text-transform: uppercase;}
     </style>
 </head>
 <body>
@@ -180,20 +198,20 @@
 
     <header id="main-header" style="display: none;">
         <div class="logo-container" style="display: flex; align-items: center; font-size: 1.2em; font-weight: bold; letter-spacing: 1px;">
-            <img src="logo_administracija.png" alt="WII SHOP LOGO" style="height: 35px; margin-right: 15px; border-radius: 4px;">
-            WII SHOP ADMIN 2.0
+            <img src="logo_administracija.png" alt="WII SHOP LOGO" style="height: 35px; margin-right: 15px;">
+            WII SHOP ADMIN 3.0
         </div>
         <div class="header-info">
             <div id="live-clock">00:00:00</div>
-            <div id="user-display">Prijavljen: /</div>
+            <div id="user-display" style="font-weight:bold;">Prijavljen: /</div>
             <button class="btn btn-danger" onclick="logout()" style="padding: 8px 15px; font-size: 13px;">Odjava</button>
         </div>
     </header>
 
     <div id="login-page">
         <img src="logo_administracija.png" alt="WII SHOP LOGO" style="max-height: 90px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;">
-        <h2>WII Shop Administracija</h2>
-        <div id="login-clock" style="font-size: 1.5em; margin-bottom: 25px; font-weight: bold; color: var(--secondary-color);">00:00:00</div>
+        <h2>Vstop v sistem</h2>
+        <div id="login-clock" style="font-size: 1.5em; margin-bottom: 25px; font-weight: bold; color: var(--secondary-color); font-family: 'JetBrains Mono', monospace;">00:00:00</div>
         <div id="login-alert"></div>
         <div class="form-group text-left">
             <input type="text" id="login-username" placeholder="Uporabniško ime">
@@ -219,7 +237,7 @@
                         <div class="form-group" style="flex: 3; flex-direction: row; gap: 10px;">
                             <button class="btn btn-success" onclick="ZabeleziLoginacijo('Prihod na delo')">Prihod</button>
                             <button class="btn btn-warning" onclick="ZabeleziLoginacijo('Pavza')">Pavza</button>
-                            <button class="btn btn-blue" style="background:#3b82f6;color:white;" onclick="ZabeleziLoginacijo('Prihod iz pavze')">Iz pavze</button>
+                            <button class="btn btn-blue" onclick="ZabeleziLoginacijo('Prihod iz pavze')">Iz pavze</button>
                             <button class="btn btn-danger" onclick="ZabeleziLoginacijo('Odhod domov')">Odhod</button>
                         </div>
                     </div>
@@ -239,28 +257,16 @@
 
             <div id="sec-place" class="page-section">
                 <h2>Plače zaposlenih</h2>
-                <div id="place-direktor-izbira" class="card" style="display:none; border-left: 4px solid var(--accent-color);">
+                <div id="place-direktor-izbira" class="card" style="display:none; background:#f0fdf4;">
                     <h3 style="margin-top:0;">Urejanje podatkov in ur (Direktor)</h3>
-                    <p style="font-size:0.9em; color:#666;">Sistem samodejno sešteva razliko med časom Prihoda in Odhoda za vsak dan posebej. Če manjka par, se dogodek ignorira do popravka. V meniju 'Registracija delovnega časa' lahko kot direktor urejate in brišete posamezne vnose ter popravite ure odhoda/prihoda.</p>
+                    <p style="font-size:0.9em; color:#666;">Sistem samodejno sešteva razliko med časom Prihoda in Odhoda. Tu določaš postavko in evidentiraš izplačilo.</p>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Izberi zaposlenega</label>
-                            <select id="place-zaposleni-select" onchange="OsveziPodatkeOPlaciZaposlenega()"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Postavka na minuto (€)</label>
-                            <input type="number" id="place-PostavkaMin" step="0.01">
-                        </div>
+                        <div class="form-group"><label>Izberi zaposlenega</label><select id="place-zaposleni-select" onchange="OsveziPodatkeOPlaciZaposlenega()"></select></div>
+                        <div class="form-group"><label>Postavka na minuto (€)</label><input type="number" id="place-PostavkaMin" step="0.01"></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Že plačan znesek (€)</label>
-                            <input type="number" id="place-ZnesekPlacano" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Ostalo neplačano (€) (Zgodovina)</label>
-                            <input type="number" id="place-ZnesekNeplacano" step="0.01">
-                        </div>
+                        <div class="form-group"><label>Že plačan znesek (€)</label><input type="number" id="place-ZnesekPlacano" step="0.01"></div>
+                        <div class="form-group"><label>Ostalo neplačano (€) (Zgodovina)</label><input type="number" id="place-ZnesekNeplacano" step="0.01"></div>
                     </div>
                     <button class="btn btn-success" onclick="ShraniPodatkeOPlaci()">Shrani plačilne podatke</button>
                 </div>
@@ -277,13 +283,13 @@
                 <div class="card">
                     <div class="form-row">
                         <div class="form-group" style="flex: 3;">
-                            <input type="text" id="iscipaket-id" placeholder="Vpiši številko paketa ali ime posiljatelja..." onkeyup="IsciPaketList()">
+                            <input type="text" id="iscipaket-id" placeholder="Vpiši številko paketa ali ime pošiljatelja..." onkeyup="IsciPaketList()">
                         </div>
                         <div class="form-group" style="flex: 1;">
                             <button class="btn" style="width: 100%; height:100%;" onclick="IsciPaketList()">Išči</button>
                         </div>
                     </div>
-                    <p style="font-size:0.8em; color:var(--text-muted); margin-top:5px;">* Dostavljeni paketi so skriti. Za iskanje dostavljenih paketov vpiši številko ali pošiljatelja.</p>
+                    <p style="font-size:0.8em; margin-top:5px;">* Dostavljeni paketi so skriti. Za iskanje dostavljenih paketov vpiši številko ali pošiljatelja.</p>
                 </div>
 
                 <div class="table-container">
@@ -297,54 +303,30 @@
             <div id="sec-oddajapaketa" class="page-section">
                 <h2>Oddaja Paketa (Blagajna)</h2>
                 <div class="card">
-                    <h3 style="margin-top:0; color:var(--text-main);" id="blagajnik-ime">Blagajnik: /</h3>
+                    <h3 style="margin-top:0;" id="blagajnik-ime">Blagajnik: /</h3>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Številka paketa</label><input type="text" id="blag-st-paketa">
-                        </div>
-                        <div class="form-group">
-                            <label>Oblika</label>
-                            <select id="blag-vrsta"><option>Pismo</option><option>Paket</option></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Velikost</label>
-                            <select id="blag-velikost"><option>Manjše</option><option>Srednje</option><option>Večje</option></select>
-                        </div>
+                        <div class="form-group"><label>Številka paketa</label><input type="text" id="blag-st-paketa"></div>
+                        <div class="form-group"><label>Oblika</label><select id="blag-vrsta"><option>Pismo</option><option>Paket</option></select></div>
+                        <div class="form-group"><label>Velikost</label><select id="blag-velikost"><option>Manjše</option><option>Srednje</option><option>Večje</option></select></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Pošiljatelj (Ime in Priimek)</label><input type="text" id="blag-posiljatelj">
-                        </div>
-                        <div class="form-group">
-                            <label>Prejemnik (Ime in Priimek)</label><input type="text" id="blag-prejemnik">
-                        </div>
+                        <div class="form-group"><label>Pošiljatelj (Ime in Priimek)</label><input type="text" id="blag-posiljatelj"></div>
+                        <div class="form-group"><label>Prejemnik (Ime in Priimek)</label><input type="text" id="blag-prejemnik"></div>
                     </div>
-                    <div class="form-row" style="background:#f8fafc; padding:15px; border-radius:6px; margin-bottom:15px; border:1px solid #e2e8f0;">
-                        <div class="form-group">
-                            <label>Cena artikla (€)</label>
-                            <input type="number" id="blag-cena" value="0.00" step="0.01" oninput="IzracunajSkupajBlagajna()">
-                        </div>
-                        <div class="form-group">
-                            <label>Poštnina (€)</label>
-                            <input type="number" id="blag-postnina" value="0.00" step="0.01" oninput="IzracunajSkupajBlagajna()">
-                        </div>
+                    <div class="form-row" style="background:#f1f5f9; padding:15px; border-radius:4px; margin-bottom:15px; border:2px solid #000;">
+                        <div class="form-group"><label>Cena artikla (€)</label><input type="number" id="blag-cena" value="0.00" step="0.01" oninput="IzracunajSkupajBlagajna()"></div>
+                        <div class="form-group"><label>Poštnina (€)</label><input type="number" id="blag-postnina" value="0.00" step="0.01" oninput="IzracunajSkupajBlagajna()"></div>
                         <div class="form-group" style="justify-content: center; align-items: center;">
-                            <div style="font-size: 1.2em; color:var(--text-muted);">Skupaj za plačilo:</div>
-                            <div style="font-size: 2em; font-weight: bold; color:var(--success-color);"><span id="blag-skupaj-prikaz">0.00</span> €</div>
+                            <div style="font-size: 1.2em; font-weight:bold;">Skupaj za plačilo:</div>
+                            <div style="font-size: 2.5em; font-weight: bold; color:var(--success-color);"><span id="blag-skupaj-prikaz">0.00</span> €</div>
                         </div>
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Način plačila</label>
-                            <select id="placilo-tip" onchange="ToggleKarticaPin()"><option>GOTOVINA</option><option>KARTICA</option></select>
-                        </div>
-                        <div class="form-group" id="pin-vnos-div" style="display: none;">
-                            <label>Vpiši PIN kartice zaposlenega</label>
-                            <input type="password" id="placilo-pin" placeholder="PIN...">
-                        </div>
+                        <div class="form-group"><label>Način plačila</label><select id="placilo-tip" onchange="ToggleKarticaPin()"><option>GOTOVINA</option><option>KARTICA</option></select></div>
+                        <div class="form-group" id="pin-vnos-div" style="display: none;"><label>Vpiši PIN kartice zaposlenega</label><input type="password" id="placilo-pin" placeholder="PIN..."></div>
                     </div>
-                    <button class="btn btn-success" style="width: 100%; font-size: 1.1em; padding:15px;" onclick="ProcesirajOddajoPaketa()">ZAKLJUČI IN PLAČAJ RAČUN</button>
+                    <button class="btn btn-success" style="width: 100%; font-size: 1.2em; padding:15px;" onclick="ProcesirajOddajoPaketa()">ZAKLJUČI IN PLAČAJ RAČUN</button>
                 </div>
             </div>
 
@@ -362,9 +344,9 @@
                 <h2>Administracija oddaje (Poročila poštarjev)</h2>
                 <div class="card">
                     <div class="form-row">
-                        <div class="form-group"><label>Izberi datum</label><input type="date" id="admin-paketi-datum" onchange="NaloziAdministracijoPaketov()"></div>
+                        <div class="form-group"><label>Prikaz za datum (izbriši za vse)</label><input type="date" id="admin-paketi-datum" onchange="NaloziAdministracijoPaketov()"></div>
                     </div>
-                    <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
+                    <hr style="border:0; border-top:2px solid #000; margin: 15px 0;">
                     <div class="form-row">
                         <div class="form-group"><label>Zap. št.</label><input type="text" id="ap-zap-st"></div>
                         <div class="form-group"><label>Pošiljatelj</label><input type="text" id="ap-posiljatelj"></div>
@@ -378,7 +360,7 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>Zap. št.</th><th>Pošiljatelj</th><th>Št. Paketa</th><th>Oddano</th><th>Poštar</th><th>Briši</th></tr></thead>
+                        <thead><tr><th>Datum</th><th>Zap. št.</th><th>Pošiljatelj</th><th>Št. Paketa</th><th>Oddano</th><th>Poštar</th><th>Briši</th></tr></thead>
                         <tbody id="tbl-admin-paketi"></tbody>
                     </table>
                 </div>
@@ -388,13 +370,13 @@
                 <h2>Koledar Sestankov in Dogodkov</h2>
                 <div class="calendar" id="app-calendar">
                     <div class="calendar-header">
-                        <button onclick="PremakniMesec(-1)">&#8592; Prejšnji</button>
+                        <button onclick="PremakniMesec(-1)">&#8592; NAZAJ</button>
                         <span id="cal-month-year" style="font-size:1.2em;">Mesec Leto</span>
-                        <button onclick="PremakniMesec(1)">Naslednji &#8594;</button>
+                        <button onclick="PremakniMesec(1)">NAPREJ &#8594;</button>
                     </div>
                     <div class="calendar-grid">
-                        <div class="calendar-day-name">Pon</div><div class="calendar-day-name">Tor</div><div class="calendar-day-name">Sre</div>
-                        <div class="calendar-day-name">Čet</div><div class="calendar-day-name">Pet</div><div class="calendar-day-name">Sob</div><div class="calendar-day-name">Ned</div>
+                        <div class="calendar-day-name">PON</div><div class="calendar-day-name">TOR</div><div class="calendar-day-name">SRE</div>
+                        <div class="calendar-day-name">ČET</div><div class="calendar-day-name">PET</div><div class="calendar-day-name">SOB</div><div class="calendar-day-name">NED</div>
                     </div>
                     <div class="calendar-grid" id="cal-days-grid"></div>
                 </div>
@@ -423,10 +405,7 @@
                 <div class="form-row">
                     <div class="card" style="flex:1;">
                         <h3>Nov zapis</h3>
-                        <div class="form-group">
-                            <label>Vrsta vpisa</label>
-                            <select id="tz-vrsta"><option value="telefon">Telefonski klic</option><option value="zapisnik">Sestanek / Živo</option></select>
-                        </div>
+                        <div class="form-group"><label>Vrsta vpisa</label><select id="tz-vrsta"><option value="telefon">Telefonski klic</option><option value="zapisnik">Sestanek / Živo</option></select></div>
                         <div class="form-group"><label>Sodelujoči</label><input type="text" id="tz-kdo"></div>
                         <div class="form-group"><label>Čas</label><input type="datetime-local" id="tz-kdaj"></div>
                         <div class="form-group"><label>Vsebina / Zapisnik</label><textarea id="tz-kaj" rows="4"></textarea></div>
@@ -454,7 +433,7 @@
                         </div>
                         <div class="form-group"><label>Zadeva:</label><input type="text" id="kom-zadeva"></div>
                         <div class="form-group"><label>Prvo sporočilo:</label><textarea id="kom-vsebina" rows="5"></textarea></div>
-                        <button class="btn btn-blue" style="background:#3b82f6;color:white;" onclick="PosljiSporocilo()">Ustvari pogovor</button>
+                        <button class="btn btn-blue" onclick="PosljiSporocilo()">Ustvari pogovor</button>
                     </div>
                     <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
                         <div>
@@ -482,16 +461,16 @@
                 <h2>Moj Profil</h2>
                 <div class="card" style="max-width: 500px;">
                     <div style="display:flex; align-items:center; gap:20px; margin-bottom:20px;">
-                        <div style="width:80px; height:80px; background:var(--bg-color); border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:30px; color:var(--secondary-color);">👤</div>
+                        <div style="width:80px; height:80px; background:#e2e8f0; border:2px solid #000; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:30px;">👤</div>
                         <div>
                             <h3 style="margin:0;" id="om-ime">/</h3>
-                            <div style="color:var(--text-muted);">Uporabniško ime: <span id="om-username">/</span></div>
+                            <div style="color:var(--text-muted); font-family:'JetBrains Mono';">Username: <span id="om-username">/</span></div>
                         </div>
                     </div>
-                    <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
+                    <hr style="border:0; border-top:2px solid #000; margin: 15px 0;">
                     <p><strong>Minutna postavka:</strong> <span id="om-postavka" class="badge badge-blue">0</span> €/min</p>
                     <p><strong>Današnji izračunan zaslužek:</strong> <span id="om-zasluzek" class="badge badge-success" style="font-size:1em;">0.00 €</span></p>
-                    <p style="font-size:0.85em; color:var(--text-muted); line-height:1.5;">Zaslužek se računa avtomatsko glede na natančen čas (do sekunde) med prihodom in odhodom na delo v zavihku Registracija delovnega časa.</p>
+                    <p style="font-size:0.85em; color:var(--text-muted); line-height:1.5;">Zaslužek se računa avtomatsko glede na natančen čas v zavihku Registracija delovnega časa.</p>
                 </div>
             </div>
 
@@ -527,7 +506,7 @@
 
             <div id="sec-banka" class="page-section">
                 <h2>Banka in Finance (Direktor)</h2>
-                <div class="card" style="background:#f0fdf4; border-color:#bbf7d0;">
+                <div class="card" style="background:#f0fdf4;">
                     <h3>Sprememba stanja</h3>
                     <div class="form-row">
                         <div class="form-group"><label>Račun zaposlenega</label><select id="banka-zaposleni-select" onchange="PrikaziTrenutnoStanjeBanke()"></select></div>
@@ -551,8 +530,14 @@
         let trenutniUporabnik = null;
         let vsiZaposleni = {};
         
+        let aktivnaStranId = "loginacija";
+        let odprtPogovorKey = null; // za real-time chat
+        let zadnjiCasPogovorov = {}; // sledenje neprebranim 
+        let lokalniZapiski = {}; // globalna hramba za modal urejanje
+        let lokalnaBazaPaketov = {};
+        
         const VSE_STRANI = [
-            { id: "loginacija", naslov: "REGISTRACIJA DEL. ČASA", icon: "🕒" },
+            { id: "loginacija", naslov: "REG. DEL. ČASA", icon: "🕒" },
             { id: "place", naslov: "PLAČE ZAPOSLENIH", icon: "💰" },
             { id: "paketi", naslov: "BAZA PAKETOV", icon: "📦" },
             { id: "oddajapaketa", naslov: "BLAGAJNA (ODDAJA)", icon: "🛒" },
@@ -560,7 +545,7 @@
             { id: "administracijapaketov", naslov: "ADMIN. ODDAJE", icon: "📋" },
             { id: "urnik", naslov: "KOLEDAR", icon: "📅" },
             { id: "vstopi", naslov: "EVIDENCA VSTOPOV", icon: "🚪" },
-            { id: "telefon", naslov: "TELEFON & ZAPISNIKI", icon: "📞" },
+            { id: "telefon", naslov: "TELEFON & ZAPIS.", icon: "📞" },
             { id: "komunikacija", naslov: "POGOVORI", icon: "✉️" },
             { id: "zapiski", naslov: "MOJI ZAPISKI", icon: "📝" },
             { id: "omeni", naslov: "MOJ PROFIL", icon: "👤" },
@@ -573,7 +558,42 @@
             NastaviUro(); setInterval(NastaviUro, 1000);
             InicijalizirajDirektorja();
             document.getElementById('admin-paketi-datum').valueAsDate = new Date();
+            
+            // Real-time polling sistem
+            setInterval(GlobalniTick, 4000); 
         };
+
+        // BEEP ZVOK (Generiran, da ne rabimo zunanjih fajlov)
+        function PredvajajPisk() {
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator(); let gain = ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.15);
+            } catch(e) {}
+        }
+
+        async function GlobalniTick() {
+            if(!trenutniUporabnik || document.getElementById('main-container').style.display === 'none') return;
+            
+            // 1. Preverimo nova sporočila v ozadju
+            PreveriNovaSporocilaSistemsko();
+
+            // 2. Osvežimo tisto stran, na kateri smo trenutno
+            if(aktivnaStranId === 'komunikacija') NaloziSporocila();
+            else if(aktivnaStranId === 'urnik' && !document.getElementById('global-modal').style.display.includes('flex')) PrikaziKoledar();
+            else if(aktivnaStranId === 'loginacija') NaloziLoginacijo();
+            else if(aktivnaStranId === 'paketi') NaloziPaketeTable(true);
+            else if(aktivnaStranId === 'zapiski') NaloziZapiske();
+            else if(aktivnaStranId === 'administracijapaketov') NaloziAdministracijoPaketov();
+
+            // 3. Če imamo odprto okno s pogovorom
+            if(odprtPogovorKey && document.getElementById('global-modal').style.display.includes('flex')) {
+                OsveziOdprtPogovorZnotrajModala();
+            }
+        }
 
         function NastaviUro() {
             let n = new Date(); let uraStr = n.toLocaleTimeString('sl-SI');
@@ -614,11 +634,16 @@
                 document.getElementById('main-container').style.display = 'flex';
                 document.getElementById('user-display').innerText = `Prijavljen: ${found.ime}`;
                 document.getElementById('blagajnik-ime').innerText = `Blagajnik: ${found.ime}`;
+                
+                // Naložimo lokalno stanje neprebranih
+                try{ zadnjiCasPogovorov = JSON.parse(localStorage.getItem(`ogledSporocil_${trenutniUporabnik.username}`)) || {}; }catch(e){}
+                
                 IzrisiNavigacijo(); NaloziIzbireZaposlenih();
                 PreklopiNaStran(NajdiPrvoDovoljenoStran());
                 OsveziVsePodatkovneTabele();
+                PreveriNovaSporocilaSistemsko();
             } else {
-                document.getElementById('login-alert').innerHTML = `<div style="color:red; margin-bottom:15px; font-weight:bold;">Napačno ime ali geslo!</div>`;
+                document.getElementById('login-alert').innerHTML = `<div style="color:red; margin-bottom:15px; font-weight:bold; font-family:'JetBrains Mono';">Napaka: Napačno ime ali geslo!</div>`;
             }
         }
 
@@ -629,7 +654,8 @@
             VSE_STRANI.forEach(stran => {
                 if(trenutniUporabnik.isDirektor || (trenutniUporabnik.pravice && trenutniUporabnik.pravice[stran.id])) {
                     let btn = document.createElement('button');
-                    btn.innerHTML = `<span>${stran.icon}</span> ${stran.naslov}`;
+                    let badgeHTML = stran.id === 'komunikacija' ? `<div class="badge-noti" id="nav-noti-komunikacija"></div>` : '';
+                    btn.innerHTML = `<span class="ikona">${stran.icon}${badgeHTML}</span> <span class="naslov-menija">${stran.naslov}</span>`;
                     btn.id = `btn-nav-${stran.id}`; btn.onclick = () => PreklopiNaStran(stran.id);
                     nav.appendChild(btn);
                 }
@@ -642,6 +668,7 @@
         }
 
         function PreklopiNaStran(stranId) {
+            aktivnaStranId = stranId;
             document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('#sidebar-nav button').forEach(btn => btn.classList.remove('active'));
             if(document.getElementById(`sec-${stranId}`)) document.getElementById(`sec-${stranId}`).classList.add('active');
@@ -652,31 +679,33 @@
             if(stranId === 'place') NaloziInIzracunajPlace();
             if(stranId === 'banka') OsveziBanko();
             if(stranId === 'urnik') PrikaziKoledar();
+            if(stranId === 'komunikacija') NaloziSporocila();
         }
 
         function NaloziIzbireZaposlenih() {
-            let optsKom = "";
-            let optsZap = "<option value=''>Samo zame</option>";
+            let optsKom = ""; let optsZap = "<option value=''>Samo zame</option>";
             for(let k in vsiZaposleni) {
                 optsZap += `<option value="${vsiZaposleni[k].username}">${vsiZaposleni[k].ime}</option>`;
-                if (vsiZaposleni[k].username !== trenutniUporabnik.username) {
-                    optsKom += `<option value="${vsiZaposleni[k].username}">${vsiZaposleni[k].ime}</option>`;
-                }
+                if (vsiZaposleni[k].username !== trenutniUporabnik.username) optsKom += `<option value="${vsiZaposleni[k].username}">${vsiZaposleni[k].ime}</option>`;
             }
-            document.getElementById('kom-za').innerHTML = optsKom;
-            document.getElementById('zapisek-deli').innerHTML = optsZap;
+            document.getElementById('kom-za').innerHTML = optsKom; document.getElementById('zapisek-deli').innerHTML = optsZap;
         }
 
         function OsveziVsePodatkovneTabele() {
             NaloziLoginacijo(); NaloziPaketeTable(); NaloziRacune(); NaloziAdministracijoPaketov(); 
-            NaloziVstopi(); NaloziTelefoneZapisnike(); NaloziZaposleneTabela(); NaloziSporocila(); NaloziZapiske();
+            NaloziVstopi(); NaloziTelefoneZapisnike(); NaloziZaposleneTabela(); NaloziZapiske();
         }
 
         function OdpriModal(htmlC) {
             document.getElementById('modal-body').innerHTML = htmlC;
             document.getElementById('global-modal').style.display = 'flex';
         }
-        function ZpriModal(force) { if(force===true || force.target.id==='global-modal') document.getElementById('global-modal').style.display='none'; }
+        function ZpriModal(force) { 
+            if(force===true || force.target.id==='global-modal') {
+                document.getElementById('global-modal').style.display='none';
+                odprtPogovorKey = null; // Resetiramo da global tick ne polla modala
+            }
+        }
 
         /* ================= 1. LOGINACIJA & PLAČE ================= */
         async function ZabeleziLoginacijo(dogodek) {
@@ -686,73 +715,47 @@
             if(!izvajalec) { alert("Napačna šifra!"); return; }
 
             let isoNow = new Date().toISOString();
-            await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, {
-                method: 'POST', body: JSON.stringify({ ime: izvajalec.ime, username: izvajalec.username, dogodek: dogodek, isoTime: isoNow })
-            });
+            await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method: 'POST', body: JSON.stringify({ ime: izvajalec.ime, username: izvajalec.username, dogodek: dogodek, isoTime: isoNow }) });
             document.getElementById('log-sifra').value = ""; NaloziLoginacijo();
         }
 
         async function NaloziLoginacijo() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/loginacija.json`);
-            let data = await res.json() || {};
-            let tbody = document.getElementById('tbl-loginacija'); tbody.innerHTML = "";
+            let res = await fetch(`${FIREBASE_BASE_URL}/loginacija.json`); let data = await res.json() || {};
+            let tbody = document.getElementById('tbl-loginacija'); let stara = tbody.innerHTML; tbody.innerHTML = "";
             if(trenutniUporabnik.isDirektor) document.getElementById('admin-loginacija-controls').style.display = 'block';
 
             let arr = Object.keys(data).map(k => ({key: k, ...data[k]})).sort((a,b) => new Date(b.isoTime) - new Date(a.isoTime));
-
+            let html="";
             arr.forEach(d => {
                 let dTime = new Date(d.isoTime).toLocaleString('sl-SI');
-                tbody.innerHTML += `<tr>
-                    <td>${d.ime}</td><td><span class="badge badge-blue">${d.dogodek}</span></td><td>${dTime}</td>
-                    <td>${trenutniUporabnik.isDirektor ? `
-                        <button class="btn btn-warning" style="padding:4px 8px; font-size:11px;" onclick="UrediZapisLoginacije('${d.key}', '${d.isoTime}', '${d.dogodek}')">Uredi čas</button>
-                        <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="BrisiZapisLoginacije('${d.key}')">Briši</button>` : '/'}
-                    </td>
+                html += `<tr><td>${d.ime}</td><td><span class="badge badge-blue">${d.dogodek}</span></td><td>${dTime}</td>
+                    <td>${trenutniUporabnik.isDirektor ? `<button class="btn btn-warning" style="padding:4px 8px; font-size:11px;" onclick="UrediZapisLoginacije('${d.key}', '${d.isoTime}', '${d.dogodek}')">Uredi</button> <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="BrisiZapisLoginacije('${d.key}')">X</button>` : '/'}</td>
                 </tr>`;
             });
+            if(stara !== html) tbody.innerHTML = html; // Prepreči flickeranje med tipkanjem šifre
         }
 
         function UrediZapisLoginacije(key, isoTime, staridog) {
-            let d = new Date(isoTime);
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            let d = new Date(isoTime); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             let localIso = d.toISOString().slice(0,16);
-            
-            OdpriModal(`
-                <h3>Urejanje prijave</h3>
-                <div class="form-group"><label>Dogodek</label><input type="text" id="edit-log-dog" value="${staridog}"></div>
-                <div class="form-group"><label>Čas (Točen)</label><input type="datetime-local" id="edit-log-cas" value="${localIso}"></div>
-                <button class="btn btn-success" onclick="ShraniUrejanjeLoginacije('${key}')">Shrani popravek</button>
-            `);
+            OdpriModal(`<h3>Urejanje prijave</h3><div class="form-group"><label>Dogodek</label><input type="text" id="edit-log-dog" value="${staridog}"></div><div class="form-group"><label>Čas</label><input type="datetime-local" id="edit-log-cas" value="${localIso}"></div><button class="btn btn-success" onclick="ShraniUrejanjeLoginacije('${key}')">Shrani popravek</button>`);
         }
         async function ShraniUrejanjeLoginacije(key) {
-            let ndog = document.getElementById('edit-log-dog').value;
-            let ncas = document.getElementById('edit-log-cas').value;
-            let isoNew = new Date(ncas).toISOString();
-            await fetch(`${FIREBASE_BASE_URL}/loginacija/${key}.json`, {
-                method: 'PATCH', body: JSON.stringify({dogodek: ndog, isoTime: isoNew})
-            });
+            let isoNew = new Date(document.getElementById('edit-log-cas').value).toISOString();
+            await fetch(`${FIREBASE_BASE_URL}/loginacija/${key}.json`, { method: 'PATCH', body: JSON.stringify({dogodek: document.getElementById('edit-log-dog').value, isoTime: isoNew}) });
             ZpriModal(true); NaloziLoginacijo(); NaloziInIzracunajPlace();
         }
 
         async function BrisiZapisLoginacije(key) { if(confirm("Brišem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija/${key}.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
-        async function PobrisiVsoLoginacijo() { if(confirm("POZOR! S tem se izbrišejo vsi zapisi za računanje plač. Nadaljujem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
+        async function PobrisiVsoLoginacijo() { if(confirm("POZOR! S tem se izbrišejo vsi zapisi. Nadaljujem?")) { await fetch(`${FIREBASE_BASE_URL}/loginacija.json`, { method:'DELETE' }); NaloziLoginacijo(); NaloziInIzracunajPlace();} }
 
         function IzracunajSkupneMinute(logDataArr, username, samoDanes = false) {
             let userLogs = logDataArr.filter(x => x.username === username).sort((a,b) => new Date(a.isoTime) - new Date(b.isoTime));
-            if(samoDanes) {
-                let today = new Date().toDateString();
-                userLogs = userLogs.filter(x => new Date(x.isoTime).toDateString() === today);
-            }
-
-            let totalMinutes = 0;
-            let lastStart = null;
+            if(samoDanes) { let today = new Date().toDateString(); userLogs = userLogs.filter(x => new Date(x.isoTime).toDateString() === today); }
+            let totalMinutes = 0; let lastStart = null;
             userLogs.forEach(l => {
-                if(l.dogodek === "Prihod na delo" || l.dogodek === "Prihod iz pavze") {
-                    lastStart = new Date(l.isoTime);
-                } else if ((l.dogodek === "Odhod domov" || l.dogodek === "Pavza") && lastStart) {
-                    totalMinutes += (new Date(l.isoTime) - lastStart) / 60000;
-                    lastStart = null;
-                }
+                if(l.dogodek === "Prihod na delo" || l.dogodek === "Prihod iz pavze") lastStart = new Date(l.isoTime);
+                else if ((l.dogodek === "Odhod domov" || l.dogodek === "Pavza") && lastStart) { totalMinutes += (new Date(l.isoTime) - lastStart) / 60000; lastStart = null; }
             });
             if(lastStart) totalMinutes += (new Date() - lastStart) / 60000;
             return totalMinutes;
@@ -773,17 +776,9 @@
             }
 
             for(let k in vsiZaposleni) {
-                let zap = vsiZaposleni[k];
-                let nastavitve = pSet[k] || { postavkaMin: zap.postavka || 0.15, placano: 0, neplacano: 0 };
-                let minute = IzracunajSkupneMinute(logDataArr, zap.username);
-                let zasluzekOcenjen = minute * nastavitve.postavkaMin;
-                let h = Math.floor(minute/60); let m = Math.floor(minute%60);
-
-                tbody.innerHTML += `<tr>
-                    <td><strong>${zap.ime}</strong></td><td>${nastavitve.postavkaMin} €/min</td>
-                    <td>${h}h ${m}m</td><td><strong style="color:var(--success-color);">${zasluzekOcenjen.toFixed(2)} €</strong></td>
-                    <td>${nastavitve.placano || 0} €</td><td><span style="color:var(--danger-color);">${nastavitve.neplacano || 0} €</span></td>
-                </tr>`;
+                let zap = vsiZaposleni[k]; let nastavitve = pSet[k] || { postavkaMin: zap.postavka || 0.15, placano: 0, neplacano: 0 };
+                let minute = IzracunajSkupneMinute(logDataArr, zap.username); let zasluzek = minute * nastavitve.postavkaMin;
+                tbody.innerHTML += `<tr><td><strong>${zap.ime}</strong></td><td>${nastavitve.postavkaMin} €/min</td><td>${Math.floor(minute/60)}h ${Math.floor(minute%60)}m</td><td><strong style="color:var(--success-color);">${zasluzek.toFixed(2)} €</strong></td><td>${nastavitve.placano || 0} €</td><td><span style="color:var(--danger-color);">${nastavitve.neplacano || 0} €</span></td></tr>`;
             }
         }
 
@@ -791,8 +786,7 @@
             let zapKey = document.getElementById('place-zaposleni-select').value; if(!zapKey) return;
             let res = await fetch(`${FIREBASE_BASE_URL}/place_nastavitve/${zapKey}.json`); let data = await res.json();
             document.getElementById('place-PostavkaMin').value = data ? (data.postavkaMin||0.15) : (vsiZaposleni[zapKey].postavka||0.15);
-            document.getElementById('place-ZnesekPlacano').value = data ? (data.placano||0) : 0;
-            document.getElementById('place-ZnesekNeplacano').value = data ? (data.neplacano||0) : 0;
+            document.getElementById('place-ZnesekPlacano').value = data ? (data.placano||0) : 0; document.getElementById('place-ZnesekNeplacano').value = data ? (data.neplacano||0) : 0;
         }
 
         async function ShraniPodatkeOPlaci() {
@@ -800,83 +794,70 @@
             let pod = { postavkaMin: parseFloat(document.getElementById('place-PostavkaMin').value)||0, placano: parseFloat(document.getElementById('place-ZnesekPlacano').value)||0, neplacano: parseFloat(document.getElementById('place-ZnesekNeplacano').value)||0 };
             await fetch(`${FIREBASE_BASE_URL}/place_nastavitve/${zapKey}.json`, { method:'PUT', body: JSON.stringify(pod) });
             await fetch(`${FIREBASE_BASE_URL}/zaposleni/${zapKey}/postavka.json`, { method:'PUT', body: JSON.stringify(pod.postavkaMin) });
-            NaloziInIzracunajPlace();
-            NaloziVseZaposlene();
+            NaloziInIzracunajPlace(); NaloziVseZaposlene();
         }
 
-        /* ================= 2. PAKETI (Skrivanje dostavljenih) ================= */
-        let lokalnaBazaPaketov = {};
-        async function NaloziPaketeTable() {
+        /* ================= 2. PAKETI ================= */
+        async function NaloziPaketeTable(vOzadju = false) {
             let res = await fetch(`${FIREBASE_BASE_URL}/paketi_baza.json`); lokalnaBazaPaketov = await res.json() || {};
+            let isciEl = document.getElementById('iscipaket-id');
+            // Če je v ozadju in up. nekaj tipka, pustimo pri miru
+            if(vOzadju && isciEl === document.activeElement) return; 
             IsciPaketList(); 
         }
 
         function IsciPaketList() {
             let query = document.getElementById('iscipaket-id').value.toLowerCase().trim();
-            let tbody = document.getElementById('tbl-vsi-paketi'); tbody.innerHTML = "";
+            let tbody = document.getElementById('tbl-vsi-paketi'); let html="";
             let arr = Object.keys(lokalnaBazaPaketov).map(k=>({key:k, ...lokalnaBazaPaketov[k]})).reverse();
             
             arr.forEach(p => {
-                let m_st = (p.stPaketa || "").toLowerCase();
-                let m_pos = (p.posiljatelj || "").toLowerCase();
-                
+                let m_st = (p.stPaketa || "").toLowerCase(); let m_pos = (p.posiljatelj || "").toLowerCase();
                 let match = false;
-
-                if (!query) {
-                    if (p.status === "Dostavljeno") return; // Skrij, če ni iskanja
-                    match = true;
-                } else {
-                    if (m_st.includes(query) || m_pos.includes(query)) match = true;
-                }
+                if (!query) { if (p.status !== "Dostavljeno") match = true; } 
+                else { if (m_st.includes(query) || m_pos.includes(query)) match = true; }
 
                 if(match) {
                     let statColor = p.status==="Plačano"?"badge-blue":p.status==="Odposlano"?"badge-warning":p.status==="Dostavljeno"?"badge-success":"badge-danger";
-                    tbody.innerHTML += `<tr class="clickable-row" onclick="OdpriUrejanjePaketa('${p.key}')">
-                        <td><strong>${p.stPaketa}</strong></td><td>${p.posiljatelj}</td><td>${p.prejemnik}</td>
-                        <td>${p.vrsta} (${p.velikost})</td><td><span class="badge ${statColor}">${p.status||'Sprejeto'}</span></td>
-                    </tr>`;
+                    html += `<tr class="clickable-row" onclick="OdpriUrejanjePaketa('${p.key}')"><td><strong>${p.stPaketa}</strong></td><td>${p.posiljatelj}</td><td>${p.prejemnik}</td><td>${p.vrsta} (${p.velikost})</td><td><span class="badge ${statColor}">${p.status||'Sprejeto'}</span></td></tr>`;
                 }
             });
+            tbody.innerHTML = html;
         }
 
         function OdpriUrejanjePaketa(key) {
             let p = lokalnaBazaPaketov[key];
-            OdpriModal(`
-                <h3>Podrobnosti Paketa: ${p.stPaketa}</h3>
+            OdpriModal(`<h3>Paket: ${p.stPaketa}</h3>
                 <div class="form-row"><div class="form-group"><label>Pošiljatelj</label><input type="text" value="${p.posiljatelj}" readonly></div><div class="form-group"><label>Prejemnik</label><input type="text" value="${p.prejemnik}" readonly></div></div>
-                <div class="form-group"><label>Status (Uredi)</label>
-                    <select id="modal-paket-status">
-                        <option value="Sprejeto" ${p.status==='Sprejeto'?'selected':''}>Sprejeto / Plačano</option>
-                        <option value="Pripravljeno" ${p.status==='Pripravljeno'?'selected':''}>Pripravljeno</option>
-                        <option value="Odposlano" ${p.status==='Odposlano'?'selected':''}>Odposlano</option>
-                        <option value="Dostavljeno" ${p.status==='Dostavljeno'?'selected':''}>Dostavljeno</option>
-                    </select>
-                </div>
+                <div class="form-group"><label>Status (Uredi)</label><select id="modal-paket-status"><option value="Sprejeto" ${p.status==='Sprejeto'?'selected':''}>Sprejeto</option><option value="Pripravljeno" ${p.status==='Pripravljeno'?'selected':''}>Pripravljeno</option><option value="Odposlano" ${p.status==='Odposlano'?'selected':''}>Odposlano</option><option value="Dostavljeno" ${p.status==='Dostavljeno'?'selected':''}>Dostavljeno</option></select></div>
                 <div class="form-group"><label>Opombe</label><textarea id="modal-paket-opombe" rows="3">${p.opombe||''}</textarea></div>
-                <button class="btn btn-success" onclick="ShraniSprememboPaketa('${key}')">Shrani spremembe</button>
+                <div style="display:flex; justify-content:space-between;">
+                    <button class="btn btn-success" onclick="ShraniSprememboPaketa('${key}')">Shrani</button>
+                    ${trenutniUporabnik.isDirektor ? `<button class="btn btn-danger" onclick="BrisiPaketIzBaze('${key}')">Izbriši paket</button>` : ''}
+                </div>
             `);
         }
         async function ShraniSprememboPaketa(key) {
-            let stat = document.getElementById('modal-paket-status').value;
-            let op = document.getElementById('modal-paket-opombe').value;
-            await fetch(`${FIREBASE_BASE_URL}/paketi_baza/${key}/status.json`, {method:'PUT', body:JSON.stringify(stat)});
-            await fetch(`${FIREBASE_BASE_URL}/paketi_baza/${key}/opombe.json`, {method:'PUT', body:JSON.stringify(op)});
+            await fetch(`${FIREBASE_BASE_URL}/paketi_baza/${key}/status.json`, {method:'PUT', body:JSON.stringify(document.getElementById('modal-paket-status').value)});
+            await fetch(`${FIREBASE_BASE_URL}/paketi_baza/${key}/opombe.json`, {method:'PUT', body:JSON.stringify(document.getElementById('modal-paket-opombe').value)});
             ZpriModal(true); NaloziPaketeTable();
+        }
+        async function BrisiPaketIzBaze(key) {
+            if(confirm("Si prepričan, da želiš popolnoma izbrisati paket iz baze?")) {
+                await fetch(`${FIREBASE_BASE_URL}/paketi_baza/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziPaketeTable();
+            }
         }
 
         /* ================= 3. ODDAJA IN RAČUNI ================= */
         function IzracunajSkupajBlagajna() {
-            let c = parseFloat(document.getElementById('blag-cena').value)||0;
-            let p = parseFloat(document.getElementById('blag-postnina').value)||0;
+            let c = parseFloat(document.getElementById('blag-cena').value)||0; let p = parseFloat(document.getElementById('blag-postnina').value)||0;
             document.getElementById('blag-skupaj-prikaz').innerText = (c+p).toFixed(2);
         }
         function ToggleKarticaPin() { document.getElementById('pin-vnos-div').style.display = document.getElementById('placilo-tip').value==="KARTICA"?'block':'none'; }
 
         async function ProcesirajOddajoPaketa() {
-            let stPaketa = document.getElementById('blag-st-paketa').value.trim();
-            let posiljatelj = document.getElementById('blag-posiljatelj').value.trim();
-            let nacinPlacila = document.getElementById('placilo-tip').value;
-            let skupaj = (parseFloat(document.getElementById('blag-cena').value)||0) + (parseFloat(document.getElementById('blag-postnina').value)||0);
+            let stPaketa = document.getElementById('blag-st-paketa').value.trim(); let posiljatelj = document.getElementById('blag-posiljatelj').value.trim();
+            let nacinPlacila = document.getElementById('placilo-tip').value; let skupaj = (parseFloat(document.getElementById('blag-cena').value)||0) + (parseFloat(document.getElementById('blag-postnina').value)||0);
             if(!stPaketa || !posiljatelj) { alert("Številka paketa in pošiljatelj sta obvezna!"); return; }
 
             if(nacinPlacila === "KARTICA") {
@@ -887,35 +868,21 @@
                 await fetch(`${FIREBASE_BASE_URL}/banka/${foundKey}/stanje.json`, {method:'PUT', body:(banka[foundKey].stanje - skupaj)});
             }
 
-            let novPaket = {
-                stPaketa: stPaketa, vrsta: document.getElementById('blag-vrsta').value, velikost: document.getElementById('blag-velikost').value,
-                posiljatelj: posiljatelj, prejemnik: document.getElementById('blag-prejemnik').value, opombe: "Nov.", status: "Sprejeto", isoTime: new Date().toISOString()
-            };
-            await fetch(`${FIREBASE_BASE_URL}/paketi_baza.json`, { method:'POST', body:JSON.stringify(novPaket) });
-
+            await fetch(`${FIREBASE_BASE_URL}/paketi_baza.json`, { method:'POST', body:JSON.stringify({stPaketa: stPaketa, vrsta: document.getElementById('blag-vrsta').value, velikost: document.getElementById('blag-velikost').value, posiljatelj: posiljatelj, prejemnik: document.getElementById('blag-prejemnik').value, opombe: "Nov.", status: "Sprejeto", isoTime: new Date().toISOString()}) });
             let stRacuna = "RE-" + Math.floor(100000 + Math.random() * 900000);
-            try {
-                await fetch(`${FIREBASE_BASE_URL}/racuni.json`, {
-                    method:'POST', body:JSON.stringify({stRacuna:stRacuna, stPaketa:stPaketa, znesek:skupaj, tipPlacila:nacinPlacila, blagajnik:trenutniUporabnik.ime, status:"VELJAVEN", isoTime: new Date().toISOString()})
-                });
-                alert("Račun izdan in paket zabeležen!");
-                ['blag-st-paketa','blag-posiljatelj','blag-prejemnik','placilo-pin'].forEach(id => document.getElementById(id).value = "");
-                document.getElementById('blag-cena').value = "0.00"; document.getElementById('blag-postnina').value = "0.00"; IzracunajSkupajBlagajna();
-                NaloziPaketeTable(); NaloziRacune();
-            } catch(e) { console.error("Napaka pri shranjevanju računa:", e); alert("Prišlo je do napake pri izdaji računa."); }
+            await fetch(`${FIREBASE_BASE_URL}/racuni.json`, { method:'POST', body:JSON.stringify({stRacuna:stRacuna, stPaketa:stPaketa, znesek:skupaj, tipPlacila:nacinPlacila, blagajnik:trenutniUporabnik.ime, status:"VELJAVEN", isoTime: new Date().toISOString()}) });
+            
+            alert("Račun izdan in paket zabeležen!");
+            ['blag-st-paketa','blag-posiljatelj','blag-prejemnik','placilo-pin'].forEach(id => document.getElementById(id).value = "");
+            document.getElementById('blag-cena').value = "0.00"; document.getElementById('blag-postnina').value = "0.00"; IzracunajSkupajBlagajna(); NaloziPaketeTable(); NaloziRacune();
         }
 
         async function NaloziRacune() {
             let res = await fetch(`${FIREBASE_BASE_URL}/racuni.json`); let data = await res.json() || {};
             let tbody = document.getElementById('tbl-racuni'); tbody.innerHTML = "";
-            let arr = Object.keys(data).map(k=>({key:k,...data[k]})).reverse();
-            arr.forEach(r => {
+            Object.keys(data).map(k=>({key:k,...data[k]})).reverse().forEach(r => {
                 let stat = r.status==='STORNO' ? `<span style="color:red;font-weight:bold;">STORNO</span>` : `<span style="color:green;font-weight:bold;">VELJAVEN</span>`;
-                tbody.innerHTML += `<tr>
-                    <td><strong>${r.stRacuna}</strong></td><td>${r.stPaketa}</td><td><strong>${r.znesek.toFixed(2)} €</strong></td>
-                    <td>${r.tipPlacila}</td><td>${r.blagajnik}</td><td>${stat}</td>
-                    <td>${r.status!=='STORNO'?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="StornirajRacun('${r.key}')">Storno</button>`:'/'}</td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td><strong>${r.stRacuna}</strong></td><td>${r.stPaketa}</td><td><strong>${r.znesek.toFixed(2)} €</strong></td><td>${r.tipPlacila}</td><td>${r.blagajnik}</td><td>${stat}</td><td>${r.status!=='STORNO'?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="StornirajRacun('${r.key}')">Storno</button>`:'/'}</td></tr>`;
             });
         }
         async function StornirajRacun(key) { if(confirm("Storniram?")) { await fetch(`${FIREBASE_BASE_URL}/racuni/${key}/status.json`, {method:'PUT', body:JSON.stringify("STORNO")}); NaloziRacune(); } }
@@ -927,7 +894,6 @@
             document.getElementById('cal-month-year').innerText = calDate.toLocaleString('sl-SI', { month: 'long', year: 'numeric' }).toUpperCase();
             let prviDan = new Date(leto, mesec, 1).getDay(); if(prviDan===0) prviDan=7;
             let stDni = new Date(leto, mesec+1, 0).getDate();
-            
             let grid = document.getElementById('cal-days-grid'); grid.innerHTML = "";
             for(let i=1; i<prviDan; i++) grid.innerHTML += `<div class="calendar-day" style="background:#f1f5f9;"></div>`;
             
@@ -938,181 +904,142 @@
                 let polniDatum = `${leto}-${(mesec+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
                 let dnevniEv = eventi.filter(e => e.datum.startsWith(polniDatum));
                 let evHtml = dnevniEv.map(e => `<div class="cal-event" onclick="event.stopPropagation(); OdpriUrejanjeSestanka('${e.key}')">${e.naslov}</div>`).join('');
-                
-                grid.innerHTML += `<div class="calendar-day" onclick="OdpriNovSestanek('${polniDatum}')">
-                    <div class="date-num">${d}</div>${evHtml}
-                </div>`;
+                grid.innerHTML += `<div class="calendar-day" onclick="OdpriNovSestanek('${polniDatum}')"><div class="date-num">${d}</div>${evHtml}</div>`;
             }
         }
         function PremakniMesec(d) { calDate.setMonth(calDate.getMonth() + d); PrikaziKoledar(); }
 
         function OdpriNovSestanek(datumStr) {
-            OdpriModal(`
-                <h3>Nov Sestanek v koledarju</h3>
-                <div class="form-group"><label>Naslov</label><input type="text" id="urnik-new-n"></div>
-                <div class="form-group"><label>Datum in ura</label><input type="datetime-local" id="urnik-new-d" value="${datumStr}T10:00"></div>
-                <div class="form-group"><label>Opis</label><textarea id="urnik-new-o"></textarea></div>
-                <button class="btn btn-success" onclick="ShraniNovSestanek()">Shrani v koledar</button>
-            `);
+            OdpriModal(`<h3>Nov Sestanek</h3><div class="form-group"><label>Naslov</label><input type="text" id="urnik-new-n"></div><div class="form-group"><label>Datum in ura</label><input type="datetime-local" id="urnik-new-d" value="${datumStr}T10:00"></div><div class="form-group"><label>Opis</label><textarea id="urnik-new-o"></textarea></div><button class="btn btn-success" onclick="ShraniNovSestanek()">Shrani</button>`);
         }
         async function ShraniNovSestanek() {
-            let n = document.getElementById('urnik-new-n').value; let d = document.getElementById('urnik-new-d').value;
-            if(!n || !d) return;
+            let n = document.getElementById('urnik-new-n').value; let d = document.getElementById('urnik-new-d').value; if(!n || !d) return;
             await fetch(`${FIREBASE_BASE_URL}/urnik.json`, { method:'POST', body:JSON.stringify({naslov:n, datum:d, opis:document.getElementById('urnik-new-o').value}) });
             ZpriModal(true); PrikaziKoledar();
         }
         async function OdpriUrejanjeSestanka(key) {
             let res = await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`); let e = await res.json();
-            OdpriModal(`
-                <h3>Uredi Sestanek</h3>
-                <div class="form-group"><label>Naslov</label><input type="text" id="urnik-ed-n" value="${e.naslov}"></div>
-                <div class="form-group"><label>Datum</label><input type="datetime-local" id="urnik-ed-d" value="${e.datum}"></div>
-                <div class="form-group"><label>Opis</label><textarea id="urnik-ed-o">${e.opis||''}</textarea></div>
-                <div style="display:flex; justify-content:space-between;">
-                    <button class="btn btn-success" onclick="PosodobiSestanek('${key}')">Posodobi</button>
-                    <button class="btn btn-danger" onclick="BrisiSestanekKoledar('${key}')">Izbriši</button>
-                </div>
-            `);
+            OdpriModal(`<h3>Uredi Sestanek</h3><div class="form-group"><label>Naslov</label><input type="text" id="urnik-ed-n" value="${e.naslov}"></div><div class="form-group"><label>Datum</label><input type="datetime-local" id="urnik-ed-d" value="${e.datum}"></div><div class="form-group"><label>Opis</label><textarea id="urnik-ed-o">${e.opis||''}</textarea></div><div style="display:flex; justify-content:space-between;"><button class="btn btn-success" onclick="PosodobiSestanek('${key}')">Posodobi</button><button class="btn btn-danger" onclick="BrisiSestanekKoledar('${key}')">Izbriši</button></div>`);
         }
-        async function PosodobiSestanek(key) {
-            await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`, { method:'PUT', body:JSON.stringify({naslov:document.getElementById('urnik-ed-n').value, datum:document.getElementById('urnik-ed-d').value, opis:document.getElementById('urnik-ed-o').value}) });
-            ZpriModal(true); PrikaziKoledar();
-        }
+        async function PosodobiSestanek(key) { await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`, { method:'PUT', body:JSON.stringify({naslov:document.getElementById('urnik-ed-n').value, datum:document.getElementById('urnik-ed-d').value, opis:document.getElementById('urnik-ed-o').value}) }); ZpriModal(true); PrikaziKoledar(); }
         async function BrisiSestanekKoledar(key) { await fetch(`${FIREBASE_BASE_URL}/urnik/${key}.json`, {method:'DELETE'}); ZpriModal(true); PrikaziKoledar(); }
 
-        /* ================= 5. TELEFON IN ZAPISNIKI ================= */
-        async function DodajTelefonZapisnik() {
-            let vrsta = document.getElementById('tz-vrsta').value; let kdo = document.getElementById('tz-kdo').value;
-            let kdaj = document.getElementById('tz-kdaj').value; let kaj = document.getElementById('tz-kaj').value;
-            if(!kdo||!kdaj||!kaj) return;
-            await fetch(`${FIREBASE_BASE_URL}/${vrsta}.json`, { method:'POST', body:JSON.stringify({kdo:kdo, kdaj:kdaj, kaj:kaj}) });
-            ['tz-kdo','tz-kdaj','tz-kaj'].forEach(id=>document.getElementById(id).value=""); NaloziTelefoneZapisnike();
-        }
-        async function NaloziTelefoneZapisnike() {
-            let tbody = document.getElementById('tbl-telefoni-zapisniki'); tbody.innerHTML = "";
-            let rt = await fetch(`${FIREBASE_BASE_URL}/telefon.json`); let dt = await rt.json() || {};
-            let rz = await fetch(`${FIREBASE_BASE_URL}/zapisnik.json`); let dz = await rz.json() || {};
-            let arr = [];
-            Object.keys(dt).forEach(k=> arr.push({key:k, tip:'Telefon', c:dt[k]}));
-            Object.keys(dz).forEach(k=> arr.push({key:k, tip:'Živo (Zapisnik)', c:dz[k]}));
-            arr.sort((a,b)=> new Date(b.c.kdaj) - new Date(a.c.kdaj)).forEach(x => {
-                let badge = x.tip==='Telefon'?'badge-warning':'badge-blue';
-                tbody.innerHTML += `<tr class="clickable-row" onclick="PrikaziPodrobnostTZ('${x.tip}', '${x.c.kdo}', '${x.c.kaj}', '${x.c.kdaj}')">
-                    <td><span class="badge ${badge}">${x.tip}</span></td><td>${x.c.kdo}</td><td>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</td>
-                </tr>`;
+        /* ================= 6. KOMUNIKACIJA (Real Time) ================= */
+        async function PreveriNovaSporocilaSistemsko() {
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); 
+            let d = await res.json() || {};
+            let imaNovo = false;
+
+            Object.keys(d).forEach(k => {
+                let p = d[k];
+                if(p.udelezenci && p.udelezenci.includes(trenutniUporabnik.username)) {
+                    let spArr = p.sporocila ? Object.values(p.sporocila) : [];
+                    let lastTime = spArr.length > 0 ? spArr[spArr.length-1].isoTime : p.zacetek;
+                    let mojZadnji = zadnjiCasPogovorov[k] || "0";
+                    if(new Date(lastTime) > new Date(mojZadnji) && (!spArr.length || spArr[spArr.length-1].od !== trenutniUporabnik.username)) {
+                        imaNovo = true;
+                    }
+                }
             });
-        }
-        function PrikaziPodrobnostTZ(tip, kdo, kaj, kdaj) {
-            OdpriModal(`<h3>Podrobnosti: ${tip}</h3><p><strong>Udeleženec:</strong> ${kdo}</p><p><strong>Čas:</strong> ${new Date(kdaj).toLocaleString('sl-SI')}</p><hr><p style="white-space:pre-wrap;">${kaj}</p>`);
+
+            let notiBadge = document.getElementById('nav-noti-komunikacija');
+            if(notiBadge) notiBadge.style.display = imaNovo ? 'block' : 'none';
+
+            // Zvok samo, če je novo stanje, ki ga še nismo registrirali kot pisk
+            if(imaNovo && !window.zvocnoOpozorjeno) {
+                PredvajajPisk(); window.zvocnoOpozorjeno = true;
+            } else if (!imaNovo) { window.zvocnoOpozorjeno = false; }
         }
 
-        /* ================= 6. KOMUNIKACIJA (POGOVORI) ================= */
         async function PosljiSporocilo() {
-            let sel = document.getElementById('kom-za');
-            let zaArr = Array.from(sel.selectedOptions).map(opt => opt.value);
-            if(zaArr.length === 0) { alert("Izberi vsaj enega prejemnika!"); return; }
-
-            let zad = document.getElementById('kom-zadeva').value;
-            let vseb = document.getElementById('kom-vsebina').value;
-            if(!zad || !vseb) return;
-
-            let udelezenci = [trenutniUporabnik.username, ...zaArr];
-            // Odstranimo dvojnike, če je kdo po nesreči izbran večkrat
-            udelezenci = [...new Set(udelezenci)];
+            let zaArr = Array.from(document.getElementById('kom-za').selectedOptions).map(opt => opt.value);
+            let zad = document.getElementById('kom-zadeva').value; let vseb = document.getElementById('kom-vsebina').value;
+            if(zaArr.length === 0 || !zad || !vseb) return;
+            let udelezenci = [...new Set([trenutniUporabnik.username, ...zaArr])];
             let isoTime = new Date().toISOString();
 
-            let novPogovor = { zadeva: zad, udelezenci: udelezenci, zacetek: isoTime };
-
-            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`, { method:'POST', body:JSON.stringify(novPogovor) });
-            let json = await res.json();
-            let threadKey = json.name;
-
-            let nSporocilo = { od: trenutniUporabnik.username, odIme: trenutniUporabnik.ime, vsebina: vseb, isoTime: isoTime };
-            await fetch(`${FIREBASE_BASE_URL}/pogovori/${threadKey}/sporocila.json`, { method:'POST', body:JSON.stringify(nSporocilo) });
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`, { method:'POST', body:JSON.stringify({ zadeva: zad, udelezenci: udelezenci, zacetek: isoTime }) });
+            let threadKey = (await res.json()).name;
+            await fetch(`${FIREBASE_BASE_URL}/pogovori/${threadKey}/sporocila.json`, { method:'POST', body:JSON.stringify({ od: trenutniUporabnik.username, odIme: trenutniUporabnik.ime, vsebina: vseb, isoTime: isoTime }) });
 
             document.getElementById('kom-zadeva').value=""; document.getElementById('kom-vsebina').value="";
-            alert("Pogovor ustvarjen!"); NaloziSporocila();
+            zadnjiCasPogovorov[threadKey] = new Date().toISOString(); ShraniZadnjeOglede();
+            NaloziSporocila();
         }
 
         async function NaloziSporocila() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); 
-            let d = await res.json() || {};
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori.json`); let d = await res.json() || {};
             let posoda = document.getElementById('kom-prejeto'); posoda.innerHTML="";
-
+            
             Object.keys(d).map(k=>({key:k,...d[k]})).sort((a,b)=>new Date(b.zacetek)-new Date(a.zacetek)).forEach(p => {
                 if(p.udelezenci && p.udelezenci.includes(trenutniUporabnik.username)) {
                     let spArr = p.sporocila ? Object.values(p.sporocila) : [];
-                    let lastSp = spArr.length > 0 ? spArr[spArr.length-1] : null;
-                    let lastTime = lastSp ? lastSp.isoTime : p.zacetek;
+                    let lastTime = spArr.length > 0 ? spArr[spArr.length-1].isoTime : p.zacetek;
+                    let isUnread = false;
+                    if(new Date(lastTime) > new Date(zadnjiCasPogovorov[p.key] || "0") && (!spArr.length || spArr[spArr.length-1].od !== trenutniUporabnik.username)) isUnread = true;
 
-                    // Pretvorba uporabniških imen v prava imena za prikaz
-                    let imena = p.udelezenci.map(u => {
-                        let zap = Object.values(vsiZaposleni).find(z => z.username === u);
-                        return zap ? zap.ime : u;
-                    }).join(', ');
-
-                    let html = `<div class="msg-item" onclick="OdpriPogovor('${p.key}')">
-                        <div class="msg-header"><span>${new Date(lastTime).toLocaleString('sl-SI')}</span><span>👥 ${p.udelezenci.length} udeležencev</span></div>
+                    let imena = p.udelezenci.map(u => { let zap = Object.values(vsiZaposleni).find(z => z.username === u); return zap ? zap.ime : u; }).join(', ');
+                    posoda.innerHTML += `<div class="msg-item ${isUnread?'neprebrano':''}" onclick="OdpriPogovor('${p.key}')">
+                        <div class="msg-header"><span>${new Date(lastTime).toLocaleString('sl-SI')}</span><span>👥 ${p.udelezenci.length}</span></div>
                         <div class="msg-title" style="margin-bottom:5px;">${p.zadeva}</div>
                         <div style="font-size:0.75em; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${imena}</div>
                     </div>`;
-                    posoda.innerHTML += html;
                 }
             });
         }
 
         async function OdpriPogovor(key) {
-            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`);
-            let p = await res.json();
-            if(!p) return;
-
-            let spArr = p.sporocila ? Object.keys(p.sporocila).map(k => ({id:k, ...p.sporocila[k]})) : [];
-            let imena = p.udelezenci.map(u => {
-                let zap = Object.values(vsiZaposleni).find(z => z.username === u);
-                return zap ? zap.ime : u;
-            }).join(', ');
-
-            let html = `<h3>${p.zadeva}</h3>
+            odprtPogovorKey = key;
+            zadnjiCasPogovorov[key] = new Date().toISOString(); ShraniZadnjeOglede(); PreveriNovaSporocilaSistemsko(); NaloziSporocila(); // umakne badge prebrano
+            
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`); let p = await res.json(); if(!p) return;
+            let imena = p.udelezenci.map(u => { let zap = Object.values(vsiZaposleni).find(z => z.username === u); return zap ? zap.ime : u; }).join(', ');
+            
+            OdpriModal(`<h3>${p.zadeva}</h3>
             <div style="font-size:0.8em; color:gray; margin-bottom:15px;"><strong>Sodelujoči:</strong> ${imena}</div>
-            <div id="chat-okno" style="max-height:300px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px; border:1px solid #e2e8f0;">`;
+            <div id="chat-okno" style="max-height:300px; overflow-y:auto; background:#f4f0eb; padding:10px; border:2px solid #000; border-radius:4px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px;"></div>
+            <textarea id="chat-nova-vsebina" rows="3" style="width:100%; box-sizing:border-box; margin-bottom:10px;" placeholder="Napiši odgovor..."></textarea>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn btn-blue" onclick="OdgovoriNaPogovor('${key}')">Pošlji</button>
+                <button class="btn btn-danger" style="font-size: 11px; padding: 6px 10px;" onclick="BrisiPogovor('${key}')">Izbriši vse</button>
+            </div>`);
+            
+            IzrisiSporocilaVOkno(p.sporocila);
+        }
 
+        async function OsveziOdprtPogovorZnotrajModala() {
+            let res = await fetch(`${FIREBASE_BASE_URL}/pogovori/${odprtPogovorKey}.json`); let p = await res.json(); if(!p) return;
+            IzrisiSporocilaVOkno(p.sporocila);
+            zadnjiCasPogovorov[odprtPogovorKey] = new Date().toISOString(); ShraniZadnjeOglede();
+        }
+
+        function IzrisiSporocilaVOkno(sporocilaObj) {
+            let co = document.getElementById('chat-okno'); if(!co) return;
+            let spArr = sporocilaObj ? Object.keys(sporocilaObj).map(k => ({id:k, ...sporocilaObj[k]})) : [];
+            let html = "";
             spArr.forEach(s => {
                 let isMe = s.od === trenutniUporabnik.username;
-                let align = isMe ? 'align-self:flex-end; background:#dbeafe; border:1px solid #bfdbfe;' : 'align-self:flex-start; background:white; border:1px solid #e2e8f0;';
-                html += `<div style="max-width:85%; padding:8px 12px; border-radius:8px; ${align}">
+                let align = isMe ? 'align-self:flex-end; background:#dbeafe; border:2px solid #000;' : 'align-self:flex-start; background:white; border:2px solid #000;';
+                html += `<div style="max-width:85%; padding:8px 12px; border-radius:4px; ${align}">
                     <div style="font-size:0.7em; color:gray; margin-bottom:4px; font-weight:bold;">${s.odIme} - ${new Date(s.isoTime).toLocaleString('sl-SI')}</div>
                     <div style="white-space:pre-wrap; font-size:0.9em;">${s.vsebina}</div>
                 </div>`;
             });
-
-            html += `</div>
-            <textarea id="chat-nova-vsebina" rows="3" style="width:100%; box-sizing:border-box; margin-bottom:10px;" placeholder="Napiši odgovor..."></textarea>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <button class="btn btn-blue" style="background:#3b82f6;color:white;" onclick="OdgovoriNaPogovor('${key}')">Odgovori</button>
-                <button class="btn btn-danger" style="font-size: 11px; padding: 6px 10px;" onclick="BrisiPogovor('${key}')">Izbriši pogovor</button>
-            </div>`;
-
-            OdpriModal(html);
-            setTimeout(() => { let co = document.getElementById('chat-okno'); if(co) co.scrollTop = co.scrollHeight; }, 100);
+            // Da ne scrolamo dol, če ni novih sporočil, preverimo dolžino starega innerHTML
+            if(co.innerHTML !== html) { co.innerHTML = html; setTimeout(() => { co.scrollTop = co.scrollHeight; }, 50); }
         }
 
         async function OdgovoriNaPogovor(key) {
-            let vseb = document.getElementById('chat-nova-vsebina').value.trim();
-            if(!vseb) return;
-            let nSporocilo = { od: trenutniUporabnik.username, odIme: trenutniUporabnik.ime, vsebina: vseb, isoTime: new Date().toISOString() };
-
-            await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}/sporocila.json`, { method:'POST', body:JSON.stringify(nSporocilo) });
-            OdpriPogovor(key); NaloziSporocila(); 
+            let vseb = document.getElementById('chat-nova-vsebina').value.trim(); if(!vseb) return;
+            document.getElementById('chat-nova-vsebina').value = ""; // takoj počistimo okno
+            await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}/sporocila.json`, { method:'POST', body:JSON.stringify({ od: trenutniUporabnik.username, odIme: trenutniUporabnik.ime, vsebina: vseb, isoTime: new Date().toISOString() }) });
+            OsveziOdprtPogovorZnotrajModala(); NaloziSporocila(); 
         }
 
-        async function BrisiPogovor(key) {
-            if(confirm("Izbrišem celoten pogovor za VSE udeležence?")) {
-                await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`, {method:'DELETE'});
-                ZpriModal(true); NaloziSporocila();
-            }
-        }
+        async function BrisiPogovor(key) { if(confirm("Izbrišem celoten pogovor za VSE udeležence?")) { await fetch(`${FIREBASE_BASE_URL}/pogovori/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziSporocila(); } }
+        function ShraniZadnjeOglede() { localStorage.setItem(`ogledSporocil_${trenutniUporabnik.username}`, JSON.stringify(zadnjiCasPogovorov)); }
 
-        /* ================= 7. ZAPISKI ================= */
+        /* ================= 7. ZAPISKI (Popravljeno) ================= */
         async function DodajZapisek() {
             let n = document.getElementById('zapisek-naslov').value; let v = document.getElementById('zapisek-vsebina').value; let d = document.getElementById('zapisek-deli').value;
             if(!n) return;
@@ -1120,22 +1047,36 @@
             document.getElementById('zapisek-naslov').value=""; document.getElementById('zapisek-vsebina').value=""; NaloziZapiske();
         }
         async function NaloziZapiske() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/zapiski.json`); let d = await res.json() || {};
+            let res = await fetch(`${FIREBASE_BASE_URL}/zapiski.json`); lokalniZapiski = await res.json() || {};
             let gr = document.getElementById('grid-zapiski'); gr.innerHTML="";
-            Object.keys(d).map(k=>({key:k,...d[k]})).sort((a,b)=>new Date(b.isoTime)-new Date(a.isoTime)).forEach(z => {
+            Object.keys(lokalniZapiski).map(k=>({key:k,...lokalniZapiski[k]})).sort((a,b)=>new Date(b.isoTime)-new Date(a.isoTime)).forEach(z => {
                 if(z.avtor === trenutniUporabnik.username || z.deliZ === trenutniUporabnik.username) {
                     let iz = z.avtor === trenutniUporabnik.username ? '(Moj)' : `(Od: ${z.avtorIme})`;
-                    gr.innerHTML += `<div class="msg-item" style="background:#fffbeb; border-color:#fde68a;" onclick="BeriZapisek('${z.key}', '${z.naslov}','${z.vsebina}')">
+                    gr.innerHTML += `<div class="msg-item" onclick="BeriZapisek('${z.key}')">
                         <div class="msg-header"><span>${new Date(z.isoTime).toLocaleDateString('sl-SI')}</span><span>${iz}</span></div>
                         <div class="msg-title">${z.naslov}</div>
                     </div>`;
                 }
             });
         }
-        function BeriZapisek(key, naslov, vsebina) {
-            OdpriModal(`<h3>${naslov}</h3><p style="white-space:pre-wrap;">${vsebina}</p><br><button class="btn btn-danger" onclick="BrisiZapisek('${key}')">Izbriši zapisek</button>`);
+        function BeriZapisek(key) {
+            let z = lokalniZapiski[key];
+            let safeVsebina = (z.vsebina||'').replace(/"/g, '&quot;');
+            OdpriModal(`<h3>Urejanje Zapiska</h3>
+                <div class="form-group"><label>Naslov</label><input type="text" id="uredi-zap-n" value="${z.naslov}"></div>
+                <div class="form-group"><label>Vsebina</label><textarea id="uredi-zap-v" rows="6">${safeVsebina}</textarea></div>
+                <div style="display:flex; justify-content:space-between;">
+                    <button class="btn btn-success" onclick="ShraniUrejenZapisek('${key}')">Shrani popravke</button>
+                    <button class="btn btn-danger" onclick="BrisiZapisek('${key}')">Izbriši</button>
+                </div>
+            `);
         }
-        async function BrisiZapisek(key) { await fetch(`${FIREBASE_BASE_URL}/zapiski/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziZapiske(); }
+        async function ShraniUrejenZapisek(key) {
+            let n = document.getElementById('uredi-zap-n').value; let v = document.getElementById('uredi-zap-v').value;
+            await fetch(`${FIREBASE_BASE_URL}/zapiski/${key}.json`, { method:'PATCH', body:JSON.stringify({naslov:n, vsebina:v}) });
+            ZpriModal(true); NaloziZapiske();
+        }
+        async function BrisiZapisek(key) { if(confirm("Izbrišem zapisek?")) {await fetch(`${FIREBASE_BASE_URL}/zapiski/${key}.json`, {method:'DELETE'}); ZpriModal(true); NaloziZapiske();} }
 
         /* ================= 8. OSTALO & PROFIL ================= */
         async function IzracunajOMeniPodatke() {
@@ -1146,9 +1087,9 @@
             document.getElementById('om-zasluzek').innerText = ((m * (trenutniUporabnik.postavka || 0.15)).toFixed(2)) + ' €';
         }
 
-        // --- ADMINISTRACIJA PAKETOV ---
+        // --- ADMINISTRACIJA PAKETOV (Popravljeno) ---
         async function DodajAdministracijoPaketa() {
-            let d = document.getElementById('admin-paketi-datum').value;
+            let d = document.getElementById('admin-paketi-datum').value || new Date().toISOString().split('T')[0];
             let obj = { datum:d, zapSt:document.getElementById('ap-zap-st').value, posiljatelj:document.getElementById('ap-posiljatelj').value, stPaketa:document.getElementById('ap-st-paketa').value, oddano:document.getElementById('ap-oddano').value, postar:document.getElementById('ap-postar').value };
             await fetch(`${FIREBASE_BASE_URL}/admin_oddaja.json`, {method:'POST', body:JSON.stringify(obj)});
             ['ap-zap-st','ap-posiljatelj','ap-st-paketa','ap-postar'].forEach(id=>document.getElementById(id).value=""); NaloziAdministracijoPaketov();
@@ -1157,90 +1098,49 @@
             let idat = document.getElementById('admin-paketi-datum').value;
             let res = await fetch(`${FIREBASE_BASE_URL}/admin_oddaja.json`); let data = await res.json() || {};
             let tbody = document.getElementById('tbl-admin-paketi'); tbody.innerHTML="";
-            Object.keys(data).filter(k=>data[k].datum===idat).forEach(k => { let p=data[k];
-                tbody.innerHTML += `<tr><td>${p.zapSt}</td><td>${p.posiljatelj}</td><td>${p.stPaketa}</td><td>${p.oddano}</td><td>${p.postar}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/admin_oddaja/${k}.json',{method:'DELETE'}).then(NaloziAdministracijoPaketov)">X</button></td></tr>`;
+            
+            Object.keys(data).map(k=>({key:k, ...data[k]})).sort((a,b)=> new Date(b.datum) - new Date(a.datum)).forEach(p => { 
+                if(!idat || p.datum === idat) {
+                    tbody.innerHTML += `<tr><td>${p.datum}</td><td>${p.zapSt}</td><td>${p.posiljatelj}</td><td>${p.stPaketa}</td><td><span class="badge ${p.oddano==='DA'?'badge-success':'badge-danger'}">${p.oddano}</span></td><td>${p.postar}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/admin_oddaja/${p.key}.json',{method:'DELETE'}).then(NaloziAdministracijoPaketov)">X</button></td></tr>`;
+                }
             });
         }
 
         // --- VSTOPI ---
-        async function DodajVstop() {
-            let kdo = document.getElementById('vstop-kdo').value; let od = document.getElementById('vstop-od').value;
-            await fetch(`${FIREBASE_BASE_URL}/vstopi.json`, {method:'POST', body:JSON.stringify({kdo:kdo, od:od, do:document.getElementById('vstop-do').value})});
-            document.getElementById('vstop-kdo').value=""; NaloziVstopi();
-        }
+        async function DodajVstop() { await fetch(`${FIREBASE_BASE_URL}/vstopi.json`, {method:'POST', body:JSON.stringify({kdo:document.getElementById('vstop-kdo').value, od:document.getElementById('vstop-od').value, do:document.getElementById('vstop-do').value})}); document.getElementById('vstop-kdo').value=""; NaloziVstopi(); }
         async function NaloziVstopi() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/vstopi.json`); let d = await res.json() || {};
-            let tbody = document.getElementById('tbl-vstopi'); tbody.innerHTML="";
-            Object.keys(d).forEach(k => { let v=d[k];
-                tbody.innerHTML+=`<tr><td>${v.kdo}</td><td>${new Date(v.od).toLocaleString('sl-SI')}</td><td>${v.do?new Date(v.do).toLocaleString('sl-SI'):'Še tu'}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/vstopi/${k}.json',{method:'DELETE'}).then(NaloziVstopi)">X</button></td></tr>`;
-            });
+            let res = await fetch(`${FIREBASE_BASE_URL}/vstopi.json`); let d = await res.json() || {}; let tbody = document.getElementById('tbl-vstopi'); tbody.innerHTML="";
+            Object.keys(d).forEach(k => { let v=d[k]; tbody.innerHTML+=`<tr><td>${v.kdo}</td><td>${new Date(v.od).toLocaleString('sl-SI')}</td><td>${v.do?new Date(v.do).toLocaleString('sl-SI'):'Še tu'}</td><td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="fetch('${FIREBASE_BASE_URL}/vstopi/${k}.json',{method:'DELETE'}).then(NaloziVstopi)">X</button></td></tr>`; });
+        }
+
+        // --- TELEFON & ZAPISNIKI ---
+        async function DodajTelefonZapisnik() {
+            let vrsta = document.getElementById('tz-vrsta').value; let kdo = document.getElementById('tz-kdo').value; let kdaj = document.getElementById('tz-kdaj').value; let kaj = document.getElementById('tz-kaj').value;
+            if(!kdo||!kdaj||!kaj) return; await fetch(`${FIREBASE_BASE_URL}/${vrsta}.json`, { method:'POST', body:JSON.stringify({kdo:kdo, kdaj:kdaj, kaj:kaj}) }); ['tz-kdo','tz-kdaj','tz-kaj'].forEach(id=>document.getElementById(id).value=""); NaloziTelefoneZapisnike();
+        }
+        async function NaloziTelefoneZapisnike() {
+            let tbody = document.getElementById('tbl-telefoni-zapisniki'); tbody.innerHTML = "";
+            let rt = await fetch(`${FIREBASE_BASE_URL}/telefon.json`); let dt = await rt.json() || {}; let rz = await fetch(`${FIREBASE_BASE_URL}/zapisnik.json`); let dz = await rz.json() || {}; let arr = [];
+            Object.keys(dt).forEach(k=> arr.push({key:k, tip:'Telefon', c:dt[k]})); Object.keys(dz).forEach(k=> arr.push({key:k, tip:'Živo', c:dz[k]}));
+            arr.sort((a,b)=> new Date(b.c.kdaj) - new Date(a.c.kdaj)).forEach(x => { let badge = x.tip==='Telefon'?'badge-warning':'badge-blue'; tbody.innerHTML += `<tr class="clickable-row" onclick="OdpriModal('<h3>${x.tip}</h3><p><strong>Z:</strong> ${x.c.kdo}</p><p>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</p><hr><p style=\\'white-space:pre-wrap;\\'>${x.c.kaj}</p>')"><td><span class="badge ${badge}">${x.tip}</span></td><td>${x.c.kdo}</td><td>${new Date(x.c.kdaj).toLocaleString('sl-SI')}</td></tr>`; });
         }
 
         // --- PRAVICE IN ZAPOSLENI (Direktor) ---
         function IzrisiDostopStran() {
             let sel = document.getElementById('dostop-izbira-zaposleni'); let cur = sel.value; sel.innerHTML = "<option value=''>-- izberi --</option>";
             for(let k in vsiZaposleni) if(!vsiZaposleni[k].isDirektor) sel.innerHTML+=`<option value="${k}">${vsiZaposleni[k].ime}</option>`;
-            if(cur) sel.value=cur;
-            let chks = document.getElementById('pravice-checkboxi'); chks.innerHTML="";
-            VSE_STRANI.filter(s=>!s.id.includes('dostop')&&!s.id.includes('zaposleni')&&!s.id.includes('banka')).forEach(s => chks.innerHTML+=`<label><input type="checkbox" id="chk-pravica-${s.id}"> ${s.naslov}</label>`);
-            PrikaziPraviceZaposlenega();
+            if(cur) sel.value=cur; let chks = document.getElementById('pravice-checkboxi'); chks.innerHTML="";
+            VSE_STRANI.filter(s=>!s.id.includes('dostop')&&!s.id.includes('zaposleni')&&!s.id.includes('banka')).forEach(s => chks.innerHTML+=`<label><input type="checkbox" id="chk-pravica-${s.id}"> ${s.naslov}</label>`); PrikaziPraviceZaposlenega();
         }
-        function PrikaziPraviceZaposlenega() {
-            let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return;
-            VSE_STRANI.forEach(s => { let e=document.getElementById(`chk-pravica-${s.id}`); if(e) e.checked = vsiZaposleni[k].pravice?.[s.id]||false; });
-        }
-        async function ShraniPraviceDostopa() {
-            let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return;
-            let p = {}; VSE_STRANI.forEach(s=>{let e=document.getElementById(`chk-pravica-${s.id}`); if(e) p[s.id]=e.checked;});
-            await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}/pravice.json`, {method:'PUT', body:JSON.stringify(p)}); alert("Shranjeno!"); NaloziVseZaposlene();
-        }
-        async function DodajZaposlenega() {
-            let ime = document.getElementById('zap-vnos-ime').value; let pos = parseFloat(document.getElementById('zap-vnos-postavka').value)||0.15;
-            let un = document.getElementById('zap-vnos-username').value; let pas = document.getElementById('zap-vnos-password').value;
-            if(!ime||!un||!pas) return;
-            let res = await fetch(`${FIREBASE_BASE_URL}/zaposleni.json`, {method:'POST', body:JSON.stringify({ime:ime, username:un, password:pas, postavka:pos, isDirektor:false, pravice:{loginacija:true, omeni:true, komunikacija:true, zapiski:true}})});
-            let j = await res.json(); await fetch(`${FIREBASE_BASE_URL}/banka/${j.name}.json`, {method:'PUT', body:JSON.stringify({ime:ime, pin:pas, stanje:50.0})});
-            ['zap-vnos-ime','zap-vnos-username','zap-vnos-password'].forEach(id=>document.getElementById(id).value=""); NaloziZaposleneTabela(); OsveziBanko();
-        }
-
-        // Tabela kadrov + možnost hitre spremembe postavke
-        function NaloziZaposleneTabela() {
-            let tb=document.getElementById('tbl-zaposleni'); tb.innerHTML="";
-            for(let k in vsiZaposleni) { let z=vsiZaposleni[k];
-                tb.innerHTML+=`<tr>
-                    <td>${z.ime} ${z.isDirektor?'<span style="color:var(--accent-color);">(Dir)</span>':''}</td>
-                    <td>${z.username}</td><td>${z.password}</td>
-                    <td>
-                        <strong>${z.postavka||0.15} €</strong>
-                        ${trenutniUporabnik.isDirektor ? `<button class="btn btn-warning" style="padding:2px 6px; font-size:10px; margin-left:10px;" onclick="SpremeniPostavkoGlobalno('${k}', '${z.ime}', ${z.postavka||0.15})">Spremeni</button>` : ''}
-                    </td>
-                    <td>${!z.isDirektor?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="BrisiZaposlenega('${k}')">X</button>`:'/'}</td>
-                </tr>`;
-            }
-        }
-        
-        function SpremeniPostavkoGlobalno(zapKey, ime, staraPostavka) {
-            let nova = prompt(`Vnesi novo minutno postavko za zaposlenega: ${ime} (€/min)`, staraPostavka);
-            if(nova !== null && !isNaN(nova) && nova !== "") {
-                fetch(`${FIREBASE_BASE_URL}/zaposleni/${zapKey}/postavka.json`, {method:'PUT', body: parseFloat(nova)})
-                .then(() => fetch(`${FIREBASE_BASE_URL}/place_nastavitve/${zapKey}/postavkaMin.json`, {method:'PUT', body: parseFloat(nova)}))
-                .then(() => { NaloziVseZaposlene().then(() => { NaloziZaposleneTabela(); NaloziInIzracunajPlace(); }); });
-            }
-        }
-
+        function PrikaziPraviceZaposlenega() { let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return; VSE_STRANI.forEach(s => { let e=document.getElementById(`chk-pravica-${s.id}`); if(e) e.checked = vsiZaposleni[k].pravice?.[s.id]||false; }); }
+        async function ShraniPraviceDostopa() { let k = document.getElementById('dostop-izbira-zaposleni').value; if(!k) return; let p = {}; VSE_STRANI.forEach(s=>{let e=document.getElementById(`chk-pravica-${s.id}`); if(e) p[s.id]=e.checked;}); await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}/pravice.json`, {method:'PUT', body:JSON.stringify(p)}); alert("Shranjeno!"); NaloziVseZaposlene(); }
+        async function DodajZaposlenega() { let ime = document.getElementById('zap-vnos-ime').value; let pos = parseFloat(document.getElementById('zap-vnos-postavka').value)||0.15; let un = document.getElementById('zap-vnos-username').value; let pas = document.getElementById('zap-vnos-password').value; if(!ime||!un||!pas) return; let res = await fetch(`${FIREBASE_BASE_URL}/zaposleni.json`, {method:'POST', body:JSON.stringify({ime:ime, username:un, password:pas, postavka:pos, isDirektor:false, pravice:{loginacija:true, omeni:true, komunikacija:true, zapiski:true}})}); let j = await res.json(); await fetch(`${FIREBASE_BASE_URL}/banka/${j.name}.json`, {method:'PUT', body:JSON.stringify({ime:ime, pin:pas, stanje:50.0})}); ['zap-vnos-ime','zap-vnos-username','zap-vnos-password'].forEach(id=>document.getElementById(id).value=""); NaloziZaposleneTabela(); OsveziBanko(); }
+        function NaloziZaposleneTabela() { let tb=document.getElementById('tbl-zaposleni'); tb.innerHTML=""; for(let k in vsiZaposleni) { let z=vsiZaposleni[k]; tb.innerHTML+=`<tr><td>${z.ime} ${z.isDirektor?'<span style="color:var(--accent-color);">(Dir)</span>':''}</td><td>${z.username}</td><td>${z.password}</td><td><strong>${z.postavka||0.15} €</strong> ${trenutniUporabnik.isDirektor ? `<button class="btn btn-warning" style="padding:2px 6px; font-size:10px; margin-left:10px;" onclick="SpremeniPostavkoGlobalno('${k}', '${z.ime}', ${z.postavka||0.15})">Uredi</button>` : ''}</td><td>${!z.isDirektor?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="BrisiZaposlenega('${k}')">X</button>`:'/'}</td></tr>`; } }
+        function SpremeniPostavkoGlobalno(zapKey, ime, staraPostavka) { let nova = prompt(`Nova minutna postavka za ${ime} (€/min)`, staraPostavka); if(nova !== null && !isNaN(nova) && nova !== "") { fetch(`${FIREBASE_BASE_URL}/zaposleni/${zapKey}/postavka.json`, {method:'PUT', body: parseFloat(nova)}).then(() => fetch(`${FIREBASE_BASE_URL}/place_nastavitve/${zapKey}/postavkaMin.json`, {method:'PUT', body: parseFloat(nova)})).then(() => { NaloziVseZaposlene().then(() => { NaloziZaposleneTabela(); NaloziInIzracunajPlace(); }); }); } }
         async function BrisiZaposlenega(k) { if(confirm("Brišem?")) { await fetch(`${FIREBASE_BASE_URL}/zaposleni/${k}.json`,{method:'DELETE'}); await fetch(`${FIREBASE_BASE_URL}/banka/${k}.json`,{method:'DELETE'}); NaloziVseZaposlene().then(NaloziZaposleneTabela); } }
 
         // --- BANKA ---
-        async function OsveziBanko() {
-            let res = await fetch(`${FIREBASE_BASE_URL}/banka.json`); let data = await res.json() || {};
-            let sel = document.getElementById('banka-zaposleni-select'); let cur=sel.value; sel.innerHTML="<option value=''>-- izberi --</option>";
-            let tb = document.getElementById('tbl-banka'); tb.innerHTML="";
-            for(let k in data) {
-                sel.innerHTML+=`<option value="${k}">${data[k].ime}</option>`;
-                tb.innerHTML+=`<tr><td><strong>${data[k].ime}</strong></td><td><code>${data[k].pin}</code></td><td style="color:var(--success-color);font-weight:bold;">${(data[k].stanje||0).toFixed(2)} €</td></tr>`;
-            }
-            if(cur) sel.value=cur; PrikaziTrenutnoStanjeBanke();
-        }
+        async function OsveziBanko() { let res = await fetch(`${FIREBASE_BASE_URL}/banka.json`); let data = await res.json() || {}; let sel = document.getElementById('banka-zaposleni-select'); let cur=sel.value; sel.innerHTML="<option value=''>-- izberi --</option>"; let tb = document.getElementById('tbl-banka'); tb.innerHTML=""; for(let k in data) { sel.innerHTML+=`<option value="${k}">${data[k].ime}</option>`; tb.innerHTML+=`<tr><td><strong>${data[k].ime}</strong></td><td><code>${data[k].pin}</code></td><td style="color:var(--success-color);font-weight:bold;">${(data[k].stanje||0).toFixed(2)} €</td></tr>`; } if(cur) sel.value=cur; PrikaziTrenutnoStanjeBanke(); }
         async function PrikaziTrenutnoStanjeBanke() { let k=document.getElementById('banka-zaposleni-select').value; if(k) { let r=await fetch(`${FIREBASE_BASE_URL}/banka/${k}.json`); document.getElementById('banka-stanje-input').value = (await r.json()).stanje; } }
         async function PosodobiStanjeVBanki() { let k=document.getElementById('banka-zaposleni-select').value; await fetch(`${FIREBASE_BASE_URL}/banka/${k}/stanje.json`, {method:'PUT', body:parseFloat(document.getElementById('banka-stanje-input').value)||0}); OsveziBanko(); }
     </script>
