@@ -2,61 +2,588 @@
 <html lang="sl">
 <head>
     <meta charset="UTF-8">
-    <title>Wii Mail - Outlook Retro</title>
+    <title>WII MAIL - Outlook Web Desktop</title>
+    <style>
+        /* Retro Windows 95 / Outlook 98 Stil */
+        * { box-sizing: border-box; font-family: 'Tahoma', 'Segoe UI', sans-serif; font-size: 12px; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #3a6ea5; overflow: hidden; }
+        
+        /* Skupni elementi gumbov in oken */
+        .win-window { background: #c0c0c0; border: 2px outset #fff; box-shadow: 1px 1px 10px rgba(0,0,0,0.4); }
+        .win-titlebar { background: linear-gradient(90deg, #000080, #1084d0); color: white; padding: 4px 6px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .win-titlebar button { background: #c0c0c0; color: black; border: 1px outset #fff; min-width: 16px; height: 14px; font-size: 9px; padding: 0; line-height: 10px; font-weight: bold; }
+        
+        button { background: #c0c0c0; border: 2px outset #fff; padding: 4px 12px; cursor: pointer; }
+        button:active { border: 2px inset #fff; padding: 5px 11px 3px 13px; }
+        input, select, textarea { background: #fff; border: 2px inset #fff; padding: 3px; outline: none; }
+        
+        /* Zaslon za prijavo */
+        #auth-screen { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; position: absolute; z-index: 999; background: #3a6ea5; }
+        .auth-box { width: 360px; padding: 2px; }
+        .auth-body { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .input-group { display: flex; flex-direction: column; gap: 3px; }
+        .auth-tabs { display: flex; gap: 2px; margin-bottom: -2px; padding-left: 5px; }
+        .auth-tab { background: #d0d0d0; border: 2px outset #fff; border-bottom: none; padding: 4px 10px; cursor: pointer; z-index: 1; }
+        .auth-tab.active { background: #c0c0c0; font-weight: bold; padding-bottom: 6px; margin-top: -2px; }
+
+        /* Glavna aplikacija čez cel zaslon */
+        #app-screen { display: none; width: 100%; height: 100%; flex-direction: column; background: #c0c0c0; }
+        .menu-bar { display: flex; gap: 10px; padding: 4px 8px; border-bottom: 1px solid #808080; background: #c0c0c0; }
+        .menu-item { cursor: pointer; padding: 2px 4px; }
+        .menu-item:hover { background: #000080; color: white; }
+        
+        .toolbar { display: flex; gap: 6px; padding: 6px; border-bottom: 2px groove #fff; background: #c0c0c0; align-items: center; }
+        .current-user-info { margin-left: auto; font-weight: bold; color: #000080; padding-right: 10px; }
+
+        /* Glavna delovna površina split screen */
+        .workspace { display: flex; flex: 1; width: 100%; height: calc(100% - 100px); overflow: hidden; background: #808080; gap: 2px; padding: 2px; }
+        .panel { background: #c0c0c0; border: 2px inset #fff; display: flex; flex-direction: column; }
+        
+        /* Leva stran: Mape in Imenik */
+        .sidebar { width: 220px; height: 100%; gap: 2px; display: flex; flex-direction: column; }
+        .folder-tree, .directory-list { background: white; flex: 1; overflow-y: auto; padding: 5px; border: 2px inset #fff; }
+        .panel-header { background: #7f7f7f; color: white; padding: 3px 6px; font-weight: bold; font-size: 11px; }
+        .folder-item { padding: 3px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .folder-item:hover, .folder-item.active { background: #000080; color: white; }
+        .user-item { padding: 3px; border-bottom: 1px svelto #eee; cursor: pointer; }
+        .user-item:hover { background: #e0e0e0; color: black; }
+
+        /* Sredina in Desna stran: Seznam mailov in vsebina */
+        .content-area { flex: 1; height: 100%; display: flex; flex-direction: column; gap: 2px; }
+        .mail-list-container { flex: 1; background: white; overflow-y: auto; border: 2px inset #fff; }
+        .mail-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .mail-table th { background: #d0d0d0; position: sticky; top: 0; padding: 4px; border-right: 1px solid #808080; border-bottom: 2px solid #808080; box-shadow: inset 1px 1px 0 #fff; }
+        .mail-table td { padding: 5px; border-bottom: 1px solid #e0e0e0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail-table tr:hover { background: #f0f0f0; }
+        .mail-table tr.selected { background: #000080; color: white; }
+        .mail-table tr.unread { font-weight: bold; }
+
+        .mail-preview { height: 220px; background: white; border: 2px inset #fff; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        .preview-header { border-bottom: 1px solid #808080; padding-bottom: 5px; margin-bottom: 5px; font-weight: bold; background: #f5f5f5; padding: 5px; }
+
+        /* Okno za novo sporočilo in Admin panel (Pop-upi) */
+        .modal { display: none; position: absolute; z-index: 1000; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 600px; padding: 2px; }
+        .modal-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Statusna vrstica spodaj */
+        .status-bar { background: #c0c0c0; border-top: 2px groove #fff; padding: 3px 8px; display: flex; justify-content: space-between; }
+    </style>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playDoubleBeep() {
+            function beep(delay) {
+                setTimeout(() => {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Visok pisk
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime); // Glasnost
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    setTimeout(() => osc.stop(), 150); // Dolžina piska 150ms
+                }, delay);
+            }
+            beep(0);
+            beep(300); // Drugi pisk po 300ms
+        }
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, set, push, onValue, get, child } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
+        // Firebase konfiguracija za tvojo bazo
         const firebaseConfig = { databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Zvočni efekt
-        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-        function playAlert() { audio.play(); setTimeout(() => audio.play(), 300); }
+        // Globalne spremenljivke stanja
+        let currentUser = null;
+        let isAdmin = false;
+        let allMails = [];
+        let currentFolder = 'inbox';
+        let firstLoad = true;
 
-        // Poslušanje sprememb v realnem času
-        const mailRef = ref(db, 'emails/');
-        onValue(mailRef, (snapshot) => {
-            const data = snapshot.val();
-            console.log("Novo sporočilo:", data);
-            playAlert();
-            // Tukaj dodaš kodo za osvežitev seznama v HTML
-        });
+        // Elementi na strani
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        const modalCompose = document.getElementById('modal-compose');
+        const modalAdmin = document.getElementById('modal-admin');
+
+        // Tab preklapljanje v Login Boxu
+        window.setAuthMode = function(mode) {
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const btnSubmit = document.getElementById('btn-auth-submit');
+            const nameGroup = document.getElementById('reg-name-group');
+            
+            if (mode === 'login') {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                btnSubmit.innerText = 'Prijava';
+                nameGroup.style.display = 'none';
+                authScreen.dataset.mode = 'login';
+            } else {
+                tabLogin.classList.add('active');
+                tabLogin.classList.remove('active');
+                tabRegister.classList.add('active');
+                btnSubmit.innerText = 'Registracija';
+                nameGroup.style.style = 'none'; // Zaposlene dodaja admin, registracija je za nove
+                nameGroup.style.display = 'flex';
+                authScreen.dataset.mode = 'register';
+            }
+        }
+
+        // Funkcija za prijavo/registracijo
+        window.handleAuth = function() {
+            const mode = authScreen.dataset.mode || 'login';
+            const usernameInput = document.getElementById('auth-username').value.trim().toLowerCase();
+            const passwordInput = document.getElementById('auth-password').value;
+            const fullNameInput = document.getElementById('auth-fullname').value.trim();
+
+            if (!usernameInput || !passwordInput) {
+                alert('Prosimo izpolnite vsa polja.');
+                return;
+            }
+
+            // Posebna preverba za Administratorja
+            if (usernameInput === 'admin' && passwordInput === '009') {
+                currentUser = { username: 'admin', name: 'Sistemski Administrator', email: 'admin@wii.shop' };
+                isAdmin = true;
+                startApplication();
+                return;
+            }
+
+            const userRef = ref(db, 'users/' + usernameInput);
+
+            if (mode === 'login') {
+                // Login logika
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        if (userData.password === passwordInput) {
+                            currentUser = userData;
+                            isAdmin = false;
+                            startApplication();
+                        } else {
+                            alert('Napačno geslo!');
+                        }
+                    } else {
+                        alert('Uporabnik ne obstaja. Če ste admin, vpišite admin / 009.');
+                    }
+                });
+            } else {
+                // Registracijska logika (če se registrirajo sami)
+                if (!fullNameInput) { alert('Vnesite ime in priimek.'); return; }
+                get(userRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        alert('Uporabniško ime je že zasedeno.');
+                    } else {
+                        const newUser = {
+                            username: usernameInput,
+                            password: passwordInput,
+                            name: fullNameInput,
+                            email: usernameInput + '@wii.shop'
+                        };
+                        set(userRef, newUser).then(() => {
+                            alert('Registracija uspešna! Sedaj se lahko prijavite.');
+                            setAuthMode('login');
+                        });
+                    }
+                });
+            }
+        }
+
+        // Zagon aplikacije po uspešni avtentikaciji
+        function startApplication() {
+            authScreen.style.display = 'none';
+            appScreen.style.display = 'flex';
+            document.getElementById('lbl-current-user').innerText = currentUser.email + ` (${currentUser.name})`;
+            
+            if (isAdmin) {
+                document.getElementById('btn-admin-panel').style.display = 'inline-block';
+            }
+
+            // Naročanje na maile in imenik v realnem času
+            listenToEmails();
+            listenToDirectory();
+        }
+
+        // Poslušanje baze za E-maile (Real-time)
+        function listenToEmails() {
+            const mailsRef = ref(db, 'emails');
+            onValue(mailsRef, (snapshot) => {
+                allMails = [];
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    for (let key in data) {
+                        let mail = data[key];
+                        mail.id = key;
+                        // Filtriraj maile, ki pripadajo trenutnemu uporabniku (prejeti ali poslani)
+                        if (mail.to === currentUser.email || mail.from === currentUser.email || currentUser.username === 'admin') {
+                            allMails.push(mail);
+                        }
+                    }
+                }
+                
+                // Sortiranje od najnovejšega do najstarejšega
+                allMails.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Sproži zvočni signal, če to ni prvo nalaganje strani in je prispel nov mail za nas
+                if (!firstLoad && allMails.length > 0) {
+                    const latestMail = allMails[0];
+                    if (latestMail.to === currentUser.email) {
+                        playDoubleBeep();
+                    }
+                }
+                firstLoad = false;
+                
+                renderMailList();
+            });
+        }
+
+        // Poslušanje baze za Imenik zaposlenih (Real-time)
+        function listenToDirectory() {
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, (snapshot) => {
+                const directoryContainer = document.getElementById('directory-list');
+                const selectTo = document.getElementById('compose-to');
+                
+                directoryContainer.innerHTML = '';
+                selectTo.innerHTML = '<option value="">-- Izberi prejemnika --</option>';
+
+                if (snapshot.exists()) {
+                    const users = snapshot.val();
+                    for (let username in users) {
+                        const u = users[username];
+                        
+                        // Preskoči samega sebe v imeniku
+                        if (u.email === currentUser.email) continue;
+
+                        // Dodaj v imenik na stranski vrstici
+                        let div = document.createElement('div');
+                        div.className = 'user-item';
+                        div.innerHTML = `📬 <b>${u.name}</b><br><small>${u.email}</small>`;
+                        div.onclick = () => {
+                            openComposeWindow(u.email);
+                        };
+                        directoryContainer.appendChild(div);
+
+                        // Dodaj v drop-down menu za pisanje maila
+                        let opt = document.createElement('option');
+                        opt.value = u.email;
+                        opt.innerText = `${u.name} (${u.email})`;
+                        selectTo.appendChild(opt);
+                    }
+                }
+            });
+        }
+
+        // Izrisovanje seznama mailov glede na izbrano mapo
+        function renderMailList() {
+            const tbody = document.getElementById('mail-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = allMails.filter(m => {
+                if (currentFolder === 'inbox') return m.to === currentUser.email;
+                if (currentFolder === 'sent') return m.from === currentUser.email;
+                return true; // Admin vidi vse
+            });
+
+            document.getElementById('status-count').innerText = `Skupno sporočil v mapi: ${filtered.length}`;
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#808080; padding:20px;">Ni sporočil v tej mapi.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                let tr = document.createElement('tr');
+                tr.onclick = () => selectMail(m, tr);
+                
+                let dateStr = new Date(m.timestamp).toLocaleString('sl-SI');
+                let displayUser = (currentFolder === 'inbox') ? m.from : m.to;
+
+                tr.innerHTML = `
+                    <td style="width:30%"><b>${displayUser}</b></td>
+                    <td style="width:50%">${m.subject || '(Brez zadeve)'}</td>
+                    <td style="width:20%">${dateStr}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Klik na posamezno sporočilo -> Prikaz predogleda
+        function selectMail(mail, element) {
+            document.querySelectorAll('.mail-table tr').forEach(r => r.classList.remove('selected'));
+            element.classList.add('selected');
+
+            const preview = document.getElementById('mail-preview');
+            let dateStr = new Date(mail.timestamp).toLocaleString('sl-SI');
+            
+            preview.innerHTML = `
+                <div class="preview-header">
+                    <div><b>Od:</b> ${mail.from}</div>
+                    <div><b>Za:</b> ${mail.to}</div>
+                    <div><b>Zadeva:</b> ${mail.subject}</div>
+                    <div><b>Datum:</b> ${dateStr}</div>
+                </div>
+                <div style="white-space: pre-wrap; padding:5px;">${mail.message}</div>
+            `;
+        }
+
+        // Preklapljanje med mapama Prejeto / Poslano
+        window.changeFolder = function(folder, element) {
+            currentFolder = folder;
+            document.querySelectorAll('.folder-item').forEach(f => f.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('mail-preview').innerHTML = `<div style="color:#808080; text-align:center; padding-top:40px;">Izberite sporočilo za predogled.</div>`;
+            renderMailList();
+        }
+
+        // Odpiranje okna za novo sporočilo
+        window.openComposeWindow = function(directToEmail = '') {
+            modalCompose.style.display = 'block';
+            if (directToEmail) {
+                document.getElementById('compose-to').value = directToEmail;
+            }
+        }
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Pošiljanje E-maila (Zapis v Firebase)
+        window.sendEmail = function() {
+            const to = document.getElementById('compose-to').value;
+            const subject = document.getElementById('compose-subject').value.trim();
+            const message = document.getElementById('compose-message').value;
+
+            if (!to) { alert('Izberite prejemnika.'); return; }
+            if (!message.trim()) { alert('Vsebina sporočila ne more biti prazna.'); return; }
+
+            const mailsRef = ref(db, 'emails');
+            const newMailRef = push(mailsRef);
+            
+            set(newMailRef, {
+                from: currentUser.email,
+                to: to,
+                subject: subject || '(Brez zadeve)',
+                message: message,
+                timestamp: Date.now()
+            }).then(() => {
+                closeModal('modal-compose');
+                // Počisti vnosna polja
+                document.getElementById('compose-subject').value = '';
+                document.getElementById('compose-message').value = '';
+                alert('Sporočilo uspešno poslano v realnem času!');
+            }).catch(err => alert('Napaka pri pošiljanju: ' + err));
+        }
+
+        // Admin funkcija: Ustvarjanje zaposlenih
+        window.openAdminPanel = function() {
+            modalAdmin.style.display = 'block';
+        }
+
+        window.createEmployee = function() {
+            const empUsername = document.getElementById('admin-emp-username').value.trim().toLowerCase();
+            const empPassword = document.getElementById('admin-emp-password').value.trim();
+            const empName = document.getElementById('admin-emp-name').value.trim();
+
+            if (!empUsername || !empPassword || !empName) {
+                alert('Vsa polja so obvezna.');
+                return;
+            }
+
+            const empRef = ref(db, 'users/' + empUsername);
+            set(empRef, {
+                username: empUsername,
+                password: empPassword,
+                name: empName,
+                email: empUsername + '@wii.shop'
+            }).then(() => {
+                alert(`Zaposleni ${empName} (@wii.shop) uspešno ustvarjen!`);
+                document.getElementById('admin-emp-username').value = '';
+                document.getElementById('admin-emp-password').value = '';
+                document.getElementById('admin-emp-name').value = '';
+            }).catch(err => alert('Napaka: ' + err));
+        }
+
+        // Odjava
+        window.logout = function() {
+            window.location.reload();
+        }
+
+        // Inicializacija začetnega zavihka
+        setAuthMode('login');
     </script>
-    <style>
-        body { background-color: #c0c0c0; font-family: Tahoma, sans-serif; font-size: 12px; margin: 0; }
-        .window { border: 2px outset #fff; background: #c0c0c0; width: 800px; margin: 20px auto; }
-        .title-bar { background: #000080; color: white; padding: 3px; font-weight: bold; }
-        .menu-bar { background: #c0c0c0; border-bottom: 1px solid #808080; padding: 5px; }
-        .toolbar { padding: 5px; border-bottom: 2px groove #fff; }
-        .main-content { display: flex; height: 400px; }
-        .sidebar { width: 200px; border-right: 2px inset #fff; padding: 10px; }
-        .inbox { flex: 1; padding: 10px; background: white; }
-        button { border: 1px outset #fff; padding: 2px 10px; background: #c0c0c0; cursor: pointer; }
-    </style>
 </head>
 <body>
 
-<div class="window">
-    <div class="title-bar">Wii Mail - Prejeto</div>
-    <div class="menu-bar">Datoteka | Uredi | Pogled | Orodja</div>
-    <div class="toolbar">
-        <button>Novo sporočilo</button>
-        <button>Odgovori</button>
-        <button>Izbriši</button>
-    </div>
-    <div class="main-content">
-        <div class="sidebar">
-            <strong>Mape:</strong><br>
-            - Prejeto (@wii.shop)<br>
-            - Poslano<br>
-            - Osnutki
+<div id="auth-screen" data-mode="login">
+    <div style="display:flex; flex-direction:column;">
+        <div class="auth-tabs">
+            <div id="tab-login" class="auth-tab active" onclick="setAuthMode('login')">Prijava</div>
+            <div id="tab-register" class="auth-tab" onclick="setAuthMode('register')">Registracija</div>
         </div>
-        <div class="inbox" id="inbox">
-            <table width="100%" border="1">
-                <tr><th>Od</th><th>Zadeva</th><th>Datum</th></tr>
-                </table>
+        <div class="win-window auth-box">
+            <div class="win-titlebar">
+                <span>WII MAIL - Avtentikacija</span>
+                <button>X</button>
+            </div>
+            <div class="auth-body">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <b style="font-size: 14px; color: #000080;">WII MAIL SISTEM v1.0</b><br>
+                    <small>Fake firma d.o.o. - Izobraževalni poligon</small>
+                </div>
+                
+                <div class="input-group" id="reg-name-group" style="display:none;">
+                    <label>Ime in Priimek zaposlenega:</label>
+                    <input type="text" id="auth-fullname" placeholder="npr. Janez Novak">
+                </div>
+
+                <div class="input-group">
+                    <label>Uporabniško ime (brez domene):</label>
+                    <div style="display:flex; align-items:center; background:white; border:2px inset #fff;">
+                        <input type="text" id="auth-username" placeholder="uporabnik" style="border:none; flex:1; width:50px;">
+                        <span style="padding-right:5px; color:#555; font-weight:bold;">@wii.shop</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Geslo:</label>
+                    <input type="password" id="auth-password" placeholder="••••••••">
+                </div>
+
+                <div style="margin-top: 10px; display:flex; justify-content: flex-end; gap: 5px;">
+                    <button id="btn-auth-submit" onclick="handleAuth()" style="font-weight:bold;">Prijava</button>
+                    <button onclick="alert('Za testiranje admina uporabi: admin / 009')">Pomoč</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="app-screen">
+    <div class="menu-bar">
+        <div class="menu-item" onclick="logout()">Datoteka (Odjava)</div>
+        <div class="menu-item" onclick="openComposeWindow()">Uredi (Novo)</div>
+        <div class="menu-item" onclick="alert('WII MAIL Retro v1.0\nNarejeno za šolske namene in Firebase testiranje.')">O programu</div>
+    </div>
+
+    <div class="toolbar">
+        <button onclick="openComposeWindow()" style="font-weight: bold; color: green;">✉ New Mail</button>
+        <button onclick="renderMailList()">🔄 Osveži ročno</button>
+        <button id="btn-admin-panel" onclick="openAdminPanel()" style="display:none; color: red; font-weight:bold;">⚙ Admin Panel</button>
+        
+        <span class="current-user-info" id="lbl-current-user">prijavljen@wii.shop</span>
+    </div>
+
+    <div class="workspace">
+        
+        <div class="sidebar">
+            <div class="panel" style="flex: 1;">
+                <div class="panel-header">Poštni predali</div>
+                <div class="folder-tree">
+                    <div class="folder-item active" onclick="changeFolder('inbox', this)">📥 Prejeto (@wii.shop)</div>
+                    <div class="folder-item" onclick="changeFolder('sent', this)">📤 Poslana pošta</div>
+                </div>
+            </div>
+            
+            <div class="panel" style="flex: 1.5;">
+                <div class="panel-header">Imenik podjetja (Real-time)</div>
+                <div class="directory-list" id="directory-list">
+                    </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="panel" style="flex: 1.2;">
+                <div class="panel-header">Seznam sporočil</div>
+                <div class="mail-list-container">
+                    <table class="mail-table">
+                        <thead>
+                            <tr>
+                                <th>Partner (Od/Za)</th>
+                                <th>Zadeva</th>
+                                <th>Prejeto / Poslano</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mail-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel" style="flex: 1;">
+                <div class="panel-header">Predogled sporočila</div>
+                <div class="mail-preview" id="mail-preview">
+                    <div style="color:#808080; text-align:center; padding-top:40px;">Izberite sporočilo iz zgornjega seznama za branje.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="status-bar">
+        <span id="status-count">Povezava z @wii.shop vzpostavljena...</span>
+        <span style="font-weight:bold; color: green;">● Na zvezi (Firebase RTDB)</span>
+    </div>
+</div>
+
+<div class="win-window modal" id="modal-compose">
+    <div class="win-titlebar">
+        <span>Novo sporočilo - WII MAIL</span>
+        <button onclick="closeModal('modal-compose')">X</button>
+    </div>
+    <div class="modal-body">
+        <div class="input-group">
+            <label>Za (Zaposleni):</label>
+            <select id="compose-to">
+                </select>
+        </div>
+        <div class="input-group">
+            <label>Zadeva:</label>
+            <input type="text" id="compose-subject" placeholder="Napišite zadevo...">
+        </div>
+        <div class="input-group">
+            <label>Sporočilo:</label>
+            <textarea id="compose-message" rows="10" placeholder="Vpišite besedilo sporočila..."></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:5px;">
+            <button onclick="sendEmail()" style="font-weight:bold; background:#d4ffd4;">Pošlji takoj</button>
+            <button onclick="closeModal('modal-compose')">Prekliči</button>
+        </div>
+    </div>
+</div>
+
+<div class="win-window modal" id="modal-admin">
+    <div class="win-titlebar">
+        <span>Nadzorna plošča za Administratorja</span>
+        <button onclick="closeModal('modal-admin')">X</button>
+    </div>
+    <div class="modal-body" style="background:#e8e8e8;">
+        <div style="border:1px dashed red; padding:5px; background:#fffbfb; margin-bottom:5px;">
+            <b>Ustvari nov račun za zaposlenega</b><br>
+            Uporabnik bo takoj videl vse ostale zaposlene v svojem imeniku ob prijavi.
+        </div>
+        <div class="input-group">
+            <label>Ime in Priimek zaposlenega:</label>
+            <input type="text" id="admin-emp-name" placeholder="npr. Luka Dončič">
+        </div>
+        <div class="input-group">
+            <label>Uporabniško ime (bo @wii.shop):</label>
+            <input type="text" id="admin-emp-username" placeholder="luka">
+        </div>
+        <div class="input-group">
+            <label>Geslo za zaposlenega:</label>
+            <input type="text" id="admin-emp-password" placeholder="geslo123">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:5px; margin-top:5px;">
+            <button onclick="createEmployee()" style="font-weight:bold; background:#ffccd2;">Kreiraj zaposlenega</button>
+            <button onclick="closeModal('modal-admin')">Zapri</button>
         </div>
     </div>
 </div>
