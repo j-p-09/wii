@@ -6,83 +6,182 @@
 <title>WII - Zaslon za goste</title>
 <style>
     :root {
-        --pos-bg: #d4d0c8;
-        --pos-panel: #ece9d8;
-        --pos-blue: #3a6ea5;
-        --pos-text: #000000;
+        --primary-color: #3b82f6;
+        --bg-color: #f3f4f6;
+        --surface: #ffffff;
+        --text-main: #1f2937;
+        --text-muted: #6b7280;
+        --border-color: #e5e7eb;
+        --success: #10b981;
+        --danger: #ef4444;
     }
 
-    * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; margin: 0; padding: 0; }
-    body { background-color: var(--pos-bg); color: var(--pos-text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    * { 
+        box-sizing: border-box; 
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        margin: 0; 
+        padding: 0; 
+    }
+    
+    body { 
+        background-color: var(--bg-color); 
+        color: var(--text-main); 
+        height: 100vh; 
+        display: flex; 
+        flex-direction: column; 
+        overflow: hidden; 
+    }
 
-    /* Header */
+    /* Header - Stranka in naslov */
     .header {
-        background: var(--pos-blue);
-        color: white;
-        padding: 20px;
-        text-align: center;
-        font-size: 32px;
-        font-weight: bold;
-        border-bottom: 4px ridge #fff;
+        background: var(--surface);
+        padding: 20px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        z-index: 10;
     }
 
-    .main-container {
-        flex: 1;
+    .shop-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--primary-color);
+        letter-spacing: 1px;
+    }
+
+    .customer-info {
         display: flex;
-        padding: 20px;
-        gap: 20px;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-color);
+        padding: 10px 20px;
+        border-radius: 50px;
+    }
+
+    .customer-info .label {
+        font-size: 14px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .customer-info .value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    /* Sredina - Seznam artiklov */
+    .cart-wrapper {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px 40px;
+    }
+
+    .cart-container {
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         overflow: hidden;
     }
 
-    /* Leva stran: Seznam artiklov */
-    .cart-container {
-        flex: 2;
-        background: white;
-        border: 3px inset #808080;
-        display: flex;
-        flex-direction: column;
+    table { 
+        width: 100%; 
+        border-collapse: collapse; 
     }
 
-    table { width: 100%; border-collapse: collapse; font-size: 24px; }
-    th { background: #d4d0c8; padding: 15px; border: 1px solid #808080; text-align: left; }
-    td { padding: 15px; border-bottom: 1px solid #ccc; }
-    .tr-header { position: sticky; top: 0; }
-
-    /* Desna stran: Info in Total */
-    .info-container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+    th { 
+        background: #f9fafb; 
+        padding: 16px 24px; 
+        font-size: 14px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+        text-align: left; 
+        border-bottom: 2px solid var(--border-color);
     }
 
-    .box {
-        background: var(--pos-panel);
-        border: 3px outset #fff;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+    td { 
+        padding: 20px 24px; 
+        border-bottom: 1px solid var(--border-color); 
+        font-size: 22px;
+        font-weight: 500;
     }
 
-    .label { font-size: 20px; color: #444; margin-bottom: 5px; }
-    .value { font-size: 30px; font-weight: bold; }
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    .tr-header { 
+        position: sticky; 
+        top: 0; 
+        z-index: 5;
+    }
+
+    /* Spodaj - Skupni znesek in plačilo */
+    .footer {
+        background: var(--surface);
+        padding: 30px 40px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 40px;
+        z-index: 10;
+    }
+
+    .payment-status {
+        background: #fef2f2;
+        border: 2px solid #fecaca;
+        padding: 15px 25px;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .payment-status.refund {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+    }
+
+    .payment-label {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+    }
 
     .total-box {
-        background: #000;
-        color: #00ff00;
         text-align: right;
-        padding: 30px;
-        border: 5px inset #808080;
     }
-    .total-label { font-size: 24px; margin-bottom: 10px; }
-    .total-amount { font-size: 70px; font-family: 'Courier New', monospace; }
+
+    .total-label { 
+        font-size: 18px; 
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .total-amount { 
+        font-size: 64px; 
+        font-weight: 800;
+        color: var(--primary-color);
+        line-height: 1;
+    }
+
+    .currency {
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
 
     /* Posebna stanja (Plačilo, Hvala) */
     #overlay {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
-        background: var(--pos-bg);
+        background: rgba(243, 244, 246, 0.9);
+        backdrop-filter: blur(8px);
         display: none;
         flex-direction: column;
         align-items: center;
@@ -90,52 +189,74 @@
         z-index: 100;
         text-align: center;
     }
-    #overlay h1 { font-size: 80px; margin-bottom: 20px; }
-    #overlay p { font-size: 40px; }
 
-    .payment-info { font-size: 40px; margin: 10px; }
-    .change-amount { color: #008800; font-weight: bold; font-size: 60px; }
+    .overlay-card {
+        background: var(--surface);
+        padding: 60px 80px;
+        border-radius: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    #overlay h1 { 
+        font-size: 64px; 
+        color: var(--success);
+        margin-bottom: 10px; 
+    }
+
+    #overlay p { 
+        font-size: 24px; 
+        color: var(--text-muted);
+    }
+
+    .change-amount { 
+        color: var(--success); 
+        font-weight: 800; 
+        font-size: 48px; 
+    }
 </style>
 </head>
 <body>
 
-    <div class="header">WII SHOP - DOBRODOŠLI</div>
+    <div class="header">
+        <div class="shop-title">WII SHOP</div>
+        <div class="customer-info">
+            <span class="label">Stranka:</span>
+            <span id="display-customer" class="value">-</span>
+        </div>
+    </div>
 
-    <div class="main-container" id="main-view">
+    <div class="cart-wrapper" id="main-view">
         <div class="cart-container">
             <table>
                 <thead>
                     <tr class="tr-header">
                         <th>Artikel</th>
-                        <th style="text-align: center;">Kol.</th>
-                        <th style="text-align: right;">Cena (WII)</th>
+                        <th style="text-align: center; width: 15%;">Kol.</th>
+                        <th style="text-align: right; width: 25%;">Cena (WII)</th>
                     </tr>
                 </thead>
                 <tbody id="display-cart">
                     </tbody>
             </table>
         </div>
+    </div>
 
-        <div class="info-container">
-            <div class="box">
-                <div class="label">STRANKA:</div>
-                <div id="display-customer" class="value">-</div>
-            </div>
-            
-            <div class="total-box">
-                <div class="total-label">ZA PLAČILO</div>
-                <div id="display-total" class="total-amount">0.00</div>
-            </div>
-            
-            <div id="payment-status-box" class="box" style="display:none; background: #ffffcc;">
-                <div class="label">STANJE PLAČILA:</div>
-                <div id="display-remaining" class="value" style="color: red;"></div>
+    <div class="footer">
+        <div id="payment-status-box" class="payment-status" style="display:none;">
+            <div id="display-remaining" class="value" style="color: var(--danger); font-size: 28px; font-weight: bold;"></div>
+        </div>
+
+        <div class="total-box">
+            <div class="total-label">Za plačilo</div>
+            <div>
+                <span id="display-total" class="total-amount">0.00</span>
+                <span class="currency">WII</span>
             </div>
         </div>
     </div>
 
     <div id="overlay">
-        <div id="overlay-content"></div>
+        <div id="overlay-content" class="overlay-card"></div>
     </div>
 
 <script>
@@ -155,12 +276,11 @@
 
         // 1. Stanje: KONČANO (Hvala za nakup)
         if (data.status === 'finished') {
-            mainView.style.opacity = "0.2";
             overlay.style.display = "flex";
             overlayContent.innerHTML = `
                 <h1>HVALA!</h1>
                 <p>Vaš nakup je bil uspešen.</p>
-                <p style="margin-top:20px; font-size: 20px;">Nasvidenje!</p>
+                <p style="margin-top:10px; font-size: 18px;">Nasvidenje!</p>
             `;
             // Po 5 sekundah resetiraj na osnovni pogled
             setTimeout(() => {
@@ -172,21 +292,22 @@
         // 2. Stanje: PLAČEVANJE
         if (data.status === 'payment') {
             overlay.style.display = "none";
-            mainView.style.opacity = "1";
             payBox.style.display = "block";
             
             document.getElementById('display-total').innerText = data.total;
-            document.getElementById('display-remaining').innerText = `Še za plačilo: ${data.remaining} WII`;
             
             if (parseFloat(data.change) > 0) {
-                document.getElementById('display-remaining').innerHTML = `VRAČILO:<br><span class="change-amount">${data.change} WII</span>`;
+                payBox.className = "payment-status refund";
+                document.getElementById('display-remaining').innerHTML = `<div class="payment-label">VRAČILO</div><span class="change-amount">${data.change} WII</span>`;
+            } else {
+                payBox.className = "payment-status";
+                document.getElementById('display-remaining').innerHTML = `<div class="payment-label">ŠE ZA PLAČILO</div>${data.remaining} WII`;
             }
         }
 
         // 3. Stanje: NAKUPOVANJE (buying)
         if (data.status === 'buying') {
             overlay.style.display = "none";
-            mainView.style.opacity = "1";
             payBox.style.display = "none";
 
             // Posodobi stranko
@@ -204,6 +325,10 @@
                 `;
                 tbody.appendChild(tr);
             });
+
+            // Avtomatski premik na dno tabele, ko se dodajo novi artikli
+            const cartWrapper = document.querySelector('.cart-wrapper');
+            cartWrapper.scrollTop = cartWrapper.scrollHeight;
 
             // Posodobi total
             document.getElementById('display-total').innerText = data.total;
