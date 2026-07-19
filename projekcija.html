@@ -18,46 +18,58 @@
         height: 100vh; 
         display: flex; 
         flex-direction: column; 
+        justify-content: flex-start; /* Prepreči razpotegnjenost - elementi se zlagajo od zgoraj */
         overflow: hidden; 
-        padding: 30px;
+        padding: 40px;
     }
 
-    /* 1. ZAČETNO STANJE: Dobrodošli */
+    /* =========================================
+       1. ZAČETNO STANJE Z ANIMACIJO
+       ========================================= */
     #welcome-view {
-        flex: 1;
         display: flex;
         justify-content: center;
         align-items: center;
+        height: 100%;
         text-align: center;
+        animation: fadeInPulse 3s infinite alternate ease-in-out;
     }
+
+    @keyframes fadeInPulse {
+        0% { transform: scale(0.95); opacity: 0.7; }
+        100% { transform: scale(1.05); opacity: 1; }
+    }
+
     #welcome-view h1 {
         font-size: 80px;
-        letter-spacing: 2px;
+        letter-spacing: 4px;
         font-weight: bold;
+        color: #333;
     }
 
-    /* GLAVNI POGLED (Ko se začne nakup) */
+    /* =========================================
+       2. GLAVNI POGLED (Nakup in plačilo)
+       ========================================= */
     #main-view {
-        display: none; /* Se prikaže šele ob prvem artiklu */
+        display: none; 
         flex-direction: column;
-        height: 100%;
+        max-height: 100%;
     }
 
-    /* Zgoraj levo: Kupec */
     .customer-header {
         font-size: 24px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         font-weight: normal;
     }
     .customer-header span {
         font-weight: bold;
     }
 
-    /* Sredina: Seznam artiklov */
     .cart-container {
-        flex: 1;
+        /* Omogoča scrollanje, če je preveč artiklov, ampak ne sili v širjenje */
         overflow-y: auto;
         margin-bottom: 20px;
+        max-height: 60vh; 
     }
 
     table { 
@@ -65,9 +77,8 @@
         border-collapse: collapse; 
     }
 
-    /* Navadni artikli: Arial Narrow, 20px */
     td { 
-        padding: 12px 0; 
+        padding: 8px 0; 
         font-family: 'Arial Narrow', sans-serif;
         font-size: 20px;
         font-weight: normal;
@@ -79,11 +90,12 @@
         font-size: 30px;
         font-weight: bold;
         border-bottom: 2px solid #000;
+        padding: 15px 0;
     }
 
     /* SPODNJI DEL: Črtkana črta in izračun ob plačilu */
     #payment-section {
-        display: none; /* Skrito med skeniranjem, prikaže se ob plačilu */
+        display: none;
         border-top: 3px dashed #000000;
         padding-top: 20px;
         margin-top: 10px;
@@ -93,7 +105,7 @@
         display: flex;
         justify-content: space-between;
         font-size: 22px;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
     }
 
     .total-row {
@@ -101,11 +113,12 @@
         justify-content: space-between;
         font-size: 45px;
         font-weight: bold;
-        margin-top: 10px;
-        margin-bottom: 10px;
+        margin-top: 15px;
     }
 
-    /* Posebna stanja (Zahvala) */
+    /* =========================================
+       3. ZAHVALA Z ANIMACIJO
+       ========================================= */
     #overlay {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -117,13 +130,26 @@
         z-index: 100;
         text-align: center;
     }
+
+    #overlay-content {
+        animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+        0% { transform: scale(0.5) translateY(50px); opacity: 0; }
+        100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
     #overlay h1 { 
         font-size: 70px; 
         font-weight: bold;
-        margin-bottom: 10px; 
+        margin-bottom: 15px; 
+        color: #000;
     }
+    
     #overlay p {
         font-size: 30px;
+        color: #555;
     }
 </style>
 </head>
@@ -155,7 +181,7 @@
                 <div id="display-remaining">0.00 WII</div>
             </div>
             <div class="total-row">
-                <div>SKUPAJ ZA PLAČILO:</div>
+                <div>SKUPAJ:</div>
                 <div><span id="display-total">0.00</span> WII</div>
             </div>
         </div>
@@ -181,9 +207,13 @@
         const mainView = document.getElementById('main-view');
         const paymentSection = document.getElementById('payment-section');
         const overlay = document.getElementById('overlay');
+        const tbody = document.getElementById('display-cart');
 
-        // KORAK 1: Stanje KONČANO (Zahvala za naročilo)
-        if (data.status === 'finished') {
+        const status = data.status || 'buying';
+        const cart = data.cart || [];
+
+        // KORAK 1: KONČANO (Zahvala)
+        if (status === 'finished') {
             welcomeView.style.display = "none";
             mainView.style.display = "none";
             overlay.style.display = "flex";
@@ -194,8 +224,8 @@
             return;
         }
 
-        // KORAK 2: Preverjanje, če je košarica prazna (prikaže Dobrodošli)
-        if (!data.cart || data.cart.length === 0) {
+        // KORAK 2: NAKUPOVANJE - Če je prazna košarica
+        if (status === 'buying' && cart.length === 0) {
             welcomeView.style.display = "flex";
             mainView.style.display = "none";
             paymentSection.style.display = "none";
@@ -203,23 +233,20 @@
             return;
         }
 
-        // Če so artikli, skrijemo Dobrodošli in prikažemo glavni pogled
+        // KORAK 3: PRIKAZ PODATKOV (Bodisi med nakupovanjem bodisi med plačilom)
         welcomeView.style.display = "none";
         mainView.style.display = "flex";
+        overlay.style.display = "none";
 
-        // Posodobi podatke o kupcu
+        // Posodobi kupca
         document.getElementById('display-customer').innerText = data.customer || "Gost";
 
-        // Izpis artiklov enega po enega
-        const tbody = document.getElementById('display-cart');
+        // Posodobi artikle v tabeli
         tbody.innerHTML = '';
-        
-        data.cart.forEach((item, index) => {
+        cart.forEach((item, index) => {
             const tr = document.createElement('tr');
-            
-            // Če je to zadnji skenirani izdelek v matriki, dodamo poseben razred za povečavo in krepko pisavo
-            if (index === data.cart.length - 1) {
-                tr.className = 'last-scanned-item';
+            if (index === cart.length - 1 && status === 'buying') {
+                tr.className = 'last-scanned-item'; // Poudari samo, če smo še v fazi nakupovanja
             }
 
             tr.innerHTML = `
@@ -230,24 +257,16 @@
             tbody.appendChild(tr);
         });
 
-        // Samodejno premikanje na dno ob novem skeniranju
+        // Avtomatski premik na dno tabele
         const cartContainer = document.querySelector('.cart-container');
-        cartContainer.scrollTop = cartContainer.scrollHeight;
+        if (cartContainer) cartContainer.scrollTop = cartContainer.scrollHeight;
 
-        // KORAK 3: Stanje NAKUPOVANJA (buying) -> Skrij izračun cen pod črto
-        if (data.status === 'buying') {
-            paymentSection.style.display = "none";
-            overlay.style.display = "none";
-        }
-
-        // KORAK 4: Stanje PLAČEVANJA (payment) -> Prikaži črtkano črto in izračunaj cene
-        if (data.status === 'payment') {
+        // KORAK 4: UPRAVLJANJE PLAČILNEGA DELA (Črtkana črta)
+        if (status === 'payment') {
             paymentSection.style.display = "block";
-            overlay.style.display = "none";
-
-            // Izračun zneskov
-            document.getElementById('display-total').innerText = data.total;
-            document.getElementById('display-discount').innerText = data.popust || "0.00"; // Izpiše popust, če obstaja v podatkih
+            
+            document.getElementById('display-total').innerText = data.total || "0.00";
+            document.getElementById('display-discount').innerText = data.popust || "0.00"; 
 
             const statusLabel = document.getElementById('status-label');
             const remainingDiv = document.getElementById('display-remaining');
@@ -259,16 +278,18 @@
                 statusLabel.innerText = "ŠE ZA PLAČILO:";
                 remainingDiv.innerHTML = `<span style="color: red; font-weight: bold;">${data.remaining} WII</span>`;
             }
+        } else {
+            // Skrij črtkano črto, če samo skeniramo
+            paymentSection.style.display = "none";
         }
     }
 
-    // Preverjanje obstoječih podatkov ob nalaganju
+    // Inicializacija
     window.onload = () => {
         const initialData = localStorage.getItem('wii_projekcija_data');
         if (initialData) {
             posodobiPrikaz(JSON.parse(initialData));
         } else {
-            // Če ni podatkov sploh, pokaži samo Dobrodošli
             document.getElementById('welcome-view').style.display = "flex";
             document.getElementById('main-view').style.display = "none";
         }
