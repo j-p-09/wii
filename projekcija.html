@@ -59,7 +59,7 @@
         height: 100%;
     }
 
-    /* Nov "trak" za prikaz prodajalca in kupca */
+    /* Trak zgoraj za prodajalca in kupca */
     .header-bar {
         background-color: #222;
         color: #fff;
@@ -75,10 +75,10 @@
 
     .header-bar span {
         font-weight: bold;
-        color: #ffd700; /* Zlato-rumen poudarek za imena */
+        color: #ffd700; 
     }
 
-    /* Nov ovojnik, ki omogoča, da gre plačilni del takoj pod artikle */
+    /* Ovojnik, ki drži artikle in plačilo skupaj (za lep prikaz takoj pod artikli) */
     .scrollable-content {
         flex: 1;
         overflow-y: auto;
@@ -112,7 +112,7 @@
         padding: 20px 0;
     }
 
-    /* Stil za izpis popusta pod artiklom */
+    /* Izpis popusta pod artiklom */
     .item-discount {
         font-size: 16px;
         color: #e53935;
@@ -122,14 +122,15 @@
     }
     
     tr.last-scanned-item .item-discount {
-        font-size: 20px; /* Večji popust, ko je artikel ravnokar skeniran */
+        font-size: 20px; 
     }
 
+    /* Plačilni del, ki se izpiše pod artikli */
     #payment-section {
         display: none;
         border-top: 3px dashed #000000;
         padding-top: 20px;
-        margin-bottom: 40px; /* Malo prostora na dnu drsnika */
+        margin-bottom: 40px; 
     }
 
     .info-row {
@@ -147,12 +148,12 @@
         margin-top: 15px;
     }
 
-    /* ZAHVALA */
+    /* ZAHVALA (Sedaj je nežno prosojna, da se vse pod njo lepo vidi) */
     #overlay {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(255, 255, 255, 0.85); 
-        backdrop-filter: blur(4px); 
+        background: rgba(255, 255, 255, 0.75); 
+        backdrop-filter: blur(2px); 
         display: none;
         flex-direction: column;
         align-items: center;
@@ -165,6 +166,7 @@
         background: #fff;
         padding: 40px 60px;
         border: 4px solid #000;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
 
@@ -302,19 +304,7 @@
         const status = data.status || 'buying';
         const cart = data.cart || [];
 
-        // KORAK 1: KONČANO (Zahvala)
-        if (status === 'finished') {
-            welcomeView.style.display = "none";
-            mainView.style.display = "flex"; 
-            overlay.style.display = "flex"; 
-            
-            setTimeout(() => {
-                location.reload(); 
-            }, 5000);
-            return;
-        }
-
-        // KORAK 2: NAKUPOVANJE - Če je prazna košarica
+        // KORAK 1: NAKUPOVANJE - Če je prazna košarica
         if (status === 'buying' && cart.length === 0) {
             welcomeView.style.display = "flex";
             mainView.style.display = "none";
@@ -323,12 +313,29 @@
             return;
         }
 
-        // KORAK 3: PRIKAZ PODATKOV 
+        // PRIKAZ GLAVNEGA POGLEDA
         welcomeView.style.display = "none";
         mainView.style.display = "flex";
-        overlay.style.display = "none";
 
-        // Posodobitev traku
+        // Upravljanje prosojnega overlay-a ob zaključku naročila
+        if (status === 'finished') {
+            overlay.style.display = "flex";
+            // Osveži stran po 5 sekundah za naslednjega kupca
+            if (!window.finishedTimeout) {
+                window.finishedTimeout = setTimeout(() => {
+                    window.finishedTimeout = null;
+                    location.reload(); 
+                }, 5000);
+            }
+        } else {
+            overlay.style.display = "none";
+            if (window.finishedTimeout) {
+                clearTimeout(window.finishedTimeout);
+                window.finishedTimeout = null;
+            }
+        }
+
+        // Posodobitev zgornjega traku
         document.getElementById('display-seller').innerText = data.seller || "Blagajna 1";
         document.getElementById('display-customer').innerText = data.customer || "Gost";
 
@@ -336,12 +343,13 @@
         tbody.innerHTML = '';
         cart.forEach((item, index) => {
             const tr = document.createElement('tr');
-            // Zaznamo zadnji poskeniran artikel (če je še vedno status nakupovanja)
+            
+            // Povečano izpišemo samo zadnji artikel in SAMO takrat, ko še dodajamo (buying)
             if (index === cart.length - 1 && status === 'buying') {
                 tr.className = 'last-scanned-item';
             }
 
-            // Preverimo in pripravimo izpis za morebiten popust pri konkretnem artiklu
+            // Priprava izpisa za popust pri posameznem artiklu
             let popustHtml = '';
             const itemPopust = item.popust || item.discount || 0;
             if (parseFloat(itemPopust) > 0) {
@@ -359,8 +367,8 @@
             tbody.appendChild(tr);
         });
 
-        // KORAK 4: UPRAVLJANJE PLAČILNEGA DELA
-        if (status === 'payment') {
+        // UPRAVLJANJE PLAČILNEGA DELA (Prikaže se pri 'payment' in tudi pri 'finished')
+        if (status === 'payment' || status === 'finished') {
             paymentSection.style.display = "block";
             
             document.getElementById('display-total').innerText = parseFloat(data.total || 0).toFixed(2);
@@ -382,7 +390,7 @@
             paymentSection.style.display = "none";
         }
 
-        // Avtomatski premik na dno, tako da je plačilni del vedno viden (ali pa zadnji artikel)
+        // Avtomatski pomik na dno seznama
         const scrollContainer = document.querySelector('.scrollable-content');
         if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
