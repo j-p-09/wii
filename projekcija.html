@@ -17,7 +17,7 @@
         font-family: 'Arial Narrow', Arial, sans-serif;
         height: 100vh; 
         display: flex; 
-        flex-direction: row; /* Razdeli zaslon levo-desno */
+        flex-direction: row; 
         overflow: hidden; 
     }
 
@@ -25,9 +25,9 @@
        LEVA STRAN (2/3) - Glavni blagajniški del
        ========================================= */
     #main-content {
-        flex: 2; /* Zavzame 2/3 prostora */
+        flex: 2; 
         padding: 40px;
-        position: relative; /* Da lahko damo overlay čez ta specifičen del */
+        position: relative; 
         display: flex;
         flex-direction: column;
     }
@@ -59,18 +59,36 @@
         height: 100%;
     }
 
-    .customer-header {
+    /* Nov "trak" za prikaz prodajalca in kupca */
+    .header-bar {
+        background-color: #222;
+        color: #fff;
+        padding: 15px 25px;
+        display: flex;
+        justify-content: space-between;
         font-size: 24px;
-        margin-bottom: 20px;
-        font-weight: normal;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        flex-shrink: 0;
     }
-    .customer-header span {
+
+    .header-bar span {
         font-weight: bold;
+        color: #ffd700; /* Zlato-rumen poudarek za imena */
+    }
+
+    /* Nov ovojnik, ki omogoča, da gre plačilni del takoj pod artikle */
+    .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }
 
     .cart-container {
-        flex: 1;
-        overflow-y: auto;
+        width: 100%;
         margin-bottom: 20px;
     }
 
@@ -80,24 +98,38 @@
     }
 
     td { 
-        padding: 8px 0; 
+        padding: 12px 0; 
         font-size: 20px;
         font-weight: normal;
         border-bottom: 1px solid #eee;
+        vertical-align: top;
     }
 
     tr.last-scanned-item td {
         font-size: 30px;
         font-weight: bold;
         border-bottom: 2px solid #000;
-        padding: 15px 0;
+        padding: 20px 0;
+    }
+
+    /* Stil za izpis popusta pod artiklom */
+    .item-discount {
+        font-size: 16px;
+        color: #e53935;
+        font-style: italic;
+        margin-top: 6px;
+        font-weight: normal;
+    }
+    
+    tr.last-scanned-item .item-discount {
+        font-size: 20px; /* Večji popust, ko je artikel ravnokar skeniran */
     }
 
     #payment-section {
         display: none;
         border-top: 3px dashed #000000;
         padding-top: 20px;
-        margin-top: auto; /* Potisne izračun na dno */
+        margin-bottom: 40px; /* Malo prostora na dnu drsnika */
     }
 
     .info-row {
@@ -115,12 +147,12 @@
         margin-top: 15px;
     }
 
-    /* ZAHVALA - Sedaj samo prekriva glavno vsebino (prosojno) */
+    /* ZAHVALA */
     #overlay {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(255, 255, 255, 0.85); /* Rahlo prosojno bela */
-        backdrop-filter: blur(4px); /* Zamegli ozadje, artikli so še vidni */
+        background: rgba(255, 255, 255, 0.85); 
+        backdrop-filter: blur(4px); 
         display: none;
         flex-direction: column;
         align-items: center;
@@ -148,7 +180,7 @@
        DESNA STRAN (1/3) - Stranski panel z uro
        ========================================= */
     #side-panel {
-        flex: 1; /* Zavzame 1/3 prostora */
+        flex: 1; 
         background-color: #f7f7f7;
         border-left: 2px solid #e0e0e0;
         display: flex;
@@ -197,29 +229,32 @@
         </div>
 
         <div id="main-view">
-            <div class="customer-header">
-                Kupec: <span id="display-customer">-</span>
+            <div class="header-bar">
+                <div>Prodajalec: <span id="display-seller">-</span></div>
+                <div>Stranka: <span id="display-customer">-</span></div>
             </div>
 
-            <div class="cart-container">
-                <table>
-                    <tbody id="display-cart">
+            <div class="scrollable-content">
+                <div class="cart-container">
+                    <table>
+                        <tbody id="display-cart">
                         </tbody>
-                </table>
-            </div>
+                    </table>
+                </div>
 
-            <div id="payment-section">
-                <div class="info-row">
-                    <div>Popust:</div>
-                    <div><span id="display-discount">0.00</span> WII</div>
-                </div>
-                <div class="info-row" id="status-row">
-                    <div id="status-label">Stanje:</div>
-                    <div id="display-remaining">0.00 WII</div>
-                </div>
-                <div class="total-row">
-                    <div>SKUPAJ:</div>
-                    <div><span id="display-total">0.00</span> WII</div>
+                <div id="payment-section">
+                    <div class="info-row">
+                        <div>Popust (skupni):</div>
+                        <div><span id="display-discount">0.00</span> WII</div>
+                    </div>
+                    <div class="info-row" id="status-row">
+                        <div id="status-label">Stanje:</div>
+                        <div id="display-remaining">0.00 WII</div>
+                    </div>
+                    <div class="total-row">
+                        <div>SKUPAJ:</div>
+                        <div><span id="display-total">0.00</span> WII</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -247,7 +282,7 @@
         document.getElementById('live-date').innerText = zdaj.toLocaleDateString('sl-SI');
     }
     setInterval(updateClock, 1000);
-    updateClock(); // Prvi klic ob zagonu
+    updateClock();
 
     // Poslušalec za podatke blagajne
     window.addEventListener('storage', (e) => {
@@ -268,11 +303,10 @@
         const cart = data.cart || [];
 
         // KORAK 1: KONČANO (Zahvala)
-        // POMEMBNO: Ne skrijemo mainView, tako da artikli ostanejo na ekranu!
         if (status === 'finished') {
             welcomeView.style.display = "none";
             mainView.style.display = "flex"; 
-            overlay.style.display = "flex"; // Prikaže se prosojno preko artiklov
+            overlay.style.display = "flex"; 
             
             setTimeout(() => {
                 location.reload(); 
@@ -294,51 +328,63 @@
         mainView.style.display = "flex";
         overlay.style.display = "none";
 
+        // Posodobitev traku
+        document.getElementById('display-seller').innerText = data.seller || "Blagajna 1";
         document.getElementById('display-customer').innerText = data.customer || "Gost";
 
         // Tabelaričen izpis artiklov
         tbody.innerHTML = '';
         cart.forEach((item, index) => {
             const tr = document.createElement('tr');
+            // Zaznamo zadnji poskeniran artikel (če je še vedno status nakupovanja)
             if (index === cart.length - 1 && status === 'buying') {
                 tr.className = 'last-scanned-item';
             }
 
+            // Preverimo in pripravimo izpis za morebiten popust pri konkretnem artiklu
+            let popustHtml = '';
+            const itemPopust = item.popust || item.discount || 0;
+            if (parseFloat(itemPopust) > 0) {
+                popustHtml = `<div class="item-discount">Popust: -${parseFloat(itemPopust).toFixed(2)} WII</div>`;
+            }
+
             tr.innerHTML = `
-                <td>${item.naziv}</td>
+                <td>
+                    <div>${item.naziv}</div>
+                    ${popustHtml}
+                </td>
                 <td style="text-align: center; width: 15%;">x${item.kol}</td>
-                <td style="text-align: right; width: 25%;">${item.total.toFixed(2)} WII</td>
+                <td style="text-align: right; width: 25%;">${parseFloat(item.total).toFixed(2)} WII</td>
             `;
             tbody.appendChild(tr);
         });
 
-        // Avtomatski premik na dno tabele
-        const cartContainer = document.querySelector('.cart-container');
-        if (cartContainer) cartContainer.scrollTop = cartContainer.scrollHeight;
-
-        // KORAK 4: UPRAVLJANJE PLAČILNEGA DELA (Črtkana črta)
+        // KORAK 4: UPRAVLJANJE PLAČILNEGA DELA
         if (status === 'payment') {
             paymentSection.style.display = "block";
             
-            document.getElementById('display-total').innerText = data.total || "0.00";
+            document.getElementById('display-total').innerText = parseFloat(data.total || 0).toFixed(2);
             
-            // Popravljeno zaznavanje popusta (preveri obe možni imeni)
             const popustVrednost = data.popust !== undefined ? data.popust : (data.discount || "0.00");
-            document.getElementById('display-discount').innerText = popustVrednost; 
+            document.getElementById('display-discount').innerText = parseFloat(popustVrednost).toFixed(2); 
 
             const statusLabel = document.getElementById('status-label');
             const remainingDiv = document.getElementById('display-remaining');
 
             if (parseFloat(data.change) > 0) {
                 statusLabel.innerText = "VRAČILO:";
-                remainingDiv.innerHTML = `<span style="color: green; font-weight: bold;">${data.change} WII</span>`;
+                remainingDiv.innerHTML = `<span style="color: green; font-weight: bold;">${parseFloat(data.change).toFixed(2)} WII</span>`;
             } else {
                 statusLabel.innerText = "ŠE ZA PLAČILO:";
-                remainingDiv.innerHTML = `<span style="color: red; font-weight: bold;">${data.remaining} WII</span>`;
+                remainingDiv.innerHTML = `<span style="color: red; font-weight: bold;">${parseFloat(data.remaining || 0).toFixed(2)} WII</span>`;
             }
         } else {
             paymentSection.style.display = "none";
         }
+
+        // Avtomatski premik na dno, tako da je plačilni del vedno viden (ali pa zadnji artikel)
+        const scrollContainer = document.querySelector('.scrollable-content');
+        if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
 
     // Inicializacija ob osvežitvi
