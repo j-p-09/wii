@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII Banka</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 1px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            width: 100%;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        h2, h3 {
+            margin-bottom: 1rem;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #059669; }
+        .btn-secondary { background-color: #475569; }
+        .btn-secondary:hover { background-color: #334155; }
+
+        /* Login Screen */
+        .login-box {
+            max-width: 400px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+
+        /* Big Balance Display */
+        .balance-card {
+            text-align: center;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid var(--primary);
+        }
+
+        .balance-amount {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--success);
+            margin: 1rem 0;
+        }
+
+        /* Employee Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Admin Switch */
+        .admin-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-positive { background-color: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge-negative { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">WII BANKA</div>
+        <div id="user-info" class="hidden">
+            <span id="header-user-name" style="margin-right: 15px; font-weight: 600;"></span>
+            <button class="btn btn-secondary" onclick="logout()">Odjava</button>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- PRIJAVNI ZASLON -->
+        <div id="login-screen" class="card login-box">
+            <h2>Prijava v banko</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Vnesite PIN številko kartice</p>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="password" id="pin-input" placeholder="Vnesite PIN..." maxlength="10" required style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Prijava</button>
+            </form>
+            <hr style="border-color: var(--card-border); margin: 1.5rem 0;">
+            <button class="btn btn-secondary" onclick="seedData()" style="font-size: 0.8rem; width: 100%;">Ustvari testne podatke v bazi</button>
+        </div>
+
+        <!-- UPORABNIŠKI ZASLON -->
+        <div id="user-screen" class="hidden">
+            <div class="card balance-card">
+                <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Trenutno Stanje Na Računu</span>
+                <div class="balance-amount" id="user-balance-display">0.00 €</div>
+                <small id="user-account-owner" style="color: var(--text-muted);"></small>
+            </div>
+
+            <div class="card">
+                <h3>Izvedi novo transakcijo</h3>
+                <form onsubmit="handleUserTransaction(event)">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Naziv transakcije / Prejemnik</label>
+                            <input type="text" id="tx-title" placeholder="npr. Plačilo položnice, Trgovina..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Znesek (€)</label>
+                            <input type="number" step="0.01" id="tx-amount" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Potrdi transakcijo</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Zgodovina transakcij</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Opis / Naziv</th>
+                            <th>Datum</th>
+                            <th>Znesek</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-tx-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ZAPOSLENI ZASLON -->
+        <div id="employee-screen" class="hidden">
+            <div class="card">
+                <h2>Portal za Zaposlene</h2>
+                <div class="nav-tabs">
+                    <button class="tab-btn active" onclick="switchEmpTab('customers')">1. Stranke</button>
+                    <button class="tab-btn" onclick="switchEmpTab('view')">2. Vpogled & Sprememba Stanja</button>
+                    <button class="tab-btn" onclick="switchEmpTab('admin')">3. Admin Funkcije</button>
+                </div>
+
+                <!-- TAB 1: STRANKE -->
+                <div id="tab-customers">
+                    <h3>Seznam vseh strank</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Urejate lahko ime in PIN številko. Stanja tukaj ni mogoče neposredno spreminjati.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ime in Priimek</th>
+                                <th>PIN Številka</th>
+                                <th>Stanje</th>
+                                <th>Akcije</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emp-customers-list"></tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 2: VPOGLED -->
+                <div id="tab-view" class="hidden">
+                    <h3>Vpogled v račun stranke</h3>
+                    <div class="form-group">
+                        <label>Izberi stranko:</label>
+                        <select id="emp-select-customer" onchange="loadCustomerView()"></select>
+                    </div>
+
+                    <div id="customer-detailed-view" class="hidden card" style="background-color: var(--bg-color);">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <div>
+                                <h2 id="emp-cust-name">-</h2>
+                                <p style="color: var(--text-muted);">PIN: <span id="emp-cust-pin"></span></p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span>Stanje:</span>
+                                <h2 id="emp-cust-balance" style="color: var(--success);">- €</h2>
+                            </div>
+                        </div>
+
+                        <hr style="border-color: var(--card-border); margin-bottom: 1.5rem;">
+
+                        <h4>Sprememba stanja (Nakazilo / Odvzem)</h4>
+                        <form onsubmit="handleEmpTransaction(event)" style="margin-top: 1rem;">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label>Naziv transakcije (Obvezno)</label>
+                                    <input type="text" id="emp-tx-title" placeholder="npr. Polog na okencu, Popravek..." required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Znesek (€)</label>
+                                    <input type="number" step="0.01" id="emp-tx-amount" placeholder="0.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Vrsta</label>
+                                    <select id="emp-tx-type">
+                                        <option value="add">Dodaj (+)</option>
+                                        <option value="sub">Odvzemi (-)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Izvedi spremembo</button>
+                        </form>
+
+                        <h4 style="margin-top: 2rem;">Zgodovina transakcij stranke</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Naziv</th>
+                                    <th>Datum</th>
+                                    <th>Znesek</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emp-cust-tx-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: ADMIN -->
+                <div id="tab-admin" class="hidden">
+                    <h3>Admin Upravljanje Transakcij</h3>
+                    <div class="admin-toggle">
+                        <input type="checkbox" id="admin-mode-check" onchange="toggleAdminMode()" style="width: auto;">
+                        <label for="admin-mode-check" style="margin: 0; color: white; cursor: pointer;">Vklopi Admin Mode (Omogoča izbris transakcij)</label>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Stranka</th>
+                                <th>Naziv Transakcije</th>
+                                <th>Datum</th>
+                                <th>Znesek</th>
+                                <th>Akcija</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tx-list"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const DB_URL = "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app";
+        
+        let usersData = {};
+        let txData = {};
+        let currentUser = null; // null ali id uporabnika ali 'EMPLOYEE'
+        let isAdminModeActive = false;
+
+        // Fetch data from Firebase
+        async function loadData() {
+            try {
+                const uRes = await fetch(`${DB_URL}/users.json`);
+                usersData = await uRes.json() || {};
+
+                const tRes = await fetch(`${DB_URL}/transactions.json`);
+                txData = await tRes.json() || {};
+            } catch (err) {
+                console.error("Napaka pri nalaganju podatkov:", err);
+            }
+        }
+
+        // Initialize App
+        async function init() {
+            await loadData();
+        }
+        init();
+
+        // Seed Initial Data (Helper)
+        async function seedData() {
+            const sampleUsers = {
+                "u1": { name: "Janez Novak", pin: "1234", balance: 1250.50 },
+                "u2": { name: "Marija Horvat", pin: "5678", balance: 3400.00 }
+            };
+            const sampleTx = {
+                "t1": { userId: "u1", title: "Polog na okencu", amount: 1250.50, timestamp: Date.now() - 100000 },
+                "t2": { userId: "u2", title: "Začetno stanje", amount: 3400.00, timestamp: Date.now() - 200000 }
+            };
+
+            await fetch(`${DB_URL}/users.json`, { method: "PUT", body: JSON.stringify(sampleUsers) });
+            await fetch(`${DB_URL}/transactions.json`, { method: "PUT", body: JSON.stringify(sampleTx) });
+            
+            alert("Baza je bila uspešno napolnjena s testnimi podatki!");
+            await loadData();
+        }
+
+        // Login Handler
+        async function handleLogin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('pin-input').value.trim();
+            await loadData();
+
+            if (pin === "000") {
+                // Zaposleni Login
+                currentUser = "EMPLOYEE";
+                showEmployeePortal();
+            } else {
+                // Uporabnik Login
+                let foundUserId = Object.keys(usersData).find(id => usersData[id].pin === pin);
+                if (foundUserId) {
+                    currentUser = foundUserId;
+                    showUserPortal();
+                } else {
+                    alert("Napačna PIN številka!");
+                }
+            }
+            document.getElementById('pin-input').value = "";
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('user-screen').classList.add('hidden');
+            document.getElementById('employee-screen').classList.add('hidden');
+            document.getElementById('user-info').classList.add('hidden');
+        }
+
+        /* --- USER PORTAL LOGIC --- */
+        function showUserPortal() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('user-screen').classList.remove('hidden');
+            document.getElementById('user-info').classList.remove('hidden');
+
+            const user = usersData[currentUser];
+            document.getElementById('header-user-name').innerText = user.name;
+            document.getElementById('user-account-owner').innerText = `Imetnik računa: ${user.name}`;
+            
+            renderUserBalanceAndTx();
+        }
+
+        function renderUserBalanceAndTx() {
+            const user = usersData[currentUser];
+            document.getElementById('user-balance-display').innerText = `${user.balance.toFixed(2)} €`;
+
+            const tbody = document.getElementById('user-tx-list');
+            tbody.innerHTML = "";
+
+            // Filter transactions for user
+            const userTxs = Object.keys(txData)
+                .map(id => ({ id, ...txData[id] }))
+                .filter(t => t.userId === currentUser)
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            userTxs.forEach(t => {
+                const tr = document.createElement('tr');
+                const isPos = t.amount >= 0;
+                tr.innerHTML = `
+                    <td>${t.title}</td>
+                    <td>${new Date(t.timestamp).toLocaleString('sl-SI')}</td>
+                    <td><span class="badge ${isPos ? 'badge-positive' : 'badge-negative'}">${isPos ? '+' : ''}${t.amount.toFixed(2)} €</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function handleUserTransaction(e) {
+            e.preventDefault();
+            const title = document.getElementById('tx-title').value;
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+
+            if (isNaN(amount) || amount <= 0) return alert("Vnesite veljaven znesek!");
+
+            // Update local & firebase balance (znesek odštejemo ali prištejemo - privzeto odštejemo kot plačilo)
+            const newBalance = usersData[currentUser].balance - amount;
+            
+            // Save transaction
+            const newTx = { userId: currentUser, title: title, amount: -amount, timestamp: Date.now() };
+
+            await fetch(`${DB_URL}/users/${currentUser}/balance.json`, { method: "PUT", body: JSON.stringify(newBalance) });
+            await fetch(`${DB_URL}/transactions.json`, { method: "POST", body: JSON.stringify(newTx) });
+
+            document.getElementById('tx-title').value = "";
+            document.getElementById('tx-amount').value = "";
+
+            await loadData();
+            renderUserBalanceAndTx();
+        }
+
+        /* --- EMPLOYEE PORTAL LOGIC --- */
+        function showEmployeePortal() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('employee-screen').classList.remove('hidden');
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('header-user-name').innerText = "Zaposleni (Admin)";
+
+            renderEmployeeCustomers();
+            populateCustomerSelect();
+            renderAdminTransactions();
+        }
+
+        function switchEmpTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab-customers').classList.add('hidden');
+            document.getElementById('tab-view').classList.add('hidden');
+            document.getElementById('tab-admin').classList.add('hidden');
+
+            if (tabName === 'customers') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-customers').classList.remove('hidden');
+            } else if (tabName === 'view') {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-view').classList.remove('hidden');
+            } else if (tabName === 'admin') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('tab-admin').classList.remove('hidden');
+            }
+        }
+
+        // Tab 1: Render Customers Table
+        function renderEmployeeCustomers() {
+            const tbody = document.getElementById('emp-customers-list');
+            tbody.innerHTML = "";
+
+            Object.keys(usersData).forEach(id => {
+                const u = usersData[id];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="text" id="edit-name-${id}" value="${u.name}"></td>
+                    <td><input type="text" id="edit-pin-${id}" value="${u.pin}" style="width: 80px;"></td>
+                    <td><strong>${u.balance.toFixed(2)} €</strong></td>
+                    <td><button class="btn btn-secondary" onclick="saveCustomerEdit('${id}')">Shrani</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function saveCustomerEdit(id) {
+            const newName = document.getElementById(`edit-name-${id}`).value;
+            const newPin = document.getElementById(`edit-pin-${id}`).value;
+
+            await fetch(`${DB_URL}/users/${id}/name.json`, { method: "PUT", body: JSON.stringify(newName) });
+            await fetch(`${DB_URL}/users/${id}/pin.json`, { method: "PUT", body: JSON.stringify(newPin) });
+
+            alert("Podatki stranke uspešno posodobljeni!");
+            await loadData();
+            renderEmployeeCustomers();
+            populateCustomerSelect();
+        }
+
+        // Tab 2: Vpogled v stranko
+        function populateCustomerSelect() {
+            const select = document.getElementById('emp-select-customer');
+            select.innerHTML = `<option value="">-- Izberite stranko --</option>`;
+            Object.keys(usersData).forEach(id => {
+                select.innerHTML += `<option value="${id}">${usersData[id].name} (PIN: ${usersData[id].pin})</option>`;
+            });
+        }
+
+        function loadCustomerView() {
+            const selectedId = document.getElementById('emp-select-customer').value;
+            const viewDiv = document.getElementById('customer-detailed-view');
+
+            if (!selectedId) {
+                viewDiv.classList.add('hidden');
+                return;
+            }
+
+            viewDiv.classList.remove('hidden');
+            const u = usersData[selectedId];
+            document.getElementById('emp-cust-name').innerText = u.name;
+            document.getElementById('emp-cust-pin').innerText = u.pin;
+            document.getElementById('emp-cust-balance').innerText = `${u.balance.toFixed(2)} €`;
+
+            // Tx list for this customer
+            const tbody = document.getElementById('emp-cust-tx-list');
+            tbody.innerHTML = "";
+
+            const custTxs = Object.keys(txData)
+                .map(id => ({ id, ...txData[id] }))
+                .filter(t => t.userId === selectedId)
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            custTxs.forEach(t => {
+                const tr = document.createElement('tr');
+                const isPos = t.amount >= 0;
+                tr.innerHTML = `
+                    <td>${t.title}</td>
+                    <td>${new Date(t.timestamp).toLocaleString('sl-SI')}</td>
+                    <td><span class="badge ${isPos ? 'badge-positive' : 'badge-negative'}">${isPos ? '+' : ''}${t.amount.toFixed(2)} €</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function handleEmpTransaction(e) {
+            e.preventDefault();
+            const selectedId = document.getElementById('emp-select-customer').value;
+            const title = document.getElementById('emp-tx-title').value;
+            let amount = parseFloat(document.getElementById('emp-tx-amount').value);
+            const type = document.getElementById('emp-tx-type').value;
+
+            if (!selectedId) return alert("Izberite stranko!");
+            if (isNaN(amount) || amount <= 0) return alert("Vnesite veljaven znesek!");
+
+            if (type === 'sub') amount = -amount;
+
+            const newBalance = usersData[selectedId].balance + amount;
+            const newTx = { userId: selectedId, title: title, amount: amount, timestamp: Date.now() };
+
+            await fetch(`${DB_URL}/users/${selectedId}/balance.json`, { method: "PUT", body: JSON.stringify(newBalance) });
+            await fetch(`${DB_URL}/transactions.json`, { method: "POST", body: JSON.stringify(newTx) });
+
+            document.getElementById('emp-tx-title').value = "";
+            document.getElementById('emp-tx-amount').value = "";
+
+            await loadData();
+            renderEmployeeCustomers();
+            loadCustomerView();
+        }
+
+        // Tab 3: Admin Functionality
+        function toggleAdminMode() {
+            isAdminModeActive = document.getElementById('admin-mode-check').checked;
+            renderAdminTransactions();
+        }
+
+        function renderAdminTransactions() {
+            const tbody = document.getElementById('admin-tx-list');
+            tbody.innerHTML = "";
+
+            const allTxs = Object.keys(txData)
+                .map(id => ({ id, ...txData[id] }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            allTxs.forEach(t => {
+                const user = usersData[t.userId] || { name: 'Neznan uporabnik' };
+                const tr = document.createElement('tr');
+                const isPos = t.amount >= 0;
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${t.title}</td>
+                    <td>${new Date(t.timestamp).toLocaleString('sl-SI')}</td>
+                    <td><span class="badge ${isPos ? 'badge-positive' : 'badge-negative'}">${isPos ? '+' : ''}${t.amount.toFixed(2)} €</span></td>
+                    <td>
+                        ${isAdminModeActive ? `<button class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="deleteTransaction('${t.id}')">Izbriši</button>` : '<span style="color:var(--text-muted); font-size:0.8rem;">Samo v Admin načinu</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteTransaction(txId) {
+            if (!confirm("Ali ste prepričani, da želite izbrisati to transakcijo?")) return;
+
+            await fetch(`${DB_URL}/transactions/${txId}.json`, { method: "DELETE" });
+            await loadData();
+            renderAdminTransactions();
+            if (document.getElementById('emp-select-customer').value) {
+                loadCustomerView();
+            }
+        }
+    </script>
+</body>
+</html>
