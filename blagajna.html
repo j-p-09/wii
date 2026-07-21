@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3 (Naročila)</title>
+<title>WII Blagajna</title>
 
 <!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -258,7 +258,6 @@
                 <button onclick="mgrPlaca()">💼 PLAČA</button>
                 <button onclick="mgrKazni()">⚠️ KAZNI</button>
                 <button onclick="mgrStranke()">🤝 STRANKE</button>
-                <button onclick="mgrBanka()">🏦 BANKA</button>
                 <button onclick="mgrBoni()" style="background:#e0cce0;">🎁 BONI</button>
                 <button onclick="mgrOdjava()" style="background:#ffcccc; grid-column: span 4;">📤 ODJAVA BLAGAJNE</button>
             </div>
@@ -522,7 +521,7 @@
         }});
     }
 
-    /* ================= NOVO: NAROČILA - POKLIČI ================= */
+    /* ================= NAROČILA - POKLIČI ================= */
     function openFetchOrder() {
         let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
         let listHtml = `<div style="max-height: 180px; overflow-y: auto; text-align: left; border: 1px solid #ccc; padding: 5px; margin-top: 10px; background: white;">`;
@@ -568,7 +567,7 @@
         showModal({title: "Naloženo", message: `Naročilo #${id} uspešno preneseno na blagajno.`});
     }
 
-    /* ================= NOVO: NAROČILA - POGLED ================= */
+    /* ================= NAROČILA - POGLED ================= */
     window.renderOrdersView = function(type) {
         let ws = document.getElementById('orders-content');
         let orders = db.orders.filter(o => type === 'open' ? o.status !== 'ODDANO' : true);
@@ -805,7 +804,7 @@
     function finishTransaction() {
         let validItems = cart.filter(i => i.koda !== '' || i.naziv !== '');
         
-        // NOVO: Če je izbrano "NAROČILO", ustvari neplačano naročilo in ne zaključi računa
+        // Če je izbrano "NAROČILO", ustvari neplačano naročilo in ne zaključi računa
         if (paymentState.method === 'narocilo') {
             let newOrder = {
                 id: db.orderSeq, date: new Date().toISOString(),
@@ -838,7 +837,7 @@
             items: JSON.parse(JSON.stringify(validItems)) 
         });
 
-        // NOVO: Če zaključujemo plačilo za POKLICANO naročilo, posodobi njegov status
+        // Če zaključujemo plačilo za POKLICANO naročilo, posodobi njegov status
         if (currentOrderId !== null) {
             let orderToUpdate = db.orders.find(o => o.id === currentOrderId);
             if (orderToUpdate) {
@@ -847,7 +846,7 @@
             }
         }
         
-        // Beleženje denarja
+        // Beleženje denarja in avtomatski odtegljaj z bančnega računa v Firebase
         if(paymentState.method === 'gotovina') {
             db.register.expectedCash += paymentState.total;
         } else if(paymentState.method === 'kartica') {
@@ -1114,18 +1113,7 @@
         }});
     }
 
-    // 11. Banka
-    function mgrBanka() {
-        let ws = openWorkspace("Bančni Računi (Kritje na kartici)");
-        let html = `<table class="crud-table"><tr><th>Stranka</th><th>Stanje (WII)</th></tr>`;
-        db.users.forEach((u, i) => {
-            html += `<tr><td>${u.name}</td><td><input type="number" value="${u.bankBalance}" onchange="db.users[${i}].bankBalance=parseFloat(this.value); saveDB()"></td></tr>`;
-        });
-        html += `</table>`;
-        ws.innerHTML = html;
-    }
-
-    // 12. Darilni Boni
+    // 11. Darilni Boni
     function mgrBoni() {
         let ws = openWorkspace("Upravljanje z Darilnimi Boni");
         let html = `<table class="crud-table"><tr><th>Koda Bona</th><th>Vrednost (WII)</th><th>Akcija</th></tr>`;
