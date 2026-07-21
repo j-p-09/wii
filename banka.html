@@ -5,80 +5,123 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WII Banka - Mobilna Aplikacija</title>
 
-<!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
     :root {
-        --bg-color: #f4f7f6;
-        --primary: #0056b3;
-        --text-main: #333;
+        --bg-color: #f0f3f8;
+        --primary: #0a58ca;
+        --primary-dark: #084298;
+        --accent: #6f42c1;
+        --text-main: #212529;
         --card-bg: #ffffff;
         --danger: #dc3545;
-        --success: #28a745;
+        --danger-hover: #bb2d3b;
+        --success: #198754;
+        --warning: #ffc107;
+        --border-color: #e2e8f0;
     }
 
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
     body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
 
     /* POGLED PRIJAVE */
     #login-view { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; }
-    .login-box { background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 350px; }
-    .login-box h2 { color: var(--primary); margin-bottom: 20px; }
-    .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center; }
-    .login-box button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
-    .login-box button:hover { background: #004494; }
+    .login-box { background: var(--card-bg); padding: 35px 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; width: 90%; max-width: 360px; }
+    .login-box h2 { color: var(--primary); margin-bottom: 8px; font-size: 26px; font-weight: 700; }
+    .login-box p { color: #6c757d; font-size: 14px; margin-bottom: 20px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1.5px solid var(--border-color); border-radius: 8px; font-size: 16px; text-align: center; transition: border-color 0.2s; outline: none; }
+    .login-box input:focus { border-color: var(--primary); }
+    .login-box button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+    .login-box button:hover { background: var(--primary-dark); }
 
-    /* POGLED NADZORNE PLOŠČE (DASHBOARD) */
-    #dashboard-view { display: none; width: 100%; max-width: 500px; flex-direction: column; height: 100vh; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    /* SKUPNE ZAHTEVE ZA EKRANE */
+    .app-container { display: none; width: 100%; max-width: 500px; flex-direction: column; min-height: 100vh; background: #fff; box-shadow: 0 0 30px rgba(0,0,0,0.08); position: relative; }
     
-    .header { background: var(--primary); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; }
-    .header h3 { font-size: 18px; font-weight: normal; }
-    .btn-logout { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    .header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; }
+    .header h3 { font-size: 18px; font-weight: 600; }
+    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; backdrop-filter: blur(5px); }
+    .btn-logout:hover { background: rgba(255,255,255,0.3); }
 
-    .balance-card { margin: -10px 20px 20px 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); text-align: center; position: relative; z-index: 10; border: 1px solid #eee; }
-    .balance-card p { color: #777; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-    .balance-card h1 { font-size: 40px; color: var(--primary); }
+    /* DASHBOARD STRANKE */
+    .balance-card { margin: -15px 20px 20px 20px; background: white; padding: 22px; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); text-align: center; position: relative; z-index: 10; border: 1px solid var(--border-color); }
+    .balance-card p { color: #6c757d; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    .balance-card h1 { font-size: 36px; color: var(--primary); font-weight: 700; }
 
-    .transactions-section { padding: 0 20px; flex: 1; overflow-y: auto; }
-    .transactions-section h4 { margin-bottom: 15px; color: #555; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+    .transactions-section { padding: 0 20px 20px 20px; flex: 1; overflow-y: auto; }
+    .transactions-section h4 { margin-bottom: 12px; color: #495057; font-size: 15px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     
-    .transaction-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
-    .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #ccc; }
-    
+    .transaction-list { display: flex; flex-direction: column; gap: 10px; }
+    .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #ccc; transition: transform 0.1s; }
     .transaction-item.expense { border-left-color: var(--danger); }
     .transaction-item.income { border-left-color: var(--success); }
     
-    .trans-info { display: flex; flex-direction: column; }
-    .trans-title { font-weight: bold; font-size: 15px; color: #333; }
-    .trans-date { font-size: 12px; color: #888; margin-top: 3px; }
-    .trans-amount { font-weight: bold; font-size: 16px; }
+    .trans-info { display: flex; flex-direction: column; gap: 2px; }
+    .trans-title { font-weight: 600; font-size: 14px; color: var(--text-main); }
+    .trans-date { font-size: 11px; color: #8c98a4; }
+    .trans-right { display: flex; align-items: center; gap: 10px; }
+    .trans-amount { font-weight: 700; font-size: 15px; }
     .trans-amount.expense { color: var(--danger); }
     .trans-amount.income { color: var(--success); }
-    
-    .empty-state { text-align: center; color: #999; padding: 20px; font-style: italic; }
 
+    .btn-delete-tx { background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; }
+    .btn-delete-tx:hover { background: var(--danger-hover); }
+
+    .empty-state { text-align: center; color: #adb5bd; padding: 30px 10px; font-style: italic; font-size: 14px; }
+
+    /* NAVIGACIJA ZAPOSLENI */
+    .emp-nav { display: flex; background: #e9ecef; margin: 15px 20px 10px 20px; border-radius: 10px; padding: 4px; gap: 4px; }
+    .emp-nav-btn { flex: 1; border: none; padding: 8px 4px; border-radius: 8px; font-size: 12px; font-weight: 600; background: transparent; color: #6c757d; cursor: pointer; transition: all 0.2s; }
+    .emp-nav-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+    .tab-content { display: none; padding: 0 20px 20px 20px; flex: 1; overflow-y: auto; }
+    .tab-content.active { display: block; }
+
+    /* KARTICE STRANK (TAB 1) */
+    .client-card { background: #f8f9fa; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; margin-bottom: 12px; }
+    .client-card-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .client-card label { font-size: 11px; font-weight: 700; color: #6c757d; text-transform: uppercase; }
+    .client-card input { width: 100%; padding: 8px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; }
+    .client-card input:disabled { background: #e9ecef; color: #495057; font-weight: 600; }
+    .btn-save-client { background: var(--success); color: white; border: none; width: 100%; padding: 8px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 5px; }
+
+    /* VPOGLED IN NAKAZILA (TAB 2) */
+    .select-user-box { margin-bottom: 15px; }
+    .select-user-box select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; outline: none; background: #fff; }
+    .transfer-form { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+    .transfer-form h5 { margin-bottom: 10px; color: var(--primary); font-size: 14px; }
+    .transfer-form input { width: 100%; padding: 9px; margin-bottom: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; }
+    .btn-transfer { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+    /* ADMIN PREKLOP (TAB 3) */
+    .admin-toggle-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 12px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+    .admin-toggle-box span { font-size: 13px; color: #664d03; font-weight: 600; }
+    
+    .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--danger); }
+    input:checked + .slider:before { transform: translateX(22px); }
 </style>
 </head>
 <body>
 
-    <!-- PRIJAVA -->
     <div id="login-view">
         <div class="login-box">
             <h2>WII Banka</h2>
-            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Vnesite številko kartice za dostop</p>
-            <input type="password" id="card-pin" placeholder="Številka kartice (PIN)">
+            <p>Vnesite PIN ali številko kartice</p>
+            <input type="password" id="card-pin" placeholder="PIN / Kartica">
             <button onclick="login()">Vpiši me</button>
-            <p id="login-error" style="color: red; margin-top: 10px; display: none; font-size: 14px;">Kartica ne obstaja!</p>
+            <p id="login-error" style="color: var(--danger); margin-top: 12px; display: none; font-size: 13px; font-weight: 600;">Kartica ne obstaja!</p>
         </div>
     </div>
 
-    <!-- NADZORNA PLOŠČA -->
-    <div id="dashboard-view">
+    <div id="dashboard-view" class="app-container">
         <div class="header">
             <div>
-                <p style="font-size: 12px; opacity: 0.8;">Dobrodošli,</p>
+                <p style="font-size: 11px; opacity: 0.8; text-transform: uppercase;">Dobrodošli,</p>
                 <h3 id="user-name">Ime Uporabnika</h3>
             </div>
             <button class="btn-logout" onclick="logout()">Odjava</button>
@@ -91,8 +134,70 @@
 
         <div class="transactions-section">
             <h4>Zadnje transakcije</h4>
-            <div class="transaction-list" id="transactions-container">
-                <!-- Transakcije se naložijo tukaj -->
+            <div class="transaction-list" id="transactions-container"></div>
+        </div>
+    </div>
+
+    <div id="employee-view" class="app-container">
+        <div class="header" style="background: linear-gradient(135deg, #212529, #343a40);">
+            <div>
+                <p style="font-size: 11px; color: #adb5bd; text-transform: uppercase;">Poslovni Sistem</p>
+                <h3>Portal za zaposlene</h3>
+            </div>
+            <button class="btn-logout" onclick="logout()">Odjava</button>
+        </div>
+
+        <div class="emp-nav">
+            <button class="emp-nav-btn active" onclick="switchEmpTab('tab-clients', this)">1. Stranke</button>
+            <button class="emp-nav-btn" onclick="switchEmpTab('tab-inspect', this)">2. Vpogled</button>
+            <button class="emp-nav-btn" onclick="switchEmpTab('tab-admin', this)">3. Admin</button>
+        </div>
+
+        <div id="tab-clients" class="tab-content active">
+            <div id="clients-list-container"></div>
+        </div>
+
+        <div id="tab-inspect" class="tab-content">
+            <div class="select-user-box">
+                <label style="font-size: 12px; font-weight: 600; color: #6c757d; display: block; margin-bottom: 5px;">Izberi stranko:</label>
+                <select id="inspect-user-select" onchange="renderInspectView()"></select>
+            </div>
+
+            <div class="balance-card" style="margin: 0 0 15px 0;">
+                <p>Stanje izbrane stranke</p>
+                <h1 id="inspect-user-balance">0.00 WII</h1>
+            </div>
+
+            <div class="transfer-form">
+                <h5>Sprememba stanja (Nakazilo / Odvzem)</h5>
+                <input type="text" id="transfer-desc" placeholder="Naziv transakcije (npr. Nakazilo, Storno...)">
+                <input type="number" step="0.01" id="transfer-amount" placeholder="Znesek (npr. 50 ali -20 za odvzem)">
+                <button class="btn-transfer" onclick="executeTransfer()">Izvedi transakcijo</button>
+            </div>
+
+            <div class="transactions-section" style="padding: 0;">
+                <h4>Zgodovina transakcij</h4>
+                <div class="transaction-list" id="inspect-transactions-container"></div>
+            </div>
+        </div>
+
+        <div id="tab-admin" class="tab-content">
+            <div class="select-user-box">
+                <label style="font-size: 12px; font-weight: 600; color: #6c757d; display: block; margin-bottom: 5px;">Izberi stranko:</label>
+                <select id="admin-user-select" onchange="renderAdminView()"></select>
+            </div>
+
+            <div class="admin-toggle-box">
+                <span>Vklopi načina urejanja (Admin)</span>
+                <label class="switch">
+                    <input type="checkbox" id="admin-mode-toggle" onchange="renderAdminView()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="transactions-section" style="padding: 0;">
+                <h4>Transakcije uporabnika</h4>
+                <div class="transaction-list" id="admin-transactions-container"></div>
             </div>
         </div>
     </div>
@@ -106,17 +211,23 @@
     const database = firebase.database();
 
     let loggedInUserId = null;
+    let isEmployeeMode = false;
     let allUsers = [];
 
     // REAL-TIME POSLUŠANJE BAZE
-    // Ta funkcija se sproži ob zagonu in NATO VSAKIČ, ko se v bazi karkoli spremeni (npr. ko blagajna potegne denar)
     database.ref('wii_db_v3/users').on('value', (snapshot) => {
         const users = snapshot.val();
         if (users) {
-            allUsers = users;
-            // Če smo že prijavljeni, takoj osvežimo prikaz na zaslonu
-            if (loggedInUserId) {
-                const me = allUsers.find(u => u.id === loggedInUserId);
+            allUsers = Array.isArray(users) ? users : Object.values(users);
+            
+            // Osveževanje glede na to, kdo je prijavljen
+            if (isEmployeeMode) {
+                renderClientsList();
+                populateUserSelects();
+                renderInspectView();
+                renderAdminView();
+            } else if (loggedInUserId) {
+                const me = allUsers.find(u => u && u.id === loggedInUserId);
                 if (me) {
                     updateDashboardUI(me);
                 }
@@ -124,21 +235,41 @@
         }
     });
 
+    // Funkcija za shranjevanje sprememb nazaj v Firebase
+    function saveUsersToFirebase() {
+        database.ref('wii_db_v3/users').set(allUsers);
+    }
+
     // Funkcija za prijavo
     function login() {
-        const pin = document.getElementById('card-pin').value;
-        const user = allUsers.find(u => u.card === pin || u.id === pin);
+        const pin = document.getElementById('card-pin').value.trim();
+        
+        // PREVERJANJE ZA ZAPOSLENEGA (PIN 000)
+        if (pin === "000") {
+            isEmployeeMode = true;
+            loggedInUserId = "EMPLOYEE";
+            document.getElementById('card-pin').value = '';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('employee-view').style.display = 'flex';
+            
+            renderClientsList();
+            populateUserSelects();
+            return;
+        }
+
+        // REDNA PRIJAVA STRANKE
+        const user = allUsers.find(u => u && (u.card === pin || u.id === pin));
         
         if (user) {
+            isEmployeeMode = false;
             loggedInUserId = user.id;
             document.getElementById('card-pin').value = '';
             document.getElementById('login-error').style.display = 'none';
             
-            // Skrijemo prijavo, pokažemo banko
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('dashboard-view').style.display = 'flex';
             
-            // Posodobimo UI z uporabnikovimi podatki
             updateDashboardUI(user);
         } else {
             document.getElementById('login-error').style.display = 'block';
@@ -148,35 +279,207 @@
     // Funkcija za odjavo
     function logout() {
         loggedInUserId = null;
+        isEmployeeMode = false;
         document.getElementById('dashboard-view').style.display = 'none';
+        document.getElementById('employee-view').style.display = 'none';
         document.getElementById('login-view').style.display = 'flex';
     }
 
-    // Funkcija, ki dejansko nariše podatke na zaslon
+    // Funkcija za izris nadzorne plošče stranke
     function updateDashboardUI(user) {
         document.getElementById('user-name').innerText = user.name;
         
-        // STROGA PRETVORBA V ŠTEVILKO (parseFloat) prepreči napake na blagajni
         let currentBalance = parseFloat(user.bankBalance || 0);
         document.getElementById('user-balance').innerText = currentBalance.toFixed(2) + ' WII';
 
         const container = document.getElementById('transactions-container');
         container.innerHTML = '';
 
-        if (!user.transactions || user.transactions.length === 0) {
-            container.innerHTML = '<div class="empty-state">Trenutno nimate zabeleženih transakcij.</div>';
+        renderTransactionsList(user.transactions, container, false, null);
+    }
+
+    /* ================= LOGIKA ZA ZAPOSLENE (PIN 000) ================= */
+
+    function switchEmpTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.emp-nav-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        btnElement.classList.add('active');
+    }
+
+    function populateUserSelects() {
+        const inspectSelect = document.getElementById('inspect-user-select');
+        const adminSelect = document.getElementById('admin-user-select');
+        
+        const currentInspectVal = inspectSelect.value;
+        const currentAdminVal = adminSelect.value;
+
+        inspectSelect.innerHTML = '';
+        adminSelect.innerHTML = '';
+
+        allUsers.forEach(u => {
+            if (!u) return;
+            let opt1 = document.createElement('option');
+            opt1.value = u.id;
+            opt1.innerText = `${u.name} (${u.card || 'Brez PIN'})`;
+            inspectSelect.appendChild(opt1);
+
+            let opt2 = document.createElement('option');
+            opt2.value = u.id;
+            opt2.innerText = `${u.name} (${u.card || 'Brez PIN'})`;
+            adminSelect.appendChild(opt2);
+        });
+
+        if (currentInspectVal) inspectSelect.value = currentInspectVal;
+        if (currentAdminVal) adminSelect.value = currentAdminVal;
+    }
+
+    // 1. STRANKE: Prikaz in urejanje podatkov
+    function renderClientsList() {
+        const container = document.getElementById('clients-list-container');
+        container.innerHTML = '';
+
+        allUsers.forEach((user, index) => {
+            if (!user) return;
+            let balance = parseFloat(user.bankBalance || 0).toFixed(2);
+
+            let cardHtml = `
+                <div class="client-card">
+                    <div class="client-card-row">
+                        <label>Ime in Priimek</label>
+                        <input type="text" id="edit-name-${index}" value="${user.name || ''}">
+                    </div>
+                    <div class="client-card-row">
+                        <label>PIN / Številka Kartice</label>
+                        <input type="text" id="edit-pin-${index}" value="${user.card || ''}">
+                    </div>
+                    <div class="client-card-row">
+                        <label>Stanje (Ni možno urejati tukaj)</label>
+                        <input type="text" disabled value="${balance} WII">
+                    </div>
+                    <button class="btn-save-client" onclick="saveClientDetails(${index})">Shrani spremembe</button>
+                </div>
+            `;
+            container.innerHTML += cardHtml;
+        });
+    }
+
+    function saveClientDetails(index) {
+        const newName = document.getElementById(`edit-name-${index}`).value.trim();
+        const newPin = document.getElementById(`edit-pin-${index}`).value.trim();
+
+        if (!newName || !newPin) {
+            alert('Ime in PIN ne smeta biti prazna!');
             return;
         }
 
-        // Kopiramo in obrnemo vrstni red transakcij (najnovejše zgoraj)
-        let txs = [...user.transactions].reverse();
+        allUsers[index].name = newName;
+        allUsers[index].card = newPin;
 
-        txs.forEach(tx => {
+        saveUsersToFirebase();
+        alert('Podatki stranke uspešno posodobljeni!');
+    }
+
+    // 2. VPOGLED & NAKAZILA
+    function renderInspectView() {
+        const selectedId = document.getElementById('inspect-user-select').value;
+        const user = allUsers.find(u => u && u.id === selectedId);
+        
+        if (!user) return;
+
+        let balance = parseFloat(user.bankBalance || 0);
+        document.getElementById('inspect-user-balance').innerText = balance.toFixed(2) + ' WII';
+
+        const container = document.getElementById('inspect-transactions-container');
+        renderTransactionsList(user.transactions, container, false, null);
+    }
+
+    function executeTransfer() {
+        const selectedId = document.getElementById('inspect-user-select').value;
+        const desc = document.getElementById('transfer-desc').value.trim();
+        const amountVal = parseFloat(document.getElementById('transfer-amount').value);
+
+        if (!selectedId || !desc || isNaN(amountVal) || amountVal === 0) {
+            alert('Vnesite veljaven naziv in znesek (ki ni 0)!');
+            return;
+        }
+
+        const user = allUsers.find(u => u && u.id === selectedId);
+        if (!user) return;
+
+        if (!user.transactions) user.transactions = [];
+
+        // Dodaj transakcijo
+        user.transactions.push({
+            description: desc,
+            amount: amountVal,
+            date: new Date().toISOString(),
+            type: 'BANK_TRANSFER'
+        });
+
+        // Posodobi stanje
+        let currentBalance = parseFloat(user.bankBalance || 0);
+        user.bankBalance = currentBalance + amountVal;
+
+        saveUsersToFirebase();
+
+        document.getElementById('transfer-desc').value = '';
+        document.getElementById('transfer-amount').value = '';
+        alert('Transakcija uspešno izvedena!');
+    }
+
+    // 3. ADMIN NAČIN (BRISANJE TRANSAKCIJ)
+    function renderAdminView() {
+        const selectedId = document.getElementById('admin-user-select').value;
+        const isAdminActive = document.getElementById('admin-mode-toggle').checked;
+        const user = allUsers.find(u => u && u.id === selectedId);
+
+        const container = document.getElementById('admin-transactions-container');
+        if (!user) {
+            container.innerHTML = '';
+            return;
+        }
+
+        renderTransactionsList(user.transactions, container, isAdminActive, user.id);
+    }
+
+    function deleteTransaction(userId, txIndexInOriginal) {
+        if (!confirm('Ali ste prepričani, da želite izbrisati to transakcijo? Stanje bo ustrezno prilagojeno.')) return;
+
+        const user = allUsers.find(u => u && u.id === userId);
+        if (!user || !user.transactions) return;
+
+        const txToDelete = user.transactions[txIndexInOriginal];
+        if (txToDelete) {
+            // Izniči vpliv transakcije na stanje (odštej znesek, ki je bil dodan/odštet)
+            let currentBalance = parseFloat(user.bankBalance || 0);
+            user.bankBalance = currentBalance - parseFloat(txToDelete.amount || 0);
+
+            // Odstrani transakcijo iz polja
+            user.transactions.splice(txIndexInOriginal, 1);
+
+            saveUsersToFirebase();
+        }
+    }
+
+    // POMOŽNA FUNKCIJA ZA IZRIS TRANSAKCIJ
+    function renderTransactionsList(transactionsArray, containerElement, showDeleteBtn, userId) {
+        containerElement.innerHTML = '';
+
+        if (!transactionsArray || transactionsArray.length === 0) {
+            containerElement.innerHTML = '<div class="empty-state">Trenutno nimate zabeleženih transakcij.</div>';
+            return;
+        }
+
+        // Pripravimo indeksirane transakcije, da obrnjen vrstni red ohrani pravi indeks za brisanje
+        let indexedTxs = transactionsArray.map((tx, originalIndex) => ({ tx, originalIndex }));
+        indexedTxs.reverse();
+
+        indexedTxs.forEach(({ tx, originalIndex }) => {
             let amount = parseFloat(tx.amount || 0);
             let isExpense = amount < 0;
             
-            // PREVERJANJE ZA WII SHOP BLAGAJNO: 
-            // Če je transakcija s POS blagajne, vsilimo naslov, ki ga zahtevaš.
             let displayTitle = tx.description;
             if (tx.type === 'POS_PAYMENT') {
                 displayTitle = "PLAČILO POS WII SHOP";
@@ -187,21 +490,27 @@
                 hour: '2-digit', minute: '2-digit' 
             });
 
-            // Ustvarimo element za seznam
             let div = document.createElement('div');
             div.className = `transaction-item ${isExpense ? 'expense' : 'income'}`;
             
+            let deleteBtnHtml = showDeleteBtn 
+                ? `<button class="btn-delete-tx" onclick="deleteTransaction('${userId}', ${originalIndex})">Izbriši</button>` 
+                : '';
+
             div.innerHTML = `
                 <div class="trans-info">
                     <span class="trans-title">${displayTitle}</span>
                     <span class="trans-date">${dateStr}</span>
                 </div>
-                <div class="trans-amount ${isExpense ? 'expense' : 'income'}">
-                    ${isExpense ? '' : '+'}${amount.toFixed(2)} WII
+                <div class="trans-right">
+                    <span class="trans-amount ${isExpense ? 'expense' : 'income'}">
+                        ${isExpense ? '' : '+'}${amount.toFixed(2)} WII
+                    </span>
+                    ${deleteBtnHtml}
                 </div>
             `;
             
-            container.appendChild(div);
+            containerElement.appendChild(div);
         });
     }
 
