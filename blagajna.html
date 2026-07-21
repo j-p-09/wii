@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna</title>
+<title>WII Blagajna - Polna Verzija v3 (Naročila & Banka Fix)</title>
 
 <!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -309,7 +309,6 @@
             const stored = snapshot.val();
             if (stored) {
                 db = stored;
-                // Preprečevanje Firebase izbrisa praznih nizov
                 if(!db.giftCards) db.giftCards = [];
                 if(!db.orders) db.orders = [];
                 if(!db.receipts) db.receipts = [];
@@ -319,18 +318,18 @@
                 db.users.forEach(u => { 
                     if(u.bankBalance === undefined) u.bankBalance = 500; 
                     if(!u.fines) u.fines = [];
+                    if(!u.transactions) u.transactions = []; // Inicializacija transakcij
                 });
                 
-                // Osveževanje vmesnika ob zunanjih spremembah, če je odprt
                 if (document.getElementById('view-narocila').classList.contains('active')) {
                     renderOrdersView('open');
                 }
             } else {
                 db = {
                     users: [
-                        { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [] },
-                        { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [] },
-                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}] }
+                        { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [], transactions: [] },
+                        { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [], transactions: [] },
+                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}], transactions: [] }
                     ],
                     items: [
                         { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
@@ -363,7 +362,7 @@
     let cart = [];
     let activeCashier = null;
     let activeCustomer = null;
-    let currentOrderId = null; // Spremlja id naročila, ki se trenutno obdeluje
+    let currentOrderId = null;
     let paymentState = { total: 0, paid: 0, method: '', inputBuffer: '', paidUserId: null };
     let modalCallback = null;
 
@@ -658,7 +657,7 @@
         if(!activeCustomer) return showModal({title:"Info", message:"Najprej izberi stranko."});
         let html = `<div style="text-align:left;">
             <b>Ime:</b> ${activeCustomer.name}<br>
-            <b>Dobroimetje:</b> ${activeCustomer.balance.toFixed(2)} WII<br><br>`;
+            <b>Dobroimetje:</b> ${parseFloat(activeCustomer.balance || 0).toFixed(2)} WII<br><br>`;
             
         if(activeCustomer.fines && activeCustomer.fines.length > 0) {
             html += `<b>KAZNI:</b><br><table style="width:100%; border-collapse:collapse; margin-top:5px;">`;
@@ -738,7 +737,12 @@
                 if (pin) { 
                     const user = db.users.find(u => u.card === pin || u.id === pin);
                     if(!user) return showModal({title:"Napaka", message:"Neveljavna kartica/PIN!"});
-                    if(user.bankBalance < paymentState.total) return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${user.bankBalance} WII)`});
+                    
+                    // Popravek pretvorbe v številko (parseFloat)
+                    const userBankBal = parseFloat(user.bankBalance || 0);
+                    if(userBankBal < paymentState.total) {
+                        return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${userBankBal.toFixed(2)} WII)`});
+                    }
                     
                     paymentState.method = 'kartica'; 
                     paymentState.paid = paymentState.total; 
@@ -752,7 +756,7 @@
             document.getElementById('btn-narocilo').style.display = 'block';
             document.getElementById('btn-nazaj').classList.remove('hidden');
             paymentState.method = 'narocilo';
-            paymentState.paid = paymentState.total; // Skrijemo potrebo po vnosu sredstev za lažji pregled
+            paymentState.paid = paymentState.total;
             document.getElementById('pay-vracilo').value = "0.00";
             document.getElementById('pay-ostanek').value = "0.00";
             updatePaymentUI();
@@ -804,7 +808,6 @@
     function finishTransaction() {
         let validItems = cart.filter(i => i.koda !== '' || i.naziv !== '');
         
-        // Če je izbrano "NAROČILO", ustvari neplačano naročilo in ne zaključi računa
         if (paymentState.method === 'narocilo') {
             let newOrder = {
                 id: db.orderSeq, date: new Date().toISOString(),
@@ -837,7 +840,6 @@
             items: JSON.parse(JSON.stringify(validItems)) 
         });
 
-        // Če zaključujemo plačilo za POKLICANO naročilo, posodobi njegov status
         if (currentOrderId !== null) {
             let orderToUpdate = db.orders.find(o => o.id === currentOrderId);
             if (orderToUpdate) {
@@ -846,12 +848,27 @@
             }
         }
         
-        // Beleženje denarja in avtomatski odtegljaj z bančnega računa v Firebase
+        // Obdelava denarja in beleženje transakcije za banko
         if(paymentState.method === 'gotovina') {
             db.register.expectedCash += paymentState.total;
         } else if(paymentState.method === 'kartica') {
             let u = db.users.find(usr => usr.id === paymentState.paidUserId);
-            if(u) u.bankBalance -= paymentState.total;
+            if(u) {
+                let oldBal = parseFloat(u.bankBalance || 0);
+                let newBal = oldBal - paymentState.total;
+                u.bankBalance = newBal;
+
+                // Vpis transakcije v profil uporabnika za aplikacijo banke
+                if(!u.transactions) u.transactions = [];
+                u.transactions.push({
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    type: 'POS_PAYMENT',
+                    description: `Plačilo blagajna (Račun #${db.seq})`,
+                    amount: -paymentState.total,
+                    balanceAfter: newBal
+                });
+            }
         }
         
         // Poraba bonov in plačilo kazni
@@ -1042,7 +1059,7 @@
                 </tr>`;
             }
         });
-        html += `</table><br><button onclick="db.users.push({id:'',name:'Nov',role:'customer',card:'',balance:0,bankBalance:500,salary:0,fines:[]}); saveDB(); renderUsers('${roleFilter}','${title}');">+ Dodaj Osebo</button>`;
+        html += `</table><br><button onclick="db.users.push({id:'',name:'Nov',role:'customer',card:'',balance:0,bankBalance:500,salary:0,fines:[],transactions:[]}); saveDB(); renderUsers('${roleFilter}','${title}');">+ Dodaj Osebo</button>`;
         ws.innerHTML = html;
     }
     function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); }
