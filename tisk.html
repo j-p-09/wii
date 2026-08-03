@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WII Tiskalnica Računov</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+<style>
+    :root {
+        --bg-color: #f4f7f6;
+        --panel-bg: #ffffff;
+        --primary: #3a6ea5;
+        --text: #333333;
+        --border: #cccccc;
+    }
+
+    * { box-sizing: border-box; font-family: 'Arial', sans-serif; margin: 0; padding: 0; user-select: none; }
+    body { background-color: var(--bg-color); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+    /* HEADER */
+    .header { 
+        background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .header h1 { font-size: 20px; }
+    .status-badge { background: #ff4d4d; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+    .status-badge.logged-in { background: #4caf50; }
+
+    /* MAIN MENU */
+    .menu-container { display: flex; gap: 15px; padding: 20px; background: #e9ecef; border-bottom: 2px solid var(--border); }
+    .menu-container button { 
+        flex: 1; padding: 15px; font-size: 16px; font-weight: bold; cursor: pointer;
+        border: none; border-radius: 8px; background: var(--panel-bg); color: var(--primary);
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: 0.2s;
+    }
+    .menu-container button:active { transform: translateY(2px); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .menu-container button.active-tab { background: var(--primary); color: white; }
+
+    /* WORKSPACE */
+    .workspace { flex: 1; padding: 20px; overflow-y: auto; display: none; flex-direction: column; gap: 10px; }
+    .workspace.active { display: flex; }
+
+    /* LIST ITEMS */
+    .list-item { 
+        background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #aaa;
+        display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .list-item.pending { border-left-color: #999; background: #f0f0f0; color: #666; }
+    .list-item.ready { border-left-color: #ff4d4d; border: 2px solid #ff4d4d; }
+    .list-item.printed { border-left-color: #4caf50; opacity: 0.7; }
+    
+    .list-info h3 { font-size: 18px; margin-bottom: 5px; }
+    .list-info.ready h3 { color: #ff4d4d; font-weight: 900; }
+    
+    .btn-print { 
+        background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; 
+        font-weight: bold; cursor: pointer; font-size: 14px;
+    }
+    .btn-print.ready { background: #ff4d4d; font-size: 16px; padding: 12px 25px; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+    }
+
+    /* MODAL (LOCK SCREEN) */
+    .modal-overlay { 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; 
+    }
+    .modal-box { background: white; padding: 25px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .modal-box h2 { margin-bottom: 15px; color: var(--primary); }
+    .modal-box input { width: 100%; padding: 12px; font-size: 20px; text-align: center; margin-bottom: 15px; border: 2px solid var(--border); border-radius: 5px; }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .numpad button { padding: 15px; font-size: 20px; border: none; background: #e9ecef; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .numpad button:active { background: #ced4da; }
+    
+    .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🖨️ WII Tiskalnica</h1>
+        <div id="cashier-status" class="status-badge">BLAGAJNA ZAKLENJENA</div>
+    </div>
+
+    <div class="menu-container">
+        <button id="tab-racuni" class="active-tab" onclick="switchTab('racuni')">🧾 NATISNI RAČUN</button>
+        <button id="tab-narocila" onclick="switchTab('narocila')">📦 NATISNI NAROČILO</button>
+        <button id="tab-zgodovina" onclick="switchTab('zgodovina')">💼 MANAGER ZGODOVINA</button>
+    </div>
+
+    <div id="ws-racuni" class="workspace active"></div>
+
+    <div id="ws-narocila" class="workspace"></div>
+
+    <div id="ws-zgodovina" class="workspace">
+        <div class="list-item" style="flex-direction: column; align-items: flex-start; gap: 15px;">
+            <h3>Iskanje in tiskanje kopije računa</h3>
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="number" id="copy-receipt-id" placeholder="Številka računa (npr. 3)" style="padding: 10px; font-size: 16px; flex: 1;">
+                <button class="btn-print" onclick="printCopy()">NATISNI KOPIJO</button>
+            </div>
+            <p id="copy-status" style="color: red; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="lock-screen">
+        <div class="modal-box">
+            <h2>Prijava Tiskalnice</h2>
+            <p style="margin-bottom: 10px; color: #666;">Vnesite PIN ali skenirajte kartico</p>
+            <input type="password" id="login-pin" readonly>
+            <div class="numpad">
+                <button onclick="pinInput('1')">1</button><button onclick="pinInput('2')">2</button><button onclick="pinInput('3')">3</button>
+                <button onclick="pinInput('4')">4</button><button onclick="pinInput('5')">5</button><button onclick="pinInput('6')">6</button>
+                <button onclick="pinInput('7')">7</button><button onclick="pinInput('8')">8</button><button onclick="pinInput('9')">9</button>
+                <button onclick="pinClear()">C</button><button onclick="pinInput('0')">0</button><button onclick="pinEnter()" style="background: var(--primary); color: white;">OK</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /* ================= FIREBASE SETUP ================= */
+    const firebaseConfig = {
+        databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    /* ================= GLOBAL variables ================= */
+    let dbData = { users: [], receipts: [], orders: [] };
+    let activeUser = null;
+    let pinBuffer = "";
+
+    // Sinhronizacija z bazo v realnem času
+    database.ref('wii_db_v3').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if(data) {
+            dbData = data;
+            if(!dbData.receipts) dbData.receipts = [];
+            if(!dbData.orders) dbData.orders = [];
+            renderWorkspaces();
+        }
+    });
+
+    /* ================= LOGIN LOGIKA ================= */
+    function pinInput(num) { 
+        pinBuffer += num; 
+        document.getElementById('login-pin').value = "*".repeat(pinBuffer.length); 
+    }
+    function pinClear() { 
+        pinBuffer = ""; 
+        document.getElementById('login-pin').value = ""; 
+    }
+    function pinEnter() {
+        if(!dbData.users) return alert("Baza uporabnikov še ni naložena!");
+        const user = dbData.users.find(u => u.card === pinBuffer || u.id === pinBuffer);
+        if(user) {
+            activeUser = user;
+            document.getElementById('lock-screen').classList.add('hidden');
+            const badge = document.getElementById('cashier-status');
+            badge.innerText = `Prijavljen blagajnik: ${user.name}`;
+            badge.classList.add('logged-in');
+            renderWorkspaces();
+        } else {
+            alert("Napačen PIN!");
+            pinClear();
+        }
+    }
+
+    /* ================= UI NAVIGACIJA ================= */
+    function switchTab(tabId) {
+        document.querySelectorAll('.menu-container button').forEach(b => b.classList.remove('active-tab'));
+        document.getElementById(`tab-${tabId}`).classList.add('active-tab');
+        
+        document.querySelectorAll('.workspace').forEach(w => w.classList.remove('active'));
+        document.getElementById(`ws-${tabId}`).classList.add('active');
+        renderWorkspaces();
+    }
+
+    /* ================= RENDER LIST (LIVE DATA) ================= */
+    function renderWorkspaces() {
+        if(!activeUser) return; // Ne riši, če ni prijavljen
+
+        // --- RAČUNI ---
+        const wsRacuni = document.getElementById('ws-racuni');
+        wsRacuni.innerHTML = '';
+        
+        // 1. Čaka na plačilo (Prikažemo tista naročila, ki so 'NAROČENO' kot simulacija sivega seznama)
+        let pendingOrders = dbData.orders.filter(o => o.status === 'NAROČENO');
+        pendingOrders.forEach(po => {
+            wsRacuni.innerHTML += `
+                <div class="list-item pending">
+                    <div class="list-info">
+                        <h3>ČAKA NA PLAČILO (Baza: Naročilo #${po.id})</h3>
+                        <p>Znesek: ${po.total.toFixed(2)} WII | Stranka: ${po.customer || 'Neznana'}</p>
+                    </div>
+                    <button class="btn-print" disabled style="background:#999; cursor:not-allowed;">NI PLAČANO</button>
+                </div>
+            `;
+        });
+
+        // 2. Plačani računi (Razvrstimo od najnovejšega dol)
+        let receipts = [...dbData.receipts].reverse(); 
+        receipts.forEach(rec => {
+            // Preverimo, če je bil že natisnjen (lokalno shranjujemo array natisnjenih ID-jev)
+            let printedIds = JSON.parse(localStorage.getItem('wii_printed_receipts') || '[]');
+            let isPrinted = printedIds.includes(rec.id);
+            
+            let itemClass = isPrinted ? 'printed' : 'ready';
+            let btnClass = isPrinted ? '' : 'ready';
+            let btnText = isPrinted ? 'NATISNI ZNOVA' : 'NATISNI RAČUN';
+            let titleClass = isPrinted ? '' : 'ready';
+
+            wsRacuni.innerHTML += `
+                <div class="list-item ${itemClass}">
+                    <div class="list-info ${titleClass}">
+                        <h3>${isPrinted ? `Račun #${rec.id}` : `AKTUALNI RAČUN #${rec.id} (Plačano!)`}</h3>
+                        <p>${new Date(rec.date).toLocaleString()} | Znesek: ${rec.total.toFixed(2)} WII</p>
+                    </div>
+                    <button class="btn-print ${btnClass}" onclick='generateReceiptPDF(${JSON.stringify(rec)}, false)'>${btnText}</button>
+                </div>
+            `;
+        });
+
+        // --- NAROČILA ---
+        const wsNarocila = document.getElementById('ws-narocila');
+        wsNarocila.innerHTML = '';
+        
+        let orders = [...dbData.orders].reverse();
+        orders.forEach(ord => {
+            let printedIds = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
+            let isPrinted = printedIds.includes(ord.id);
+            
+            wsNarocila.innerHTML += `
+                <div class="list-item ${isPrinted ? 'printed' : 'ready'}">
+                    <div class="list-info">
+                        <h3>Naročilo #${ord.id} - ${ord.status}</h3>
+                        <p>${new Date(ord.date).toLocaleString()} | Znesek: ${ord.total.toFixed(2)} WII</p>
+                    </div>
+                    <button class="btn-print ${isPrinted ? '' : 'ready'}" onclick='generateOrderPDF(${JSON.stringify(ord)})'>
+                        ${isPrinted ? 'NATISNI ZNOVA' : 'NATISNI NAROČILO'}
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    /* ================= PDF GENERACIJA - TERMO TISKALNIK ================= */
+    const jsPDF = window.jspdf.jsPDF;
+
+    function generateReceiptPDF(receipt, isCopy = false) {
+        // 1. Izračun dinamične višine (Širina termo papirja = 58mm)
+        let baseHeight = 90; // glava, noge, QR koda
+        let itemHeight = 6;
+        let totalHeight = baseHeight + (receipt.items.length * itemHeight);
+        
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
+        let y = 8;
+        
+        // --- Glava ---
+        if(isCopy) {
+            doc.setFillColor(0, 0, 0);
+            doc.rect(2, 2, 54, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text("KOPIJA RAČUNA", 29, 7, { align: "center" });
+            doc.setTextColor(0, 0, 0);
+            y += 8;
+        }
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("WII Shop", 29, y, { align: "center" });
+        y += 6;
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("RAČUN", 29, y, { align: "center" });
+        y += 4;
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(`St. racuna: ${receipt.id.toString().padStart(3, '0')}`, 29, y, { align: "center" });
+        doc.text(`Datum: ${new Date(receipt.date).toLocaleString()}`, 29, y+4, { align: "center" });
+        y += 8;
+
+        // --- Postavke ---
+        drawDashedLine(doc, y); y += 4;
+        
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "bold");
+        doc.text("ARTIKEL", 2, y);
+        doc.text("KOL", 36, y, { align: "center" });
+        doc.text("CENA", 56, y, { align: "right" });
+        y += 4;
+        
+        drawDashedLine(doc, y); y += 4;
+
+        doc.setFont("helvetica", "normal");
+        receipt.items.forEach(item => {
+            // Ime skrajšamo, da gre v vrstico
+            let name = item.naziv.substring(0, 18);
+            if(item.stornirano) name = "(STORNO) " + name.substring(0, 9);
+            
+            doc.text(name, 2, y);
+            doc.text(item.kol.toString(), 36, y, { align: "center" });
+            doc.text(item.total.toFixed(2), 56, y, { align: "right" });
+            y += itemHeight;
+        });
+
+        drawDashedLine(doc, y); y += 5;
+
+        // --- Total ---
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("ZA PLAČILO", 2, y);
+        doc.text(`${receipt.total.toFixed(2)} WII`, 56, y, { align: "right" });
+        y += 6;
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Nacin: ${receipt.method.toUpperCase()}`, 2, y);
+        doc.text(`Blagajnik: ${receipt.cashier}`, 56, y, { align: "right" });
+        y += 4;
+
+        drawDashedLine(doc, y); y += 5;
+
+        // --- QR Koda ---
+        const qr = new QRious({ value: `WII-RACUN-${receipt.id}`, size: 150 });
+        const qrData = qr.toDataURL();
+        doc.addImage(qrData, 'PNG', 19, y, 20, 20); // 58mm/2 = 29 center -> 29 - 10(polovica width) = 19
+        y += 26;
+
+        // --- Noga ---
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Hvala za nakup.", 29, y, { align: "center" });
+
+        // Shrani PDF in označi kot natisnjeno
+        doc.save(`Racun_${receipt.id}.pdf`);
+        
+        if(!isCopy) {
+            let printed = JSON.parse(localStorage.getItem('wii_printed_receipts') || '[]');
+            if(!printed.includes(receipt.id)) {
+                printed.push(receipt.id);
+                localStorage.setItem('wii_printed_receipts', JSON.stringify(printed));
+                renderWorkspaces();
+            }
+        }
+    }
+
+    function generateOrderPDF(order) {
+        let totalHeight = 85; 
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
+        let y = 10;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("WII Shop", 29, y, { align: "center" });
+        y += 8;
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("NAROČILO", 29, y, { align: "center" });
+        y += 10;
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        let txt = doc.splitTextToSize("Predložite ta listek na blagajni za plačilo.", 54);
+        doc.text(txt, 29, y, { align: "center" });
+        y += 12;
+
+        const qr = new QRious({ value: `WII-NARO-${order.id}`, size: 200 });
+        const qrData = qr.toDataURL();
+        doc.addImage(qrData, 'PNG', 14, y, 30, 30);
+        y += 35;
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(`ŠT. NAROČILA: ${order.id}`, 29, y, { align: "center" });
+
+        doc.save(`Narocilo_${order.id}.pdf`);
+
+        let printed = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
+        if(!printed.includes(order.id)) {
+            printed.push(order.id);
+            localStorage.setItem('wii_printed_orders', JSON.stringify(printed));
+            renderWorkspaces();
+        }
+    }
+
+    /* Pomožna funkcija za risanje črtkane črte v jsPDF */
+    function drawDashedLine(doc, y) {
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(150, 150, 150);
+        for(let i=2; i<56; i+=3) { doc.line(i, y, i+1.5, y); }
+        doc.setDrawColor(0, 0, 0);
+    }
+
+    /* ================= MANAGER KOPIJA ================= */
+    function printCopy() {
+        let idStr = document.getElementById('copy-receipt-id').value;
+        let statusEl = document.getElementById('copy-status');
+        if(!idStr) { statusEl.innerText = "Vnesite številko računa!"; return; }
+        
+        let id = parseInt(idStr);
+        let rec = dbData.receipts.find(r => r.id === id);
+        
+        if(rec) {
+            statusEl.style.color = "green";
+            statusEl.innerText = `Račun #${id} najden. Pripravljam kopijo...`;
+            generateReceiptPDF(rec, true);
+        } else {
+            statusEl.style.color = "red";
+            statusEl.innerText = `Napaka: Račun #${id} ne obstaja!`;
+        }
+    }
+</script>
+</body>
+</html>
