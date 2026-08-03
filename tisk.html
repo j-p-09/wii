@@ -2,8 +2,8 @@
 <html lang="sl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Tiskalnica Računov</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WII Tiskalnica Računov - Mobile</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -21,65 +21,76 @@
     }
 
     * { box-sizing: border-box; font-family: 'Arial', sans-serif; margin: 0; padding: 0; user-select: none; }
-    body { background-color: var(--bg-color); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+    body { background-color: var(--bg-color); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* HEADER */
     .header { 
-        background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        background: var(--primary); color: white; padding: 15px; display: flex; flex-direction: column; gap: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
     }
-    .header h1 { font-size: 20px; }
-    .status-badge { background: #ff4d4d; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; }
+    .status-badge { background: #ff4d4d; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 12px; text-align: center; }
     .status-badge.logged-in { background: #4caf50; }
 
-    /* MAIN MENU */
-    .menu-container { display: flex; gap: 15px; padding: 20px; background: #e9ecef; border-bottom: 2px solid var(--border); }
-    .menu-container button { 
-        flex: 1; padding: 15px; font-size: 16px; font-weight: bold; cursor: pointer;
-        border: none; border-radius: 8px; background: var(--panel-bg); color: var(--primary);
-        box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: 0.2s;
+    /* MOBILE MENU (Scrollable) */
+    .menu-container { 
+        display: flex; overflow-x: auto; white-space: nowrap; padding: 10px; 
+        background: #e9ecef; border-bottom: 2px solid var(--border);
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
-    .menu-container button:active { transform: translateY(2px); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .menu-container::-webkit-scrollbar { display: none; }
+    .menu-container button { 
+        flex: 0 0 auto; padding: 12px 15px; font-size: 14px; font-weight: bold; cursor: pointer;
+        border: none; border-radius: 8px; background: var(--panel-bg); color: var(--primary);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-right: 10px; transition: 0.2s;
+    }
     .menu-container button.active-tab { background: var(--primary); color: white; }
 
     /* WORKSPACE */
-    .workspace { flex: 1; padding: 20px; overflow-y: auto; display: none; flex-direction: column; gap: 10px; }
+    .workspace { flex: 1; padding: 15px; overflow-y: auto; display: none; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
     .workspace.active { display: flex; }
 
     /* LIST ITEMS */
     .list-item { 
         background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #aaa;
-        display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .list-item.pending { border-left-color: #999; background: #f0f0f0; color: #666; }
     .list-item.ready { border-left-color: #ff4d4d; border: 2px solid #ff4d4d; }
-    .list-item.printed { border-left-color: #4caf50; opacity: 0.7; }
+    .list-item.printed { border-left-color: #4caf50; opacity: 0.8; }
+    .list-item.highlight { border-left-color: var(--primary); background: #eef4fb; }
     
-    .list-info h3 { font-size: 18px; margin-bottom: 5px; }
-    .list-info.ready h3 { color: #ff4d4d; font-weight: 900; }
+    .list-info h3 { font-size: 16px; margin-bottom: 5px; }
+    .list-info p { font-size: 14px; color: #555; }
     
     .btn-print { 
-        background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; 
-        font-weight: bold; cursor: pointer; font-size: 14px;
+        background: var(--primary); color: white; border: none; padding: 12px; border-radius: 5px; 
+        font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; text-align: center;
     }
-    .btn-print.ready { background: #ff4d4d; font-size: 16px; padding: 12px 25px; animation: pulse 1.5s infinite; }
+    .btn-print.ready { background: #ff4d4d; animation: pulse 1.5s infinite; }
+    .btn-print.action { background: #28a745; }
 
     @keyframes pulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
-        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.5); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(255, 77, 77, 0); }
         100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
     }
+
+    /* MANAGER SECTION */
+    .manager-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; }
+    .manager-box h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 5px; }
+    .input-field { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 5px; }
 
     /* MODAL (LOCK SCREEN) */
     .modal-overlay { 
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-        background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; 
+        background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; 
     }
-    .modal-box { background: white; padding: 25px; border-radius: 10px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .modal-box h2 { margin-bottom: 15px; color: var(--primary); }
-    .modal-box input { width: 100%; padding: 12px; font-size: 20px; text-align: center; margin-bottom: 15px; border: 2px solid var(--border); border-radius: 5px; }
-    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .numpad button { padding: 15px; font-size: 20px; border: none; background: #e9ecef; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .modal-box { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; }
+    .modal-box h2 { margin-bottom: 10px; color: var(--primary); }
+    .modal-box input { width: 100%; padding: 15px; font-size: 24px; text-align: center; margin-bottom: 15px; border: 2px solid var(--border); border-radius: 5px; }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .numpad button { padding: 15px; font-size: 22px; border: none; background: #e9ecef; border-radius: 5px; cursor: pointer; font-weight: bold; }
     .numpad button:active { background: #ced4da; }
     
     .hidden { display: none !important; }
@@ -88,36 +99,61 @@
 <body>
 
     <div class="header">
-        <h1>🖨️ WII Tiskalnica</h1>
+        <div class="header-top">
+            <h1>🖨️ WII Tiskalnica</h1>
+        </div>
         <div id="cashier-status" class="status-badge">BLAGAJNA ZAKLENJENA</div>
     </div>
 
     <div class="menu-container">
-        <button id="tab-racuni" class="active-tab" onclick="switchTab('racuni')">🧾 NATISNI RAČUN</button>
-        <button id="tab-narocila" onclick="switchTab('narocila')">📦 NATISNI NAROČILO</button>
-        <button id="tab-zgodovina" onclick="switchTab('zgodovina')">💼 MANAGER ZGODOVINA</button>
+        <button id="tab-blagajna" class="active-tab" onclick="switchTab('blagajna')">⚡ BLAGAJNA</button>
+        <button id="tab-racuni" onclick="switchTab('racuni')">🧾 RAČUNI</button>
+        <button id="tab-narocila" onclick="switchTab('narocila')">📦 NAROČILA</button>
+        <button id="tab-manager" onclick="switchTab('manager')">💼 MANAGER</button>
     </div>
 
-    <div id="ws-racuni" class="workspace active"></div>
+    <div id="ws-blagajna" class="workspace active">
+        <div class="list-item highlight">
+            <h3>Najnovejši račun</h3>
+            <p>Ko se na blagajni zaključi račun, se bo pojavil tukaj za hiter tisk.</p>
+        </div>
+        <div id="latest-receipt-container"></div>
+    </div>
+
+    <div id="ws-racuni" class="workspace"></div>
 
     <div id="ws-narocila" class="workspace"></div>
 
-    <div id="ws-zgodovina" class="workspace">
-        <div class="list-item" style="flex-direction: column; align-items: flex-start; gap: 15px;">
-            <h3>Iskanje in tiskanje kopije računa</h3>
-            <div style="display: flex; gap: 10px; width: 100%;">
-                <input type="number" id="copy-receipt-id" placeholder="Številka računa (npr. 3)" style="padding: 10px; font-size: 16px; flex: 1;">
-                <button class="btn-print" onclick="printCopy()">NATISNI KOPIJO</button>
+    <div id="ws-manager" class="workspace">
+        
+        <div class="manager-box" id="shift-container">
+            <h3>🕒 Upravljanje Izmene</h3>
+            
+            <div id="prijava-form">
+                <p style="font-size:14px; color:#666; margin-bottom:10px;">Blagajna trenutno ni prijavljena.</p>
+                <select id="shift-user" class="input-field"></select>
+                <input type="number" id="shift-deposit" class="input-field" placeholder="Začetni depozit (WII)">
+                <button class="btn-print action" onclick="prijaviIzmeno()">PRIJAVI IN NATISNI</button>
             </div>
-            <p id="copy-status" style="color: red; font-weight: bold;"></p>
+
+            <div id="odjava-form" class="hidden">
+                <p id="shift-info" style="font-size:14px; color:green; margin-bottom:10px; font-weight:bold;"></p>
+                <button class="btn-print" style="background:#dc3545;" onclick="odjaviIzmeno()">ODJAVI IN NATISNI IZKUPIČEK</button>
+            </div>
+        </div>
+
+        <div class="manager-box">
+            <h3>Tisk Kopije Računa</h3>
+            <input type="number" id="copy-receipt-id" class="input-field" placeholder="Številka računa (npr. 3)">
+            <button class="btn-print" onclick="printCopy()">NATISNI KOPIJO</button>
+            <p id="copy-status" style="font-weight: bold; margin-top:5px; font-size:14px;"></p>
         </div>
     </div>
 
     <div class="modal-overlay" id="lock-screen">
         <div class="modal-box">
             <h2>Prijava Tiskalnice</h2>
-            <p style="margin-bottom: 10px; color: #666;">Vnesite PIN ali skenirajte kartico</p>
-            <input type="password" id="login-pin" readonly>
+            <input type="password" id="login-pin" readonly placeholder="PIN / Kartica">
             <div class="numpad">
                 <button onclick="pinInput('1')">1</button><button onclick="pinInput('2')">2</button><button onclick="pinInput('3')">3</button>
                 <button onclick="pinInput('4')">4</button><button onclick="pinInput('5')">5</button><button onclick="pinInput('6')">6</button>
@@ -136,7 +172,7 @@
     const database = firebase.database();
 
     /* ================= GLOBAL variables ================= */
-    let dbData = { users: [], receipts: [], orders: [] };
+    let dbData = { users: [], receipts: [], orders: [], currentShift: null };
     let activeUser = null;
     let pinBuffer = "";
 
@@ -148,31 +184,34 @@
             if(!dbData.receipts) dbData.receipts = [];
             if(!dbData.orders) dbData.orders = [];
             renderWorkspaces();
+            populateShiftUsers();
         }
     });
 
+    /* ================= POMOŽNE FUNKCIJE ================= */
+    function cleanText(str) {
+        if(!str) return "";
+        // Zamenjava šumnikov v navadne črke za jsPDF
+        return str.replace(/[čć]/g, 'c').replace(/[ČĆ]/g, 'C')
+                  .replace(/š/g, 's').replace(/Š/g, 'S')
+                  .replace(/ž/g, 'z').replace(/Ž/g, 'Z');
+    }
+
     /* ================= LOGIN LOGIKA ================= */
-    function pinInput(num) { 
-        pinBuffer += num; 
-        document.getElementById('login-pin').value = "*".repeat(pinBuffer.length); 
-    }
-    function pinClear() { 
-        pinBuffer = ""; 
-        document.getElementById('login-pin').value = ""; 
-    }
+    function pinInput(num) { pinBuffer += num; document.getElementById('login-pin').value = "*".repeat(pinBuffer.length); }
+    function pinClear() { pinBuffer = ""; document.getElementById('login-pin').value = ""; }
     function pinEnter() {
-        if(!dbData.users) return alert("Baza uporabnikov še ni naložena!");
+        if(!dbData.users) return alert("Baza še ni naložena!");
         const user = dbData.users.find(u => u.card === pinBuffer || u.id === pinBuffer);
         if(user) {
             activeUser = user;
             document.getElementById('lock-screen').classList.add('hidden');
             const badge = document.getElementById('cashier-status');
-            badge.innerText = `Prijavljen blagajnik: ${user.name}`;
+            badge.innerText = `Prijavljen: ${user.name}`;
             badge.classList.add('logged-in');
             renderWorkspaces();
         } else {
-            alert("Napačen PIN!");
-            pinClear();
+            alert("Napačen PIN!"); pinClear();
         }
     }
 
@@ -188,165 +227,217 @@
 
     /* ================= RENDER LIST (LIVE DATA) ================= */
     function renderWorkspaces() {
-        if(!activeUser) return; // Ne riši, če ni prijavljen
+        if(!activeUser) return; 
+        let printedReceipts = JSON.parse(localStorage.getItem('wii_printed_receipts') || '[]');
+        let receipts = [...dbData.receipts].reverse(); 
 
-        // --- RAČUNI ---
+        // --- ZAVIHEK BLAGAJNA (Samo najnovejši) ---
+        const wsLatest = document.getElementById('latest-receipt-container');
+        wsLatest.innerHTML = '';
+        if(receipts.length > 0) {
+            let latest = receipts[0];
+            let isPrinted = printedReceipts.includes(latest.id);
+            wsLatest.innerHTML = `
+                <div class="list-item ${isPrinted ? 'printed' : 'ready'}">
+                    <div class="list-info">
+                        <h3>RAČUN #${latest.id}</h3>
+                        <p>${new Date(latest.date).toLocaleString()}<br>Skupaj: <b>${latest.total.toFixed(2)} WII</b></p>
+                    </div>
+                    <button class="btn-print ${isPrinted ? '' : 'ready'}" onclick='generateReceiptPDF(${JSON.stringify(latest)}, false)'>
+                        ${isPrinted ? 'NATISNI ZNOVA' : 'NATISNI RAČUN'}
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- ZAVIHEK RAČUNI ---
         const wsRacuni = document.getElementById('ws-racuni');
         wsRacuni.innerHTML = '';
-        
-        // 1. Čaka na plačilo (Prikažemo tista naročila, ki so 'NAROČENO' kot simulacija sivega seznama)
-        let pendingOrders = dbData.orders.filter(o => o.status === 'NAROČENO');
-        pendingOrders.forEach(po => {
-            wsRacuni.innerHTML += `
-                <div class="list-item pending">
-                    <div class="list-info">
-                        <h3>ČAKA NA PLAČILO (Baza: Naročilo #${po.id})</h3>
-                        <p>Znesek: ${po.total.toFixed(2)} WII | Stranka: ${po.customer || 'Neznana'}</p>
-                    </div>
-                    <button class="btn-print" disabled style="background:#999; cursor:not-allowed;">NI PLAČANO</button>
-                </div>
-            `;
-        });
-
-        // 2. Plačani računi (Razvrstimo od najnovejšega dol)
-        let receipts = [...dbData.receipts].reverse(); 
         receipts.forEach(rec => {
-            // Preverimo, če je bil že natisnjen (lokalno shranjujemo array natisnjenih ID-jev)
-            let printedIds = JSON.parse(localStorage.getItem('wii_printed_receipts') || '[]');
-            let isPrinted = printedIds.includes(rec.id);
-            
-            let itemClass = isPrinted ? 'printed' : 'ready';
-            let btnClass = isPrinted ? '' : 'ready';
-            let btnText = isPrinted ? 'NATISNI ZNOVA' : 'NATISNI RAČUN';
-            let titleClass = isPrinted ? '' : 'ready';
-
+            let isPrinted = printedReceipts.includes(rec.id);
             wsRacuni.innerHTML += `
-                <div class="list-item ${itemClass}">
-                    <div class="list-info ${titleClass}">
-                        <h3>${isPrinted ? `Račun #${rec.id}` : `AKTUALNI RAČUN #${rec.id} (Plačano!)`}</h3>
-                        <p>${new Date(rec.date).toLocaleString()} | Znesek: ${rec.total.toFixed(2)} WII</p>
+                <div class="list-item ${isPrinted ? 'printed' : 'ready'}">
+                    <div class="list-info">
+                        <h3>Račun #${rec.id}</h3>
+                        <p>${new Date(rec.date).toLocaleString()} | Znesek: <b>${rec.total.toFixed(2)} WII</b></p>
                     </div>
-                    <button class="btn-print ${btnClass}" onclick='generateReceiptPDF(${JSON.stringify(rec)}, false)'>${btnText}</button>
+                    <button class="btn-print ${isPrinted ? '' : 'ready'}" onclick='generateReceiptPDF(${JSON.stringify(rec)}, false)'>${isPrinted ? 'TISKAJ ZNOVA' : 'NATISNI'}</button>
                 </div>
             `;
         });
 
-        // --- NAROČILA ---
+        // --- ZAVIHEK NAROČILA ---
         const wsNarocila = document.getElementById('ws-narocila');
         wsNarocila.innerHTML = '';
-        
+        let printedOrders = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
         let orders = [...dbData.orders].reverse();
         orders.forEach(ord => {
-            let printedIds = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
-            let isPrinted = printedIds.includes(ord.id);
-            
+            let isPrinted = printedOrders.includes(ord.id);
             wsNarocila.innerHTML += `
                 <div class="list-item ${isPrinted ? 'printed' : 'ready'}">
                     <div class="list-info">
-                        <h3>Naročilo #${ord.id} - ${ord.status}</h3>
-                        <p>${new Date(ord.date).toLocaleString()} | Znesek: ${ord.total.toFixed(2)} WII</p>
+                        <h3>Naročilo #${ord.id} (${ord.status})</h3>
+                        <p>${new Date(ord.date).toLocaleString()} | Znesek: <b>${ord.total.toFixed(2)} WII</b></p>
                     </div>
                     <button class="btn-print ${isPrinted ? '' : 'ready'}" onclick='generateOrderPDF(${JSON.stringify(ord)})'>
-                        ${isPrinted ? 'NATISNI ZNOVA' : 'NATISNI NAROČILO'}
+                        ${isPrinted ? 'TISKAJ ZNOVA' : 'NATISNI'}
                     </button>
                 </div>
             `;
         });
+
+        // --- MANAGER IZMENA UI ---
+        const pForm = document.getElementById('prijava-form');
+        const oForm = document.getElementById('odjava-form');
+        const sInfo = document.getElementById('shift-info');
+        
+        if(dbData.currentShift) {
+            pForm.classList.add('hidden');
+            oForm.classList.remove('hidden');
+            let d = new Date(dbData.currentShift.startTime).toLocaleString();
+            sInfo.innerText = `Izmena odprta: ${d}\nBlagajnik: ${dbData.currentShift.cashierName}\nDepozit: ${dbData.currentShift.deposit.toFixed(2)} WII`;
+        } else {
+            pForm.classList.remove('hidden');
+            oForm.classList.add('hidden');
+        }
+    }
+
+    function populateShiftUsers() {
+        const sel = document.getElementById('shift-user');
+        sel.innerHTML = '<option value="">-- Izberi Blagajnika --</option>';
+        if(dbData.users) {
+            dbData.users.filter(u => u.role !== 'customer').forEach(u => {
+                sel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+            });
+        }
+    }
+
+    /* ================= IZMENE (MANAGER) ================= */
+    function prijaviIzmeno() {
+        let user = document.getElementById('shift-user').value;
+        let dep = parseFloat(document.getElementById('shift-deposit').value);
+        if(!user || isNaN(dep)) return alert("Izpolni vsa polja!");
+
+        let shiftData = {
+            startTime: new Date().toISOString(),
+            cashierName: user,
+            deposit: dep
+        };
+
+        // Shrani v bazo
+        database.ref('wii_db_v3/currentShift').set(shiftData);
+        
+        // Natisni potrdilo
+        generateShiftPDF(shiftData, "PRIJAVA BLAGAJNE", null);
+        
+        document.getElementById('shift-deposit').value = "";
+    }
+
+    function odjaviIzmeno() {
+        if(!dbData.currentShift) return;
+        let shift = dbData.currentShift;
+        let endTime = new Date();
+        
+        // Izračuni
+        let stRacunov = 0;
+        let sumGotovina = 0;
+        let sumKartica = 0;
+        let seznam = [];
+
+        dbData.receipts.forEach(r => {
+            if(new Date(r.date) >= new Date(shift.startTime)) {
+                stRacunov++;
+                seznam.push(r);
+                if(r.method === 'gotovina') sumGotovina += r.total;
+                if(r.method === 'kartica') sumKartica += r.total;
+            }
+        });
+
+        let stats = {
+            endTime: endTime.toISOString(),
+            stRacunov: stRacunov,
+            sumGotovina: sumGotovina,
+            sumKartica: sumKartica,
+            seznam: seznam
+        };
+
+        // Natisni potrdilo
+        generateShiftPDF(shift, "ODJAVA BLAGAJNE", stats);
+
+        // Počisti izmeno v bazi
+        database.ref('wii_db_v3/currentShift').remove();
     }
 
     /* ================= PDF GENERACIJA - TERMO TISKALNIK ================= */
     const jsPDF = window.jspdf.jsPDF;
 
     function generateReceiptPDF(receipt, isCopy = false) {
-        // 1. Izračun dinamične višine (Širina termo papirja = 58mm)
-        let baseHeight = 90; // glava, noge, QR koda
+        // Dinamična višina
+        let baseHeight = 110; // Več prostora za noge in plačilo
         let itemHeight = 6;
         let totalHeight = baseHeight + (receipt.items.length * itemHeight);
         
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
         let y = 8;
         
-        // --- Glava ---
         if(isCopy) {
-            doc.setFillColor(0, 0, 0);
-            doc.rect(2, 2, 54, 8, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.text("KOPIJA RAČUNA", 29, 7, { align: "center" });
-            doc.setTextColor(0, 0, 0);
-            y += 8;
+            doc.setFillColor(0, 0, 0); doc.rect(2, 2, 54, 8, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+            doc.text("KOPIJA RACUNA", 29, 7, { align: "center" });
+            doc.setTextColor(0, 0, 0); y += 10;
         }
 
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text("WII Shop", 29, y, { align: "center" });
-        y += 6;
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.text("WII Shop", 29, y, { align: "center" }); y += 6;
 
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("RAČUN", 29, y, { align: "center" });
-        y += 4;
+        doc.setFontSize(16); doc.setFont("helvetica", "bold");
+        doc.text("RACUN", 29, y, { align: "center" }); y += 6;
 
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
         doc.text(`St. racuna: ${receipt.id.toString().padStart(3, '0')}`, 29, y, { align: "center" });
         doc.text(`Datum: ${new Date(receipt.date).toLocaleString()}`, 29, y+4, { align: "center" });
         y += 8;
 
-        // --- Postavke ---
         drawDashedLine(doc, y); y += 4;
-        
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "bold");
-        doc.text("ARTIKEL", 2, y);
-        doc.text("KOL", 36, y, { align: "center" });
-        doc.text("CENA", 56, y, { align: "right" });
-        y += 4;
-        
-        drawDashedLine(doc, y); y += 4;
+        doc.setFontSize(7); doc.setFont("helvetica", "bold");
+        doc.text("ARTIKEL", 2, y); doc.text("KOL", 36, y, { align: "center" }); doc.text("CENA", 56, y, { align: "right" });
+        y += 4; drawDashedLine(doc, y); y += 4;
 
         doc.setFont("helvetica", "normal");
         receipt.items.forEach(item => {
-            // Ime skrajšamo, da gre v vrstico
-            let name = item.naziv.substring(0, 18);
+            let name = cleanText(item.naziv).substring(0, 18);
             if(item.stornirano) name = "(STORNO) " + name.substring(0, 9);
-            
             doc.text(name, 2, y);
             doc.text(item.kol.toString(), 36, y, { align: "center" });
             doc.text(item.total.toFixed(2), 56, y, { align: "right" });
             y += itemHeight;
         });
 
-        drawDashedLine(doc, y); y += 5;
+        drawDashedLine(doc, y); y += 6;
 
-        // --- Total ---
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("ZA PLAČILO", 2, y);
-        doc.text(`${receipt.total.toFixed(2)} WII`, 56, y, { align: "right" });
-        y += 6;
+        // --- Total & Podatki o plačilu (Razširjeno) ---
+        doc.setFontSize(12); doc.setFont("helvetica", "bold");
+        doc.text("ZA PLACILO:", 2, y); doc.text(`${receipt.total.toFixed(2)} WII`, 56, y, { align: "right" });
+        y += 8;
 
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Nacin: ${receipt.method.toUpperCase()}`, 2, y);
-        doc.text(`Blagajnik: ${receipt.cashier}`, 56, y, { align: "right" });
-        y += 4;
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.text("PODATKI O TRANSAKCIJI:", 2, y); y += 5;
+        doc.text(`Nacin placila:`, 2, y); doc.text(cleanText(receipt.method).toUpperCase(), 56, y, {align:"right"}); y += 4;
+        doc.text(`Blagajnik:`, 2, y); doc.text(cleanText(receipt.cashier), 56, y, {align:"right"}); y += 4;
+        
+        if(receipt.customer) {
+            doc.text(`Stranka:`, 2, y); doc.text(cleanText(receipt.customer), 56, y, {align:"right"}); y += 4;
+        }
 
-        drawDashedLine(doc, y); y += 5;
+        y += 2; drawDashedLine(doc, y); y += 5;
 
-        // --- QR Koda ---
+        // QR
         const qr = new QRious({ value: `WII-RACUN-${receipt.id}`, size: 150 });
-        const qrData = qr.toDataURL();
-        doc.addImage(qrData, 'PNG', 19, y, 20, 20); // 58mm/2 = 29 center -> 29 - 10(polovica width) = 19
-        y += 26;
+        doc.addImage(qr.toDataURL(), 'PNG', 19, y, 20, 20); y += 26;
 
-        // --- Noga ---
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10); doc.setFont("helvetica", "bold");
         doc.text("Hvala za nakup.", 29, y, { align: "center" });
 
-        // Shrani PDF in označi kot natisnjeno
         doc.save(`Racun_${receipt.id}.pdf`);
         
         if(!isCopy) {
@@ -360,49 +451,76 @@
     }
 
     function generateOrderPDF(order) {
-        let totalHeight = 85; 
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 85] });
         let y = 10;
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text("WII Shop", 29, y, { align: "center" });
-        y += 8;
-
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("NAROČILO", 29, y, { align: "center" });
-        y += 10;
-
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        let txt = doc.splitTextToSize("Predložite ta listek na blagajni za plačilo.", 54);
-        doc.text(txt, 29, y, { align: "center" });
-        y += 12;
+        doc.setFontSize(10); doc.text("WII Shop", 29, y, { align: "center" }); y += 8;
+        doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text("NAROCILO", 29, y, { align: "center" }); y += 10;
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
+        let txt = doc.splitTextToSize("Predlozite ta listek na blagajni za placilo.", 54);
+        doc.text(txt, 29, y, { align: "center" }); y += 12;
 
         const qr = new QRious({ value: `WII-NARO-${order.id}`, size: 200 });
-        const qrData = qr.toDataURL();
-        doc.addImage(qrData, 'PNG', 14, y, 30, 30);
-        y += 35;
-
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.text(`ŠT. NAROČILA: ${order.id}`, 29, y, { align: "center" });
+        doc.addImage(qr.toDataURL(), 'PNG', 14, y, 30, 30); y += 35;
+        doc.setFontSize(14); doc.setFont("helvetica", "bold");
+        doc.text(`ST. NAROCILA: ${order.id}`, 29, y, { align: "center" });
 
         doc.save(`Narocilo_${order.id}.pdf`);
-
         let printed = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
         if(!printed.includes(order.id)) {
-            printed.push(order.id);
-            localStorage.setItem('wii_printed_orders', JSON.stringify(printed));
-            renderWorkspaces();
+            printed.push(order.id); localStorage.setItem('wii_printed_orders', JSON.stringify(printed)); renderWorkspaces();
         }
     }
 
-    /* Pomožna funkcija za risanje črtkane črte v jsPDF */
+    function generateShiftPDF(shift, title, stats) {
+        let extraHeight = stats ? (stats.seznam.length * 5) + 50 : 20;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 70 + extraHeight] });
+        let y = 10;
+
+        doc.setFontSize(12); doc.setFont("helvetica", "bold");
+        doc.text(cleanText(title), 29, y, { align: "center" }); y += 8;
+
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.text(`Blagajnik: ${cleanText(shift.cashierName)}`, 2, y); y += 5;
+        doc.text(`Zacetek: ${new Date(shift.startTime).toLocaleString()}`, 2, y); y += 5;
+        doc.text(`Zacetni depozit: ${shift.deposit.toFixed(2)} WII`, 2, y); y += 8;
+
+        drawDashedLine(doc, y); y += 5;
+
+        if(stats) {
+            doc.text(`Konec: ${new Date(stats.endTime).toLocaleString()}`, 2, y); y += 8;
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("STATISTIKA PRODAJE:", 2, y); y += 5;
+            doc.setFont("helvetica", "normal");
+            doc.text(`Izdani racuni: ${stats.stRacunov}`, 2, y); y += 5;
+            doc.text(`Skupaj GOTOVINA: ${stats.sumGotovina.toFixed(2)}`, 2, y); y += 5;
+            doc.text(`Skupaj KARTICA: ${stats.sumKartica.toFixed(2)}`, 2, y); y += 8;
+
+            let expected = shift.deposit + stats.sumGotovina;
+            doc.setFont("helvetica", "bold");
+            doc.text(`PRICAKOVANA GOTOVINA:`, 2, y); y += 5;
+            doc.text(`${expected.toFixed(2)} WII`, 2, y); y += 8;
+
+            drawDashedLine(doc, y); y += 5;
+            doc.text("SEZNAM RACUNOV:", 2, y); y += 5;
+            doc.setFont("helvetica", "normal");
+            
+            if(stats.seznam.length === 0) {
+                doc.text("Ni izdanih racunov.", 2, y);
+            } else {
+                stats.seznam.forEach(r => {
+                    doc.text(`#${r.id} - ${cleanText(r.method)}`, 2, y);
+                    doc.text(`${r.total.toFixed(2)}`, 56, y, {align:"right"});
+                    y += 5;
+                });
+            }
+        }
+
+        doc.save(`${title.replace(' ', '_')}.pdf`);
+    }
+
     function drawDashedLine(doc, y) {
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(150, 150, 150);
+        doc.setLineWidth(0.5); doc.setDrawColor(150, 150, 150);
         for(let i=2; i<56; i+=3) { doc.line(i, y, i+1.5, y); }
         doc.setDrawColor(0, 0, 0);
     }
@@ -411,18 +529,16 @@
     function printCopy() {
         let idStr = document.getElementById('copy-receipt-id').value;
         let statusEl = document.getElementById('copy-status');
-        if(!idStr) { statusEl.innerText = "Vnesite številko računa!"; return; }
+        if(!idStr) { statusEl.innerText = "Vnesite številko računa!"; statusEl.style.color = "red"; return; }
         
         let id = parseInt(idStr);
         let rec = dbData.receipts.find(r => r.id === id);
         
         if(rec) {
-            statusEl.style.color = "green";
-            statusEl.innerText = `Račun #${id} najden. Pripravljam kopijo...`;
+            statusEl.style.color = "green"; statusEl.innerText = `Kopija računa #${id} se tiska...`;
             generateReceiptPDF(rec, true);
         } else {
-            statusEl.style.color = "red";
-            statusEl.innerText = `Napaka: Račun #${id} ne obstaja!`;
+            statusEl.style.color = "red"; statusEl.innerText = `Napaka: Račun #${id} ne obstaja!`;
         }
     }
 </script>
