@@ -18,6 +18,7 @@
         --bg-color: #f4f7f6;
         --panel-bg: #ffffff;
         --primary: #3a6ea5;
+        --danger: #dc3545;
         --text: #333333;
         --border: #cccccc;
     }
@@ -61,6 +62,7 @@
     .list-item.ready { border-left-color: #ff4d4d; border: 2px solid #ff4d4d; }
     .list-item.printed { border-left-color: #4caf50; opacity: 0.8; }
     .list-item.highlight { border-left-color: var(--primary); background: #eef4fb; }
+    .list-item.fine { border-left-color: var(--danger); }
     
     .list-info h3 { font-size: 16px; margin-bottom: 5px; }
     .list-info p { font-size: 14px; color: #555; }
@@ -71,6 +73,7 @@
     }
     .btn-print.ready { background: #ff4d4d; animation: pulse 1.5s infinite; }
     .btn-print.action { background: #28a745; }
+    .btn-print.danger { background: var(--danger); }
 
     @keyframes pulse {
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.5); }
@@ -78,10 +81,16 @@
         100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
     }
 
-    /* MANAGER / FORM BOX */
+    /* MANAGER / KAZNI BOX */
     .manager-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; }
     .manager-box h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 5px; }
     .input-field { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 5px; }
+
+    /* TABLE FOR FINES */
+    .fine-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+    .fine-table th, .fine-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    .fine-table th { background-color: #f2f2f2; }
+    .btn-remove { background: #ff4d4d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
 
     /* MODAL (LOCK SCREEN) */
     .modal-overlay { 
@@ -113,8 +122,8 @@
         <button id="tab-blagajna" class="active-tab" onclick="switchTab('blagajna')">⚡ BLAGAJNA</button>
         <button id="tab-racuni" onclick="switchTab('racuni')">🧾 RAČUNI</button>
         <button id="tab-narocila" onclick="switchTab('narocila')">📦 NAROČILA</button>
-        <button id="tab-kazni" onclick="switchTab('kazni')">⚠️ KAZNI</button>
         <button id="tab-manager" onclick="switchTab('manager')">💼 MANAGER</button>
+        <button id="tab-kazni" onclick="switchTab('kazni')">⚠️ KAZNI</button>
     </div>
 
     <!-- WORKSPACE: BLAGAJNA (Samo najnovejši račun) -->
@@ -132,44 +141,12 @@
     <!-- WORKSPACE: NAROČILA -->
     <div id="ws-narocila" class="workspace"></div>
 
-    <!-- WORKSPACE: KAZNI -->
-    <div id="ws-kazni" class="workspace">
-        <div class="manager-box">
-            <h3>⚠️ Izdaja Kazni</h3>
-            
-            <label style="font-size:12px; font-weight:bold;">Kaznovana stranka:</label>
-            <select id="penalty-customer" class="input-field"></select>
-
-            <label style="font-size:12px; font-weight:bold;">Kazen izdal (zaposleni):</label>
-            <select id="penalty-issuer" class="input-field"></select>
-
-            <hr style="margin: 5px 0;">
-            <label style="font-size:12px; font-weight:bold;">Vnos prekrškov:</label>
-            <div style="display:flex; gap:5px; margin-bottom:5px;">
-                <input type="text" id="penalty-item-name" class="input-field" placeholder="Opis prekrška" style="flex:2; margin:0;">
-                <input type="number" id="penalty-item-price" class="input-field" placeholder="Cena (WII)" style="flex:1; margin:0;">
-                <button class="btn-print action" style="width:auto; padding:0 15px;" onclick="addPenaltyItem()">+</button>
-            </div>
-
-            <div id="penalty-items-list" style="display:flex; flex-direction:column; gap:5px; margin-bottom:10px;"></div>
-
-            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:18px; margin-bottom:10px; background:#e9ecef; padding:10px; border-radius:5px;">
-                <span>SKUPAJ:</span>
-                <span id="penalty-total-display">0.00 WII</span>
-            </div>
-
-            <button class="btn-print ready" onclick="saveAndPrintPenalty()">SHRANI IN NATISNI KAZEN</button>
-        </div>
-    </div>
-
     <!-- WORKSPACE: MANAGER -->
     <div id="ws-manager" class="workspace">
-        
         <!-- Izmena Box -->
         <div class="manager-box" id="shift-container">
             <h3>🕒 Upravljanje Izmene</h3>
             
-            <!-- Prijava Form -->
             <div id="prijava-form">
                 <p style="font-size:14px; color:#666; margin-bottom:10px;">Blagajna trenutno ni prijavljena.</p>
                 <select id="shift-user" class="input-field"></select>
@@ -177,7 +154,6 @@
                 <button class="btn-print action" onclick="prijaviIzmeno()">PRIJAVI IN NATISNI</button>
             </div>
 
-            <!-- Odjava Form -->
             <div id="odjava-form" class="hidden">
                 <p id="shift-info" style="font-size:14px; color:green; margin-bottom:10px; font-weight:bold;"></p>
                 <button class="btn-print" style="background:#dc3545;" onclick="odjaviIzmeno()">ODJAVI IN NATISNI IZKUPIČEK</button>
@@ -191,6 +167,46 @@
             <button class="btn-print" onclick="printCopy()">NATISNI KOPIJO</button>
             <p id="copy-status" style="font-weight: bold; margin-top:5px; font-size:14px;"></p>
         </div>
+    </div>
+
+    <!-- WORKSPACE: KAZNI -->
+    <div id="ws-kazni" class="workspace">
+        <div class="manager-box">
+            <h3>⚠️ Izdaja Kazni</h3>
+            
+            <label style="font-size: 12px; font-weight: bold;">Kaznovana stranka:</label>
+            <select id="fine-customer" class="input-field"></select>
+
+            <label style="font-size: 12px; font-weight: bold;">Kazen izdal:</label>
+            <select id="fine-issuer" class="input-field"></select>
+
+            <label style="font-size: 12px; font-weight: bold;">Dodaj prekršek:</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="fine-offense-name" class="input-field" placeholder="Opis prekrška" style="flex: 2;">
+                <input type="number" id="fine-offense-price" class="input-field" placeholder="Cena (WII)" style="flex: 1;">
+                <button onclick="addFineOffense()" style="padding: 10px; background: var(--primary); color: white; border: none; border-radius: 5px; font-weight: bold;">+</button>
+            </div>
+
+            <table class="fine-table">
+                <thead>
+                    <tr>
+                        <th>Prekršek</th>
+                        <th>Cena</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="fine-items-body"></tbody>
+            </table>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <span style="font-weight: bold; font-size: 16px;">SKUPAJ:</span>
+                <span id="fine-total-price" style="font-weight: bold; font-size: 18px; color: var(--danger);">0.00 WII</span>
+            </div>
+
+            <button class="btn-print danger" style="margin-top: 10px;" onclick="saveFine()">SHRANI KAZEN</button>
+        </div>
+
+        <div id="saved-fine-container"></div>
     </div>
 
     <!-- LOCK SCREEN MODAL -->
@@ -216,10 +232,11 @@
     const database = firebase.database();
 
     /* ================= GLOBAL VARIABLES ================= */
-    let dbData = { users: [], receipts: [], orders: [], currentShift: null, penalties: [] };
+    let dbData = { users: [], receipts: [], orders: [], currentShift: null };
     let activeUser = null;
     let pinBuffer = "";
-    let penaltyItems = [];
+    let currentFineItems = [];
+    let lastSavedFine = null;
 
     // Sinhronizacija z bazo v realnem času
     database.ref('wii_db_v3').on('value', (snapshot) => {
@@ -229,8 +246,7 @@
             if(!dbData.receipts) dbData.receipts = [];
             if(!dbData.orders) dbData.orders = [];
             renderWorkspaces();
-            populateShiftUsers();
-            populatePenaltyDropdowns();
+            populateSelectOptions();
         }
     });
 
@@ -270,13 +286,13 @@
         renderWorkspaces();
     }
 
-    /* ================= RENDER LIST (LIVE DATA) ================= */
+    /* ================= RENDER WORKSPACES ================= */
     function renderWorkspaces() {
         if(!activeUser) return; 
         let printedReceipts = JSON.parse(localStorage.getItem('wii_printed_receipts') || '[]');
         let receipts = [...dbData.receipts].reverse(); 
 
-        // --- ZAVIHEK BLAGAJNA ---
+        // --- BLAGAJNA ---
         const wsLatest = document.getElementById('latest-receipt-container');
         wsLatest.innerHTML = '';
         if(receipts.length > 0) {
@@ -295,7 +311,7 @@
             `;
         }
 
-        // --- ZAVIHEK RAČUNI ---
+        // --- RAČUNI ---
         const wsRacuni = document.getElementById('ws-racuni');
         wsRacuni.innerHTML = '';
         receipts.forEach(rec => {
@@ -311,7 +327,7 @@
             `;
         });
 
-        // --- ZAVIHEK NAROČILA ---
+        // --- NAROČILA ---
         const wsNarocila = document.getElementById('ws-narocila');
         wsNarocila.innerHTML = '';
         let printedOrders = JSON.parse(localStorage.getItem('wii_printed_orders') || '[]');
@@ -345,108 +361,112 @@
             pForm.classList.remove('hidden');
             oForm.classList.add('hidden');
         }
+
+        // --- KAZNI PRINT CONTAINER ---
+        renderSavedFine();
     }
 
-    function populateShiftUsers() {
-        const sel = document.getElementById('shift-user');
-        sel.innerHTML = '<option value="">-- Izberi Blagajnika --</option>';
+    function populateSelectOptions() {
+        const shiftSel = document.getElementById('shift-user');
+        const fineCustSel = document.getElementById('fine-customer');
+        const fineIssSel = document.getElementById('fine-issuer');
+
+        shiftSel.innerHTML = '<option value="">-- Izberi Blagajnika --</option>';
+        fineCustSel.innerHTML = '<option value="">-- Izberi Kaznovanega --</option>';
+        fineIssSel.innerHTML = '<option value="">-- Izberi Izdajatelja --</option>';
+
         if(dbData.users) {
-            dbData.users.filter(u => u.role !== 'customer').forEach(u => {
-                sel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+            dbData.users.forEach(u => {
+                fineCustSel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+                if(u.role !== 'customer') {
+                    shiftSel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+                    fineIssSel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
+                }
             });
         }
     }
 
     /* ================= KAZNI LOGIKA ================= */
-    function populatePenaltyDropdowns() {
-        const custSel = document.getElementById('penalty-customer');
-        const issSel = document.getElementById('penalty-issuer');
-        if(!custSel || !issSel) return;
+    function addFineOffense() {
+        let nameEl = document.getElementById('fine-offense-name');
+        let priceEl = document.getElementById('fine-offense-price');
+        
+        let name = nameEl.value.trim();
+        let price = parseFloat(priceEl.value);
 
-        let currentCust = custSel.value;
-        let currentIss = issSel.value;
-
-        custSel.innerHTML = '<option value="">-- Izberi Kaznovanega --</option>';
-        issSel.innerHTML = '<option value="">-- Izberi Izdajatelja --</option>';
-
-        if(dbData.users) {
-            dbData.users.forEach(u => {
-                custSel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
-            });
-            dbData.users.filter(u => u.role !== 'customer').forEach(u => {
-                issSel.innerHTML += `<option value="${u.name}">${u.name}</option>`;
-            });
+        if(!name || isNaN(price) || price <= 0) {
+            return alert("Vnesite veljaven opis in ceno prekrška!");
         }
 
-        if(currentCust) custSel.value = currentCust;
-        if(currentIss) issSel.value = currentIss;
+        currentFineItems.push({ name: name, price: price });
+        nameEl.value = "";
+        priceEl.value = "";
+        renderFineTable();
     }
 
-    function addPenaltyItem() {
-        let nameInput = document.getElementById('penalty-item-name');
-        let priceInput = document.getElementById('penalty-item-price');
-        let name = nameInput.value.trim();
-        let price = parseFloat(priceInput.value);
-
-        if(!name || isNaN(price) || price <= 0) return alert("Vnesite veljaven prekršek in ceno!");
-
-        penaltyItems.push({ name, price });
-        nameInput.value = "";
-        priceInput.value = "";
-        renderPenaltyItems();
+    function removeFineOffense(index) {
+        currentFineItems.splice(index, 1);
+        renderFineTable();
     }
 
-    function removePenaltyItem(index) {
-        penaltyItems.splice(index, 1);
-        renderPenaltyItems();
-    }
-
-    function renderPenaltyItems() {
-        let container = document.getElementById('penalty-items-list');
-        container.innerHTML = "";
+    function renderFineTable() {
+        let tbody = document.getElementById('fine-items-body');
+        tbody.innerHTML = "";
         let total = 0;
 
-        penaltyItems.forEach((item, index) => {
+        currentFineItems.forEach((item, index) => {
             total += item.price;
-            container.innerHTML += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:8px 12px; border:1px solid #ccc; border-radius:5px;">
-                    <span style="font-size:14px;">${item.name} (<b>${item.price.toFixed(2)} WII</b>)</span>
-                    <button onclick="removePenaltyItem(${index})" style="background:#dc3545; color:white; border:none; border-radius:3px; padding:4px 8px; font-weight:bold; cursor:pointer;">X</button>
-                </div>
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.price.toFixed(2)} WII</td>
+                    <td><button class="btn-remove" onclick="removeFineOffense(${index})">X</button></td>
+                </tr>
             `;
         });
 
-        document.getElementById('penalty-total-display').innerText = total.toFixed(2) + " WII";
+        document.getElementById('fine-total-price').innerText = `${total.toFixed(2)} WII`;
     }
 
-    function saveAndPrintPenalty() {
-        let customer = document.getElementById('penalty-customer').value;
-        let issuer = document.getElementById('penalty-issuer').value;
+    function saveFine() {
+        let customer = document.getElementById('fine-customer').value;
+        let issuer = document.getElementById('fine-issuer').value;
 
-        if(!customer || !issuer) return alert("Izberite kaznovano stranko in izdajatelja!");
-        if(penaltyItems.length === 0) return alert("Dodajte vsaj en prekršek!");
+        if(!customer || !issuer) return alert("Izberite stranko in izdajatelja kazni!");
+        if(currentFineItems.length === 0) return alert("Dodajte vsaj en prekršek!");
 
-        let total = penaltyItems.reduce((sum, item) => sum + item.price, 0);
-        let penaltyData = {
-            id: Date.now(),
+        let total = currentFineItems.reduce((sum, i) => sum + i.price, 0);
+
+        lastSavedFine = {
             customer: customer,
             issuer: issuer,
-            items: penaltyItems,
+            items: [...currentFineItems],
             total: total,
             date: new Date().toISOString()
         };
 
-        // Shrani v Firebase
-        database.ref('wii_db_v3/penalties/' + penaltyData.id).set(penaltyData);
+        // Resetiraj vnosna polja
+        currentFineItems = [];
+        renderFineTable();
+        renderSavedFine();
+    }
 
-        // Natisni PDF Kazen
-        generatePenaltyPDF(penaltyData);
+    function renderSavedFine() {
+        let container = document.getElementById('saved-fine-container');
+        if(!container) return;
+        container.innerHTML = "";
 
-        // Ponastavi obrazec
-        penaltyItems = [];
-        renderPenaltyItems();
-        document.getElementById('penalty-customer').value = "";
-        document.getElementById('penalty-issuer').value = "";
+        if(lastSavedFine) {
+            container.innerHTML = `
+                <div class="list-item fine ready" style="margin-top: 15px;">
+                    <div class="list-info">
+                        <h3 style="color: var(--danger);">⚠️ KAZEN PRIPRAVLJENA FOR PRINT</h3>
+                        <p>Kaznovan: <b>${lastSavedFine.customer}</b><br>Skupaj: <b>${lastSavedFine.total.toFixed(2)} WII</b></p>
+                    </div>
+                    <button class="btn-print ready" onclick='generateFinePDF(${JSON.stringify(lastSavedFine)})'>NATISNI KAZEN</button>
+                </div>
+            `;
+        }
     }
 
     /* ================= IZMENE (MANAGER) ================= */
@@ -497,11 +517,11 @@
         database.ref('wii_db_v3/currentShift').remove();
     }
 
-    /* ================= PDF GENERACIJA ================= */
+    /* ================= PDF GENERACIJA - TERMO TISKALNIK ================= */
     const jsPDF = window.jspdf.jsPDF;
 
     function generateReceiptPDF(receipt, isCopy = false) {
-        let baseHeight = 110; 
+        let baseHeight = 110;
         let itemHeight = 6;
         let totalHeight = baseHeight + (receipt.items.length * itemHeight);
         
@@ -597,71 +617,6 @@
         }
     }
 
-    function generatePenaltyPDF(penalty) {
-        let baseHeight = 130;
-        let itemHeight = 7;
-        let totalHeight = baseHeight + (penalty.items.length * itemHeight);
-
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
-        let y = 10;
-
-        // Naslov
-        doc.setFontSize(12); doc.setFont("helvetica", "bold");
-        doc.text("OBVESTILO O PREJETI KAZNI", 29, y, { align: "center" }); y += 7;
-
-        doc.setFontSize(9); doc.setFont("helvetica", "normal");
-        doc.text("za", 29, y, { align: "center" }); y += 6;
-
-        // Kaznovana oseba (krepko, večje)
-        doc.setFontSize(13); doc.setFont("helvetica", "bold");
-        doc.text(cleanText(penalty.customer), 29, y, { align: "center" }); y += 8;
-
-        drawDashedLine(doc, y); y += 5;
-
-        // Prekrški
-        doc.setFontSize(9); doc.setFont("helvetica", "bold");
-        doc.text("PREKRSIKI IN CENE:", 2, y); y += 6;
-        
-        doc.setFontSize(8); doc.setFont("helvetica", "normal");
-        penalty.items.forEach(item => {
-            let name = cleanText(item.name).substring(0, 22);
-            doc.text(name, 2, y);
-            doc.text(`${item.price.toFixed(2)} WII`, 56, y, { align: "right" });
-            y += itemHeight;
-        });
-
-        drawDashedLine(doc, y); y += 6;
-
-        // Skupni znesek
-        doc.setFontSize(11); doc.setFont("helvetica", "bold");
-        doc.text("SKUPNA CENA:", 2, y);
-        doc.text(`${penalty.total.toFixed(2)} WII`, 56, y, { align: "right" });
-        y += 8;
-
-        drawDashedLine(doc, y); y += 5;
-
-        // QR Koda
-        const qr = new QRious({ value: '0095127633290', size: 180 });
-        doc.addImage(qr.toDataURL(), 'PNG', 16, y, 26, 26);
-        y += 30;
-
-        // Navodila
-        doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
-        let instructionText = "Kazen prinesete na WII blagajno, kjer pokazete listek. Casa imate 24 ur. Prve 3 ure po izdani kazni se znesek razpolovi. Po 10 urah znesek izgubi 20% vrednosti. Po vec kot omenjenem casu se izplaca popolen znesek.";
-        let splitText = doc.splitTextToSize(instructionText, 54);
-        doc.text(splitText, 2, y);
-        y += (splitText.length * 3.5) + 4;
-
-        drawDashedLine(doc, y); y += 5;
-
-        // Noga (Datum in Izdajatelj)
-        doc.setFontSize(8); doc.setFont("helvetica", "normal");
-        doc.text(`Kazen izdana - ${new Date(penalty.date).toLocaleString()}`, 2, y); y += 5;
-        doc.text(`Izdal: ${cleanText(penalty.issuer)}`, 2, y);
-
-        doc.save(`Kazen_${cleanText(penalty.customer).replace(/\s+/g, '_')}.pdf`);
-    }
-
     function generateShiftPDF(shift, title, stats) {
         let extraHeight = stats ? (stats.seznam.length * 5) + 50 : 20;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 70 + extraHeight] });
@@ -708,6 +663,71 @@
         }
 
         doc.save(`${title.replace(' ', '_')}.pdf`);
+    }
+
+    function generateFinePDF(fine) {
+        let baseHeight = 135;
+        let itemHeight = 6;
+        let totalHeight = baseHeight + (fine.items.length * itemHeight);
+
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, totalHeight] });
+        let y = 10;
+
+        // Naslov
+        doc.setFontSize(11); doc.setFont("helvetica", "bold");
+        doc.text("OBVESTILO O PREJETI KAZNI", 29, y, { align: "center" }); y += 7;
+
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
+        doc.text("za", 29, y, { align: "center" }); y += 6;
+
+        // Ime kaznovanega
+        doc.setFontSize(13); doc.setFont("helvetica", "bold");
+        doc.text(cleanText(fine.customer), 29, y, { align: "center" }); y += 8;
+
+        drawDashedLine(doc, y); y += 5;
+
+        // Postavke prekrškov
+        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        doc.text("PREKRSEK", 2, y);
+        doc.text("CENA", 56, y, { align: "right" });
+        y += 5; drawDashedLine(doc, y); y += 5;
+
+        doc.setFont("helvetica", "normal");
+        fine.items.forEach(item => {
+            let name = cleanText(item.name).substring(0, 22);
+            doc.text(name, 2, y);
+            doc.text(`${item.price.toFixed(2)} WII`, 56, y, { align: "right" });
+            y += itemHeight;
+        });
+
+        drawDashedLine(doc, y); y += 6;
+
+        // Skupaj
+        doc.setFontSize(11); doc.setFont("helvetica", "bold");
+        doc.text("SKUPAJ:", 2, y);
+        doc.text(`${fine.total.toFixed(2)} WII`, 56, y, { align: "right" });
+        y += 8;
+
+        drawDashedLine(doc, y); y += 5;
+
+        // QR Koda
+        const qr = new QRious({ value: "0095127633290", size: 180 });
+        doc.addImage(qr.toDataURL(), 'PNG', 17, y, 24, 24); y += 28;
+
+        // Navodilo
+        doc.setFontSize(7); doc.setFont("helvetica", "normal");
+        let instructionText = "Kazen prinesete na WII blagajno, kjer pokazete listek. Casa imate 24 ur. Prve 3 ure po izdani kazni se znesek razpolovi. Po 10 urah znesek izgubi 20% vrednosti. Po vec kot omenjenem casu se izplaca popolen znesek.";
+        let splitInstruction = doc.splitTextToSize(instructionText, 54);
+        doc.text(splitInstruction, 29, y, { align: "center" }); y += (splitInstruction.length * 3.5) + 4;
+
+        drawDashedLine(doc, y); y += 5;
+
+        // Noga
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.text(`Kazen izdana: ${new Date(fine.date).toLocaleString()}`, 2, y); y += 4;
+        doc.text(`Izdal: ${cleanText(fine.issuer)}`, 2, y);
+
+        doc.save(`Kazen_${cleanText(fine.customer).replace(' ', '_')}.pdf`);
     }
 
     function drawDashedLine(doc, y) {
