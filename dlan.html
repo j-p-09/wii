@@ -14,86 +14,153 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
 <style>
-    /* RETRO POS STYLING */
+    /* VIBRANT & MODERN POS STYLING WITH FULL SCROLLING */
     :root {
-        --pos-bg: #d4d0c8;
-        --pos-panel: #ece9d8;
-        --pos-border-light: #ffffff;
-        --pos-border-dark: #808080;
-        --pos-border-darker: #404040;
-        --pos-blue: #3a6ea5;
-        --pos-text: #000000;
-        --pos-highlight: #0a246a;
+        --pos-bg: linear-gradient(135deg, #1e1e2f 0%, #2a2a40 100%);
+        --pos-panel: #2d2b45;
+        --pos-card: #363457;
+        --pos-accent: #ff4757;
+        --pos-blue: #2e86de;
+        --pos-green: #10ac84;
+        --pos-purple: #5f27cd;
+        --pos-orange: #ff9f43;
+        --pos-yellow: #feca57;
+        --pos-text: #ffffff;
+        --pos-text-muted: #c8d6e5;
+        --pos-highlight: #ff6b6b;
     }
 
-    * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif !important; margin: 0; padding: 0; user-select: none; }
-    body { background-color: var(--pos-bg); color: var(--pos-text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 18px; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif !important; margin: 0; padding: 0; }
     
-    /* 3D Gumbi */
+    html, body { 
+        background: #1e1e2f;
+        background-attachment: fixed;
+        color: var(--pos-text); 
+        min-height: 100vh;
+        height: 100%;
+        overflow-y: auto !important; /* Omogočeno drsenje / slajdanje dol */
+        -webkit-overflow-scrolling: touch;
+        font-size: 18px; 
+    }
+    
+    /* Moderni Barviti Gumbi */
     button { 
-        cursor: pointer; background: var(--pos-bg); color: var(--pos-text); font-weight: bold; font-size: 18px;
-        border-top: 2px solid var(--pos-border-light); border-left: 2px solid var(--pos-border-light);
-        border-right: 2px solid var(--pos-border-darker); border-bottom: 2px solid var(--pos-border-darker);
-        padding: 10px; box-shadow: inset 1px 1px 0px #fff, inset -1px -1px 0px var(--pos-border-dark);
+        cursor: pointer; 
+        background: linear-gradient(135deg, #383654 0%, #2b2942 100%); 
+        color: var(--pos-text); 
+        font-weight: bold; 
+        font-size: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 12px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        transition: all 0.2s ease;
     }
     button:active {
-        border-top: 2px solid var(--pos-border-darker); border-left: 2px solid var(--pos-border-darker);
-        border-right: 2px solid var(--pos-border-light); border-bottom: 2px solid var(--pos-border-light);
-        box-shadow: inset 1px 1px 0px var(--pos-border-dark); padding: 11px 9px 9px 11px;
+        transform: scale(0.97);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
     
     input { 
-        padding: 8px; font-size: 18px; 
-        border-top: 2px solid var(--pos-border-dark); border-left: 2px solid var(--pos-border-dark);
-        border-right: 2px solid var(--pos-border-light); border-bottom: 2px solid var(--pos-border-light);
+        padding: 12px; font-size: 18px; 
+        background: #252338;
+        color: #fff;
+        border: 2px solid var(--pos-purple);
+        border-radius: 10px;
     }
-    input:focus { outline: none; background: #ffffcc; }
+    input:focus { outline: none; border-color: var(--pos-yellow); background: #2d2948; }
 
     /* POGLEDI (Views) */
-    .view { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+    .view { display: none; flex-direction: column; min-height: 100vh; height: auto; overflow-y: auto; padding-bottom: 20px; }
     .view.active { display: flex; }
 
     /* LOGINA & WELCOME */
-    .center-box { margin: auto; padding: 20px; background: var(--pos-panel); border: 3px outset #fff; text-align: center; width: 90%; max-width: 400px; }
-    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; }
-    .numpad button { height: 60px; font-size: 24px; }
+    .center-box { margin: auto; padding: 25px; background: var(--pos-panel); border-radius: 20px; border: 2px solid var(--pos-purple); text-align: center; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+    .numpad button { height: 60px; font-size: 24px; background: linear-gradient(135deg, #4834d4, #686de0); border: none; border-radius: 10px; }
     
-    .long-btn { width: 100%; margin: 8px 0; padding: 15px; font-size: 20px; text-align: center; }
+    .long-btn { width: 100%; margin: 8px 0; padding: 16px; font-size: 20px; text-align: center; border-radius: 12px; border: none; }
 
     /* GLAVNI SISTEM / MAIN LAYOUT */
-    .top-tray { background: var(--pos-blue); color: white; padding: 10px; text-align: center; font-weight: bold; border-bottom: 2px solid var(--pos-border-darker); display: flex; justify-content: space-between; align-items: center; }
+    .top-tray { 
+        background: linear-gradient(90deg, #ff4757, #ff6b81, #5f27cd); 
+        color: white; 
+        padding: 14px 16px; 
+        text-align: center; 
+        font-weight: bold; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
     
-    .workspace { flex: 1; overflow-y: auto; padding: 5px; background: #fff; border: 2px inset #808080; margin: 5px; display: flex; flex-direction: column; gap: 5px; }
+    /* GUMBI PRESTAVLJENI VIŠJE / TOP NAV BAR FIX */
+    .sys-actions { 
+        display: flex; 
+        gap: 8px; 
+        padding: 10px; 
+        background: var(--pos-panel); 
+        border-bottom: 2px solid rgba(255,255,255,0.1); 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .sys-actions button { flex: 1; height: 55px; font-size: 16px; border-radius: 10px; }
+
+    .order-actions { 
+        display: flex; 
+        gap: 8px; 
+        padding: 10px; 
+        background: var(--pos-panel); 
+        border-bottom: 2px solid rgba(255,255,255,0.1); 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .order-actions button { flex: 1; height: 55px; font-size: 16px; border-radius: 10px; }
+    .order-actions .btn-pay { background: linear-gradient(135deg, #10ac84, #1dd1a1); color: white; border: none; }
+
+    .workspace { flex: 1; overflow-y: auto; padding: 10px; background: #252338; border-radius: 15px; margin: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4); }
     
     /* Gumbi za skupine in artikle */
-    .grid-btn-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .item-btn { height: 80px; font-size: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; white-space: normal; line-height: 1.2; }
-    .group-btn { background: #a9b8c2; height: 70px; }
+    .grid-btn-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .item-btn { 
+        height: 85px; 
+        font-size: 16px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center; 
+        white-space: normal; 
+        line-height: 1.2; 
+        background: linear-gradient(135deg, #00d2d3 0%, #01a3a4 100%);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+    }
+    .group-btn { 
+        background: linear-gradient(135deg, #ff9f43 0%, #ee5253 100%); 
+        height: 75px; 
+        border: none;
+        color: #fff;
+        font-size: 18px;
+        border-radius: 12px;
+    }
 
     /* Tabela vozička */
-    .cart-list { flex: 1; overflow-y: auto; border: 1px solid #ccc; background: white; }
-    .cart-item { display: flex; justify-content: space-between; padding: 15px 10px; border-bottom: 1px solid #eee; align-items: center; }
-    .cart-item:active { background: var(--pos-highlight); color: white; }
-    .cart-item .qty { font-weight: bold; margin-right: 10px; }
-    .cart-item .price { font-weight: bold; }
-    .cart-total { padding: 15px; text-align: right; font-size: 24px; font-weight: bold; background: #e0e0e0; border-top: 2px solid #aaa; }
-
-    /* Spodnja vrstica z akcijami (Naročilo) */
-    .order-actions { display: flex; gap: 5px; padding: 5px; background: #a9b8c2; border-top: 2px solid var(--pos-border-dark); }
-    .order-actions button { flex: 1; height: 60px; font-size: 16px; }
-    .order-actions .btn-pay { background: #ccffcc; }
-
-    /* Spodnja vrstica sistema (Navigacija) */
-    .sys-actions { display: flex; gap: 5px; padding: 5px; background: var(--pos-panel); border-top: 2px solid var(--pos-border-light); }
-    .sys-actions button { flex: 1; height: 60px; font-size: 16px; }
+    .cart-list { flex: 1; overflow-y: auto; border-radius: 10px; background: #1e1e2f; padding: 5px; }
+    .cart-item { display: flex; justify-content: space-between; padding: 16px 12px; border-bottom: 1px solid #363457; align-items: center; border-radius: 8px; margin-bottom: 4px; background: #2d2b45; }
+    .cart-item:active { background: var(--pos-purple); color: white; }
+    .cart-item .qty { font-weight: bold; margin-right: 10px; color: var(--pos-yellow); }
+    .cart-item .price { font-weight: bold; color: #1dd1a1; }
+    .cart-total { padding: 15px; text-align: right; font-size: 24px; font-weight: bold; background: #363457; border-radius: 10px; color: var(--pos-yellow); margin-top: 8px; }
 
     /* Modali */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
     .modal-overlay.active { display: flex; }
-    .modal-box { background: var(--pos-bg); border: 3px outset #fff; width: 90%; max-width: 400px; padding: 15px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+    .modal-box { background: var(--pos-panel); border: 2px solid var(--pos-purple); border-radius: 20px; width: 100%; max-width: 420px; padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: center; color: white; box-shadow: 0 15px 30px rgba(0,0,0,0.7); }
 
-    .order-card { background: var(--pos-panel); border: 2px outset #fff; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-    .order-card:active { border-style: inset; }
+    .order-card { background: linear-gradient(135deg, #363457 0%, #2d2b45 100%); border-left: 5px solid var(--pos-yellow); border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .order-card:active { transform: scale(0.98); }
 
     .hidden { display: none !important; }
 </style>
@@ -103,26 +170,26 @@
     <!-- POGLED 1: PRIJAVA -->
     <div id="view-login" class="view active">
         <div class="center-box">
-            <h2 style="margin-bottom:15px;">PRIJAVA</h2>
+            <h2 style="margin-bottom:15px; color:var(--pos-yellow);">PRIJAVA</h2>
             <input type="password" id="login-pin" readonly placeholder="Kartica / PIN" style="width:100%; text-align:center;">
             <div class="numpad">
                 <button onclick="pinInput('1')">1</button><button onclick="pinInput('2')">2</button><button onclick="pinInput('3')">3</button>
                 <button onclick="pinInput('4')">4</button><button onclick="pinInput('5')">5</button><button onclick="pinInput('6')">6</button>
                 <button onclick="pinInput('7')">7</button><button onclick="pinInput('8')">8</button><button onclick="pinInput('9')">9</button>
-                <button onclick="pinClear()">C</button><button onclick="pinInput('0')">0</button><button onclick="login()" style="background:var(--pos-blue); color:white;">OK</button>
+                <button onclick="pinClear()" style="background: linear-gradient(135deg, #ee5253, #ff6b6b);">C</button><button onclick="pinInput('0')">0</button><button onclick="login()" style="background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white;">OK</button>
             </div>
         </div>
     </div>
 
     <!-- POGLED 2: WELCOME SCREEN -->
     <div id="view-welcome" class="view">
-        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding: 20px;">
-            <h1 style="text-align:center; margin-bottom: 30px; font-size: 28px;">Dobrodošel<br><span id="welcome-name" style="color:var(--pos-blue);"></span></h1>
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding: 20px; max-width:450px; margin:auto; width:100%;">
+            <h1 style="text-align:center; margin-bottom: 30px; font-size: 28px; color: white;">Dobrodošel<br><span id="welcome-name" style="color:var(--pos-yellow);"></span></h1>
             
-            <button class="long-btn" onclick="logout()">ODJAVA (<span id="btn-logout-name"></span>)</button>
-            <button class="long-btn" onclick="openSystem()" style="background:#ccffcc; height: 80px;">VSTOPI V SISTEM</button>
-            <button class="long-btn" onclick="openTiskalnica()">TISKALNICA</button>
-            <button class="long-btn" onclick="testTiskalnika()">TEST TISKALNIKA</button>
+            <button class="long-btn" onclick="openSystem()" style="background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white; height: 80px; font-size:22px;">🚀 VSTOPI V SISTEM</button>
+            <button class="long-btn" onclick="openTiskalnica()" style="background: linear-gradient(135deg, #2e86de, #54a0ff); color:white;">🖨️ TISKALNICA</button>
+            <button class="long-btn" onclick="testTiskalnika()" style="background: linear-gradient(135deg, #ff9f43, #feca57); color:white;">🧪 TEST TISKALNIKA</button>
+            <button class="long-btn" onclick="logout()" style="background: linear-gradient(135deg, #ee5253, #ff6b6b); color:white; margin-top:20px;">🔒 ODJAVA (<span id="btn-logout-name"></span>)</button>
         </div>
     </div>
 
@@ -132,13 +199,14 @@
             <span>AKTIVNA NAROČILA</span>
             <span id="sys-clock"></span>
         </div>
+        <!-- Akcijski gumbi prestavljeni na vrh, da niso odrezani na dnu -->
+        <div class="sys-actions">
+            <button onclick="openSystem()" style="background: linear-gradient(135deg, #5f27cd, #341f97); color:white;">Vsa naročila</button>
+            <button onclick="showMenu()" style="background: linear-gradient(135deg, #ff9f43, #ee5253); color:white;">Meni</button>
+            <button onclick="startNewOrder()" style="background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white;">+ Novo naročilo</button>
+        </div>
         <div class="workspace" id="orders-list">
             <!-- Dinamičen seznam naročil -->
-        </div>
-        <div class="sys-actions">
-            <button onclick="openSystem()">Vsa naročila</button>
-            <button onclick="showMenu()">Meni</button>
-            <button onclick="startNewOrder()" style="background: #cceeff;">Novo naročilo</button>
         </div>
     </div>
 
@@ -147,31 +215,32 @@
         <div class="top-tray">
             <div style="display:flex; align-items:center; gap:10px;">
                 <span id="order-title">Naročilo #---</span>
-                <button onclick="editCustomer()" style="font-size:12px; padding: 4px 8px;">👤 Stranka</button>
+                <button onclick="editCustomer()" style="font-size:12px; padding: 4px 8px; background: rgba(255,255,255,0.2); border:none; color:white;">👤 Stranka</button>
             </div>
             <span id="order-customer-name"></span>
         </div>
         
+        <!-- Akcijski gumbi prestavljeni na vrh -->
+        <div class="order-actions">
+            <button id="btn-toggle-view" onclick="toggleOrderView()" style="background: linear-gradient(135deg, #2e86de, #54a0ff); color:white;">☰ Pregled</button>
+            <button id="btn-action-middle" onclick="searchItem()" style="background: linear-gradient(135deg, #ff9f43, #feca57); color:white;">🔍 Iskanje</button>
+            <button id="btn-save-order" onclick="saveOrder()" style="background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white;">💾 Shrani</button>
+        </div>
+
         <!-- Področje Artiklov (Način dodajanja) -->
         <div class="workspace" id="order-add-mode">
-            <div style="padding:5px; font-weight:bold; background:#e0e0e0; text-align:center;" id="current-group-label">IZBERI SKUPINO</div>
+            <div style="padding:8px; font-weight:bold; background:#363457; text-align:center; color:var(--pos-yellow); border-radius:8px;" id="current-group-label">IZBERI SKUPINO</div>
             <div class="grid-btn-container" id="grid-content">
                 <!-- Skupine ali Artikli -->
             </div>
         </div>
 
         <!-- Področje Računa (Način pregleda) -->
-        <div class="workspace hidden" id="order-cart-mode" style="padding:0;">
+        <div class="workspace hidden" id="order-cart-mode" style="padding:5px;">
             <div class="cart-list" id="cart-list"></div>
             <div class="cart-total" id="cart-total">Skupaj: 0.00 WII</div>
             <!-- Tiskaj gumb po plačilu -->
-            <button id="btn-tiskaj" class="hidden" onclick="printCurrentReceipt()" style="margin: 10px; background:var(--pos-blue); color:white; height:60px;">🖨️ TISKAJ RAČUN</button>
-        </div>
-
-        <div class="order-actions">
-            <button id="btn-toggle-view" onclick="toggleOrderView()">☰ Pregled</button>
-            <button id="btn-action-middle" onclick="searchItem()">🔍 Iskanje</button>
-            <button id="btn-save-order" onclick="saveOrder()">Shrani</button>
+            <button id="btn-tiskaj" class="hidden" onclick="printCurrentReceipt()" style="margin-top: 10px; width:100%; background: linear-gradient(135deg, #2e86de, #5f27cd); color:white; height:60px; border:none;">🖨️ TISKAJ RAČUN</button>
         </div>
     </div>
 
@@ -181,15 +250,15 @@
         <div class="workspace" style="justify-content:center; padding:20px; align-items:center;">
             <p style="margin-bottom:10px;">Vnesi številko že plačanega računa:</p>
             <input type="number" id="reprint-id" style="width:100%; max-width:300px; text-align:center; font-size:24px; padding:15px;">
-            <button onclick="findAndReprint()" class="long-btn" style="max-width:300px; background:#cceeff; margin-top:20px;">IŠČI IN NATISNI</button>
-            <button onclick="document.getElementById('view-tiskalnica').classList.remove('active'); document.getElementById('view-welcome').classList.add('active');" class="long-btn" style="max-width:300px; margin-top:40px;">⬅ Nazaj</button>
+            <button onclick="findAndReprint()" class="long-btn" style="max-width:300px; background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white; margin-top:20px;">IŠČI IN NATISNI</button>
+            <button onclick="document.getElementById('view-tiskalnica').classList.remove('active'); document.getElementById('view-welcome').classList.add('active');" class="long-btn" style="max-width:300px; margin-top:20px; background: linear-gradient(135deg, #ee5253, #ff6b6b); color:white;">⬅ Nazaj</button>
         </div>
     </div>
 
     <!-- MODAL SYSTEM -->
     <div class="modal-overlay" id="custom-modal">
         <div class="modal-box">
-            <h3 id="modal-title">Naslov</h3>
+            <h3 id="modal-title" style="color:var(--pos-yellow);">Naslov</h3>
             <p id="modal-message">Sporočilo</p>
             <input type="text" id="modal-input" class="hidden">
             <div id="modal-numpad" class="numpad hidden">
@@ -237,6 +306,7 @@
     function switchView(viewId) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${viewId}`).classList.add('active');
+        window.scrollTo(0, 0);
     }
 
     setInterval(() => {
@@ -274,7 +344,7 @@
         let openOrders = dbData.orders.filter(o => o.status === 'NAROČENO');
         
         if(openOrders.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Ni odprtih naročil.</div>`;
+            container.innerHTML = `<div style="text-align:center; padding:20px; color:#c8d6e5;">Ni odprtih naročil.</div>`;
             return;
         }
 
@@ -283,10 +353,10 @@
             container.innerHTML += `
                 <div class="order-card" onclick="openExistingOrder(${o.id})">
                     <div>
-                        <div style="font-weight:bold; font-size:20px;">#${o.id} - ${o.customer || 'Miza'}</div>
-                        <div style="font-size:14px; color:#555;">Artiklov: ${o.items.length}</div>
+                        <div style="font-weight:bold; font-size:20px; color:#fff;">#${o.id} - ${o.customer || 'Miza'}</div>
+                        <div style="font-size:14px; color:#c8d6e5;">Artiklov: ${o.items.length}</div>
                     </div>
-                    <div style="font-size:20px; font-weight:bold;">${total.toFixed(2)} WII</div>
+                    <div style="font-size:20px; font-weight:bold; color:var(--pos-yellow);">${total.toFixed(2)} WII</div>
                 </div>
             `;
         });
@@ -294,7 +364,6 @@
 
     function showMenu() {
         alert("Prikazujem meni/katalog (Lahko služi kot hiter vpogled v artikle).");
-        // Lahko naredimo view samo za brskanje, trenutno ostane na system.
     }
 
     /* ================= NAROČILA ================= */
@@ -354,6 +423,8 @@
         
         let backBtn = document.createElement('button');
         backBtn.innerText = "⬅ NAZAJ";
+        backBtn.style.background = "linear-gradient(135deg, #5f27cd, #341f97)";
+        backBtn.style.color = "white";
         backBtn.onclick = () => renderGroups();
         container.appendChild(backBtn);
 
@@ -361,7 +432,7 @@
         items.forEach(it => {
             let btn = document.createElement('button');
             btn.className = 'item-btn';
-            btn.innerHTML = `<span>${it.naziv}</span><span style="font-size:14px; font-weight:normal;">${it.cena.toFixed(2)} WII</span>`;
+            btn.innerHTML = `<span>${it.naziv}</span><span style="font-size:14px; font-weight:normal; opacity:0.9;">${it.cena.toFixed(2)} WII</span>`;
             btn.onclick = () => addItemToOrder(it);
             container.appendChild(btn);
         });
@@ -377,7 +448,6 @@
                 koda: item.koda, naziv: item.naziv, kol: 1, cena: item.cena, popust: 0, total: item.cena
             });
         }
-        // Majhen feedback
         document.getElementById('current-group-label').innerText = `Dodano: ${item.naziv}`;
         setTimeout(() => { if(!isCartView) document.getElementById('current-group-label').innerText = `SKUPINA: ${item.skupina}`; }, 1000);
     }
@@ -470,7 +540,7 @@
             if(found.length > 0) {
                 let container = document.getElementById('grid-content');
                 document.getElementById('current-group-label').innerText = "REZULTATI ISKANJA";
-                container.innerHTML = '<button onclick="renderGroups()">⬅ NAZAJ</button>';
+                container.innerHTML = '<button onclick="renderGroups()" style="background:linear-gradient(135deg,#5f27cd,#341f97); color:white;">⬅ NAZAJ</button>';
                 found.forEach(it => {
                     let btn = document.createElement('button');
                     btn.className = 'item-btn';
@@ -515,9 +585,9 @@ Izberi način plačila:`, "none", null, true);
         
         let footer = document.getElementById('modal-footer');
         footer.innerHTML = `
-            <button onclick="processPayment('gotovina')" style="background:#ccffcc; font-size:20px; padding:10px;">💵 GOTOVINA</button>
-            <button onclick="processPayment('kartica')" style="background:#cceeff; font-size:20px; padding:10px;">💳 KARTICA</button>
-            <button onclick="closeModal()" style="background:#ffcccc; font-size:20px; padding:10px;">Prekliči</button>
+            <button onclick="processPayment('gotovina')" style="background: linear-gradient(135deg, #10ac84, #1dd1a1); color:white; font-size:18px; padding:12px;">💵 GOTOVINA</button>
+            <button onclick="processPayment('kartica')" style="background: linear-gradient(135deg, #2e86de, #54a0ff); color:white; font-size:18px; padding:12px;">💳 KARTICA</button>
+            <button onclick="closeModal()" style="background: linear-gradient(135deg, #ee5253, #ff6b6b); color:white; font-size:18px; padding:12px;">Prekliči</button>
         `;
     }
 
@@ -578,7 +648,11 @@ Izberi način plačila:`, "none", null, true);
 
     function cleanText(str) {
         if(!str) return "";
-        return str.replace(/[čć]/g, 'c').replace(/[ČĆ]/g, 'C').replace(/š/g, 's').replace(/Š/g, 'S').replace(/ž/g, 'z').replace(/Ž/g, 'Z');
+        return str.replace(/[čcć]/gi, function(m) { return m === m.toUpperCase() ? 'C' : 'c'; })
+                  .replace(/[šs]/gi, function(m) { return m === m.toUpperCase() ? 'S' : 's'; })
+                  .replace(/[žz]/gi, function(m) { return m === m.toUpperCase() ? 'Z' : 'z'; })
+                  .replace(/č/g, 'c').replace(/Č/g, 'C').replace(/ć/g, 'c').replace(/Ć/g, 'C')
+                  .replace(/š/g, 's').replace(/Š/g, 'S').replace(/ž/g, 'z').replace(/Ž/g, 'Z');
     }
 
     function drawDashedLine(doc, y) {
@@ -651,7 +725,6 @@ Izberi način plačila:`, "none", null, true);
         let receipt = dbData.receipts.find(r => r.id === currentOrder.receiptId);
         if(receipt) {
             buildReceiptPDF(receipt, false);
-            // Vrni se v sistem po tiskanju
             setTimeout(() => openSystem(), 1000);
         }
     }
@@ -674,8 +747,8 @@ Izberi način plačila:`, "none", null, true);
         doc.setFont("helvetica", "bold"); doc.setFontSize(14);
         doc.text("TEST TISKALNIKA", 29, 20, { align: "center" });
         doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text("Tiskalnik na dlančniku", 29, 30, { align: "center" });
-        doc.text("uspešno povezan!", 29, 36, { align: "center" });
+        doc.text("Tiskalnik na dlancniku", 29, 30, { align: "center" });
+        doc.text("uspesno povezan!", 29, 36, { align: "center" });
         drawDashedLine(doc, 45);
         const qr = new QRious({ value: `TEST-OK`, size: 100 });
         doc.addImage(qr.toDataURL(), 'PNG', 19, 50, 20, 20);
@@ -702,8 +775,8 @@ Izberi način plačila:`, "none", null, true);
         let footer = document.getElementById('modal-footer');
         if(!customFooter) {
             footer.innerHTML = `
-                <button onclick="closeModal(false)" style="padding:10px;">Prekliči</button>
-                <button onclick="closeModal(true)" style="background:var(--pos-blue); color:white; padding:10px;">Potrdi</button>
+                <button onclick="closeModal(false)" style="padding:10px; background:linear-gradient(135deg, #ee5253, #ff6b6b); color:white;">Prekliči</button>
+                <button onclick="closeModal(true)" style="background:linear-gradient(135deg, #10ac84, #1dd1a1); color:white; padding:10px;">Potrdi</button>
             `;
         }
     }
