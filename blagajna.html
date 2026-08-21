@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3 (Skupine & Prenosnik Sync)</title>
+<title>WII Blagajna - Polna Verzija v4 (Prenosnik Workflow & Fixes)</title>
 
 <!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -124,7 +124,7 @@
     .orders-workspace { flex: 1; overflow-y: auto; background: white; margin: 10px; padding: 10px; border: 2px inset #808080; }
 
     /* DLANČNIK / PRENOSNIK KARTICE */
-    .prenosnik-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 10px; }
+    .prenosnik-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 10px 0; }
     .order-card { background: #fdfdfd; border: 2px solid var(--pos-blue); padding: 10px; border-radius: 4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; }
     .order-card-header { background: var(--pos-blue); color: white; padding: 4px 8px; font-weight: bold; display: flex; justify-content: space-between; }
     .order-card-body { font-size: 14px; max-height: 120px; overflow-y: auto; border: 1px solid #eee; padding: 4px; background: #fff; }
@@ -203,11 +203,11 @@
     <div id="view-prenosnik" class="view-container">
         <div class="orders-layout">
             <div class="orders-tabs" style="background:#3a6ea5; color:white; align-items:center;">
-                <h2 style="font-size:20px; padding-left:10px;">📱 PRENOSNIK / DLANČNIK (Naročila v živo)</h2>
-                <span style="margin-left:auto; padding-right:15px; font-size:14px; color:#ccffcc;">🟢 Real-time Firebase Sync Aktiven</span>
+                <h2 style="font-size:20px; padding-left:10px;">📱 PRENOSNIK (Pregled naročil)</h2>
+                <span style="margin-left:auto; padding-right:15px; font-size:14px; color:#ccffcc;">🟢 Povezano s Firebase</span>
             </div>
             <div class="orders-workspace" id="prenosnik-content">
-                <!-- Dinamični prikaz kartic naročil -->
+                <!-- Dinamični prikaz kartic naročil (Nova in Plačana) -->
             </div>
         </div>
     </div>
@@ -323,7 +323,7 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    /* ================= BAZA PODATKOV (FIREBASE SYNC IN REAL TIME) ================= */
+    /* ================= BAZA PODATKOV ================= */
     let db = { groups: ['SHOP'], users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
     let isDbLoaded = false;
 
@@ -332,7 +332,7 @@
             const stored = snapshot.val();
             if (stored) {
                 db = stored;
-                if(!db.groups || db.groups.length === 0) db.groups = ['SHOP'];
+                if(!db.groups) db.groups = ['SHOP'];
                 if(!db.giftCards) db.giftCards = [];
                 if(!db.orders) db.orders = [];
                 if(!db.receipts) db.receipts = [];
@@ -340,44 +340,34 @@
                 if(!db.users) db.users = [];
                 if(!db.orderSeq) db.orderSeq = 100;
                 
-                // Nastavitev privzete skupine SHOP za vse artikle
-                db.items.forEach(it => {
-                    if(!it.skupina) it.skupina = 'SHOP';
-                });
+                // POPRAVEK: Avtomatsko osveži številko računa takoj ko baza naloži novo stanje!
+                if(db.seq) {
+                    document.getElementById('racun-st').innerText = db.seq.toString().padStart(3, '0');
+                }
 
+                db.items.forEach(it => { if(!it.skupina) it.skupina = 'SHOP'; });
                 db.users.forEach(u => { 
                     if(u.bankBalance === undefined) u.bankBalance = 500; 
                     if(!u.fines) u.fines = [];
                     if(!u.transactions) u.transactions = [];
                 });
                 
-                // Osvežitev pogledov v živo ob spremembah
-                if (document.getElementById('view-narocila').classList.contains('active')) {
-                    renderOrdersView('open');
-                }
-                if (document.getElementById('view-prenosnik').classList.contains('active')) {
-                    renderPrenosnikView();
-                }
+                // Osvežitev pogledov v živo
+                if (document.getElementById('view-narocila').classList.contains('active')) renderOrdersView('open');
+                if (document.getElementById('view-prenosnik').classList.contains('active')) renderPrenosnikView();
             } else {
                 db = {
                     groups: ['SHOP'],
                     users: [
                         { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [], transactions: [] },
                         { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [], transactions: [] },
-                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}], transactions: [] }
+                        { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [], transactions: [] }
                     ],
                     items: [
-                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48, skupina: 'SHOP' },
-                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00, skupina: 'SHOP' }
+                        { koda: '1001', naziv: 'KAVA', cena: 1.50, skupina: 'SHOP' },
+                        { koda: '1002', naziv: 'COCA COLA', cena: 2.50, skupina: 'SHOP' }
                     ],
-                    receipts: [],
-                    orders: [],
-                    giftCards: [
-                        { code: 'BON10', value: 10 }
-                    ],
-                    register: { expectedCash: 0 },
-                    seq: 3,
-                    orderSeq: 100
+                    receipts: [], orders: [], giftCards: [], register: { expectedCash: 0 }, seq: 3, orderSeq: 100
                 };
                 saveDB();
             }
@@ -389,9 +379,7 @@
         });
     }
 
-    function saveDB() { 
-        database.ref('wii_db_v3').set(db); 
-    }
+    function saveDB() { database.ref('wii_db_v3').set(db); }
 
     /* ================= GLOBALNO STANJE ================= */
     let cart = [];
@@ -418,7 +406,7 @@
     }
 
     function initReceipt() {
-        document.getElementById('racun-st').innerText = db.seq.toString().padStart(3, '0');
+        if(db && db.seq) document.getElementById('racun-st').innerText = db.seq.toString().padStart(3, '0');
         activeCustomer = null;
         currentOrderId = null;
         document.getElementById('racun-stranka').innerText = "";
@@ -432,8 +420,7 @@
         document.getElementById('modal-title').innerText = title;
         
         const msgEl = document.getElementById('modal-message');
-        if(isHtml) msgEl.innerHTML = message;
-        else msgEl.innerText = message;
+        if(isHtml) msgEl.innerHTML = message; else msgEl.innerText = message;
         
         const inpText = document.getElementById('modal-input');
         const inpPass = document.getElementById('modal-password');
@@ -442,8 +429,7 @@
         
         inpText.classList.add('hidden'); inpText.value = '';
         inpPass.classList.add('hidden'); inpPass.value = '';
-        numpad.classList.add('hidden');
-        footer.innerHTML = '';
+        numpad.classList.add('hidden'); footer.innerHTML = '';
         modalCallback = onConfirm;
 
         let activeInput = null;
@@ -468,7 +454,7 @@
             btnO.onclick = () => closeModal(true, activeInput ? activeInput.value : null);
             footer.appendChild(btnC); footer.appendChild(btnO);
         } else if (type === 'none') {
-            const btnC = document.createElement('button'); btnC.innerText = 'Prekliči / Zapri';
+            const btnC = document.createElement('button'); btnC.innerText = 'Zapri';
             btnC.onclick = () => closeModal(false);
             footer.appendChild(btnC);
         }
@@ -517,13 +503,6 @@
 
         document.getElementById('skupaj-znesek').innerText = totalWii.toFixed(2) + ' WII';
         document.getElementById('skupaj-popust').innerText = totalDiscount.toFixed(2);
-
-        localStorage.setItem('wii_projekcija_data', JSON.stringify({
-            status: 'buying',
-            cart: cart.filter(i => i.koda !== '' || i.naziv !== ''),
-            total: totalWii.toFixed(2),
-            customer: activeCustomer ? activeCustomer.name : ""
-        }));
     }
 
     function cellEdit(index, field, value) {
@@ -535,8 +514,7 @@
         if (field === 'koda') {
             const found = db.items.find(i => i.koda === val);
             if (found) {
-                cart[index].naziv = found.naziv;
-                cart[index].cena = found.cena;
+                cart[index].naziv = found.naziv; cart[index].cena = found.cena;
                 cart[index].kol = 1; cart[index].popust = 0;
                 if (index === cart.length - 1) cart.push({ koda: '', naziv: '', kol: 1, cena: 0, popust: 0, total: 0 });
             }
@@ -545,62 +523,95 @@
     }
 
     function voidItem(index) { cart.splice(index, 1); updateCartUI(); }
-
     function applyDiscount() {
         showModal({title: "Popust", message: "Vnesi % popusta za celoten nakup:", type: "prompt", inputType: "number", showNumpad: true, onConfirm: (v) => {
             let proc = parseFloat(v);
-            if(proc > 0 && proc <= 100) {
-                cart.forEach(item => { if(item.koda||item.naziv) item.popust = proc; });
-                updateCartUI();
-            }
+            if(proc > 0 && proc <= 100) { cart.forEach(item => { if(item.koda||item.naziv) item.popust = proc; }); updateCartUI(); }
         }});
     }
 
-    /* ================= PRENOSNIK / DLANČNIK REAL-TIME POGLED ================= */
+    /* ================= PRENOSNIK (WORKFLOW ZA DLANČNIK) ================= */
     window.renderPrenosnikView = function() {
         let container = document.getElementById('prenosnik-content');
-        let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
+        
+        // Ločimo na Nova naročila in Plačana naročila
+        let newOrders = db.orders.filter(o => o.status === 'NAROČENO');
+        let paidOrders = db.orders.filter(o => o.status === 'PLAČANO');
 
-        if(openOrders.length === 0) {
+        if(newOrders.length === 0 && paidOrders.length === 0) {
             container.innerHTML = `<div style="text-align:center; padding: 40px; color: #777;">
-                <h3>Ni aktivnih naročil iz dlančnika.</h3>
-                <p>Naročila ustvarjena na dlančniku se bodo tukaj pojavila samodejno v isti sekundi.</p>
+                <h3>Ni aktivnih naročil za obdelavo.</h3>
+                <p>Naročila poslana iz dlančnika se bodo takoj pojavila tukaj.</p>
             </div>`;
             return;
         }
 
-        let html = `<div class="prenosnik-grid">`;
-        openOrders.forEach(o => {
-            let itemLines = o.items.map(i => `<div>- ${i.kol}x ${i.naziv} (${i.total.toFixed(2)} WII)</div>`).join('');
-            let statusColor = o.status === 'PLAČANO' ? '#d4edda' : '#fff3cd';
+        let html = '';
 
-            html += `
-                <div class="order-card" style="background:${statusColor};">
-                    <div class="order-card-header">
-                        <span>#${o.id} - ${o.customer || 'Stranka'}</span>
-                        <span>${o.status}</span>
+        // SEKCIJA 1: NOVA NAROČILA (Čakajo na prevzem)
+        if(newOrders.length > 0) {
+            html += `<h3 style="margin:10px 0; color:#d9534f;">🔴 NOVA NAROČILA (Prevzemi in Plačaj na blagajni)</h3>`;
+            html += `<div class="prenosnik-grid">`;
+            newOrders.forEach(o => {
+                let itemLines = o.items.map(i => `<div>- ${i.kol}x ${i.naziv} (${i.total.toFixed(2)} WII)</div>`).join('');
+                html += `
+                    <div class="order-card" style="background:#fff3cd; border-color:#ffc107;">
+                        <div class="order-card-header" style="background:#ffc107; color:black;">
+                            <span>#${o.id} - ${o.customer || 'Miza/Stranka'}</span>
+                            <span>${o.status}</span>
+                        </div>
+                        <div class="order-card-body">${itemLines}</div>
+                        <div style="font-weight:bold; text-align:right; font-size:16px;">Skupaj: ${o.total.toFixed(2)} WII</div>
+                        <div class="order-card-footer">
+                            <button onclick="loadOrderToRegister(${o.id})" style="background:#ccffcc;">📥 Prevzemi na blagajno</button>
+                        </div>
                     </div>
-                    <div class="order-card-body">
-                        ${itemLines}
+                `;
+            });
+            html += `</div>`;
+        }
+
+        // SEKCIJA 2: PLAČANA NAROČILA (Čakajo na izročitev)
+        if(paidOrders.length > 0) {
+            html += `<h3 style="margin:20px 0 10px 0; color:#5cb85c;">🟢 PLAČANA NAROČILA (Pripravi in izroči)</h3>`;
+            html += `<div class="prenosnik-grid">`;
+            paidOrders.forEach(o => {
+                let itemLines = o.items.map(i => `<div>- ${i.kol}x ${i.naziv}</div>`).join('');
+                html += `
+                    <div class="order-card" style="background:#d4edda; border-color:#28a745;">
+                        <div class="order-card-header" style="background:#28a745; color:white;">
+                            <span>#${o.id} - ${o.customer || 'Miza/Stranka'}</span>
+                            <span>${o.status}</span>
+                        </div>
+                        <div class="order-card-body">${itemLines}</div>
+                        <div style="font-weight:bold; text-align:right; font-size:16px; color:#28a745;">Že plačano (${o.total.toFixed(2)} WII)</div>
+                        <div class="order-card-footer">
+                            <button onclick="markOrderOddano(${o.id})" style="background:#cce5ff;">✅ Označi kot ODDANO</button>
+                        </div>
                     </div>
-                    <div style="font-weight:bold; text-align:right; font-size:16px;">
-                        Skupaj: ${o.total.toFixed(2)} WII
-                    </div>
-                    <div class="order-card-footer">
-                        <button onclick="loadOrderToRegister(${o.id})" style="background:#ccffcc;">📥 Prevzemi na blagajno</button>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
+                `;
+            });
+            html += `</div>`;
+        }
+
         container.innerHTML = html;
+    }
+
+    // Funkcija za dokončen izbris iz ekrana prenosnika
+    window.markOrderOddano = function(id) {
+        let order = db.orders.find(o => o.id === id);
+        if(order) {
+            order.status = 'ODDANO';
+            saveDB();
+            // Prikaz se bo samodejno osvežil zaradi Firebase .on('value')
+        }
     }
 
     /* ================= NAROČILA - POKLIČI ================= */
     function openFetchOrder() {
-        let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
+        let openOrders = db.orders.filter(o => o.status === 'NAROČENO');
         let listHtml = `<div style="max-height: 180px; overflow-y: auto; text-align: left; border: 1px solid #ccc; padding: 5px; margin-top: 10px; background: white;">`;
-        if (openOrders.length === 0) listHtml += `<i style="padding: 5px;">Ni odprtih naročil.</i>`;
+        if (openOrders.length === 0) listHtml += `<i style="padding: 5px;">Ni odprtih novih naročil.</i>`;
         openOrders.forEach(o => {
             listHtml += `<div style="padding: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                 <span><b>#${o.id}</b> - ${o.total.toFixed(2)} WII (${o.status})</span>
@@ -613,9 +624,8 @@
             <div style="margin-bottom: 10px; text-align: left;">
                 Vnesi številko naročila: <input type="number" id="manual-order-id" style="width: 100px;">
                 <button onclick="let v = document.getElementById('manual-order-id').value; if(v) loadOrderToRegister(parseInt(v));">Išči</button>
-            </div>
-            <hr>
-            <b style="display:block; text-align:left; margin-top:5px;">Ali izberi iz seznama odprtih:</b>
+            </div><hr>
+            <b style="display:block; text-align:left; margin-top:5px;">Ali izberi iz seznama:</b>
             ${listHtml}
         `;
         showModal({title: "Pokliči Naročilo", message: html, isHtml: true, type: "none"});
@@ -624,26 +634,22 @@
     window.loadOrderToRegister = function(id) {
         let order = db.orders.find(o => o.id === id);
         if (!order) { alert("Naročilo s to številko ne obstaja!"); return; }
-        if (order.status === 'ODDANO') { alert("To naročilo je že oddano/zaključeno!"); return; }
+        if (order.status !== 'NAROČENO') { alert("To naročilo je že plačano ali zaključeno!"); return; }
         
         cart = JSON.parse(JSON.stringify(order.items));
         currentOrderId = id;
         
         if (order.customerId) {
             let c = db.users.find(u => u.id === order.customerId);
-            if (c) { 
-                activeCustomer = c; 
-                document.getElementById('racun-stranka').innerText = c.name; 
-            }
+            if (c) { activeCustomer = c; document.getElementById('racun-stranka').innerText = c.name; }
         }
         
         switchView('blagajna');
         updateCartUI();
         closeModal(false);
-        showModal({title: "Naloženo", message: `Naročilo #${id} uspešno preneseno na blagajno.`});
     }
 
-    /* ================= NAROČILA - POGLED ================= */
+    /* ================= NAROČILA - ZGODOVINA ================= */
     window.renderOrdersView = function(type) {
         let ws = document.getElementById('orders-content');
         let orders = db.orders.filter(o => type === 'open' ? o.status !== 'ODDANO' : true);
@@ -657,7 +663,7 @@
             orders.forEach(o => {
                 let d = new Date(o.date).toLocaleString();
                 let racunInfo = o.receiptId ? `#${o.receiptId}` : '-';
-                let style = o.status === 'ODDANO' ? 'color:gray;' : (o.status === 'PLAČANO' ? 'color:green;font-weight:bold;' : 'color:blue;font-weight:bold;');
+                let style = o.status === 'ODDANO' ? 'color:gray;' : (o.status === 'PLAČANO' ? 'color:green;font-weight:bold;' : 'color:red;font-weight:bold;');
                 
                 html += `<tr>
                     <td>${o.id}</td><td>${d}</td><td style="${style}">${o.status}</td><td>${o.total.toFixed(2)} WII</td><td>${racunInfo}</td>
@@ -700,12 +706,7 @@
     window.updateOrderStatus = function(id) {
         let order = db.orders.find(o => o.id === id);
         let sel = document.getElementById(`order-status-select-${id}`);
-        if(order && sel) {
-            order.status = sel.value;
-            saveDB();
-            showModal({title:"Shranjeno", message:"Status naročila je bil uspešno posodobljen."});
-            manageOrder(id);
-        }
+        if(order && sel) { order.status = sel.value; saveDB(); manageOrder(id); }
     }
 
     /* ================= FUNKCIJE STRANKE IN BONOV ================= */
@@ -716,41 +717,27 @@
                 if(!val) return;
                 const c = db.users.find(u => u.card === val || u.id === val || u.name.toLowerCase().includes(val.toLowerCase()));
                 if (c) {
-                    activeCustomer = c;
-                    document.getElementById('racun-stranka').innerText = c.name;
+                    activeCustomer = c; document.getElementById('racun-stranka').innerText = c.name;
                     let neplacano = (c.fines||[]).filter(f=>!f.paid).reduce((a,b)=>a+b.amount,0);
-                    if(neplacano > 0) {
-                        setTimeout(() => showModal({title: "Opozorilo", message: `Stranka ima neplačane kazni v višini ${neplacano} WII!`}), 500);
-                    }
+                    if(neplacano > 0) setTimeout(() => showModal({title: "Opozorilo", message: `Stranka ima neplačane kazni v višini ${neplacano} WII!`}), 500);
                     updateCartUI();
-                } else {
-                    showModal({title: "Napaka", message: "Stranka ni najdena."});
-                }
+                } else { showModal({title: "Napaka", message: "Stranka ni najdena."}); }
             }
         });
     }
 
     function viewCustomerInfo() {
         if(!activeCustomer) return showModal({title:"Info", message:"Najprej izberi stranko."});
-        let html = `<div style="text-align:left;">
-            <b>Ime:</b> ${activeCustomer.name}<br>
-            <b>Dobroimetje:</b> ${parseFloat(activeCustomer.balance || 0).toFixed(2)} WII<br><br>`;
-            
+        let html = `<div style="text-align:left;"><b>Ime:</b> ${activeCustomer.name}<br><b>Dobroimetje:</b> ${parseFloat(activeCustomer.balance || 0).toFixed(2)} WII<br><br>`;
         if(activeCustomer.fines && activeCustomer.fines.length > 0) {
             html += `<b>KAZNI:</b><br><table style="width:100%; border-collapse:collapse; margin-top:5px;">`;
             activeCustomer.fines.forEach((f, i) => {
                 let d = new Date(f.date).toLocaleDateString();
-                if(f.paid) {
-                    html += `<tr><td style="color:green; padding:3px 0;">${d} - ${f.amount} WII (PLAČANO)</td><td></td></tr>`;
-                } else {
-                    html += `<tr><td style="color:red; padding:3px 0;">${d} - ${f.amount} WII (NEPLAČANO)</td>
-                    <td style="text-align:right;"><button onclick="payFine(${i})" style="font-size:12px;">Plačaj</button></td></tr>`;
-                }
+                if(f.paid) html += `<tr><td style="color:green; padding:3px 0;">${d} - ${f.amount} WII (PLAČANO)</td><td></td></tr>`;
+                else html += `<tr><td style="color:red; padding:3px 0;">${d} - ${f.amount} WII (NEPLAČANO)</td><td style="text-align:right;"><button onclick="payFine(${i})" style="font-size:12px;">Plačaj</button></td></tr>`;
             });
             html += `</table>`;
-        } else {
-            html += `Ni zabeleženih kazni.`;
-        }
+        } else { html += `Ni zabeleženih kazni.`; }
         html += `</div>`;
         showModal({title: "Podatki stranke", message: html, isHtml: true});
     }
@@ -759,8 +746,7 @@
         if(cart.find(c => c.fineRef === i)) return alert("Kazen je že na računu!");
         let fine = activeCustomer.fines[i];
         cart.unshift({ koda: 'KAZEN', naziv: 'Plačilo kazni', kol: 1, cena: fine.amount, popust: 0, total: fine.amount, fineRef: i });
-        updateCartUI();
-        closeModal(true);
+        updateCartUI(); closeModal(true);
     }
 
     function applyGiftCard() {
@@ -774,9 +760,7 @@
                 if(amt > 0 && amt <= gc.value) {
                     cart.push({koda:'BON', naziv:`PLAČILO Z BONOM (${code})`, kol:1, cena: -amt, popust:0, total:-amt, gcCode: code});
                     updateCartUI();
-                } else {
-                    showModal({title:"Napaka", message:"Neveljaven znesek ali na bonu ni dovolj sredstev."});
-                }
+                } else { showModal({title:"Napaka", message:"Neveljaven znesek ali na bonu ni dovolj sredstev."}); }
             }});
         }});
     }
@@ -784,505 +768,166 @@
     /* ================= PLAČILO ================= */
     function openPaymentView() {
         let total = cart.reduce((acc, item) => acc + (item.total || 0), 0);
-        if(total <= 0) return showModal({title: "Opozorilo", message: "Znesek za plačilo mora biti večji od 0 (ali pa je račun prazen)."});
+        if(total <= 0) return showModal({title: "Opozorilo", message: "Znesek za plačilo mora biti večji od 0."});
         
         paymentState.total = total; paymentState.paid = 0; paymentState.method = ''; paymentState.inputBuffer = ''; paymentState.paidUserId = null;
-        document.getElementById('pay-znesek').value = total.toFixed(2);
-        document.getElementById('pay-osnova').value = total.toFixed(2);
-        document.getElementById('pay-skupaj-popust').value = total.toFixed(2);
-        document.getElementById('pay-za-placilo').value = total.toFixed(2);
+        document.getElementById('pay-znesek').value = total.toFixed(2); document.getElementById('pay-osnova').value = total.toFixed(2);
+        document.getElementById('pay-skupaj-popust').value = total.toFixed(2); document.getElementById('pay-za-placilo').value = total.toFixed(2);
         document.getElementById('pay-big-total').innerText = total.toFixed(2);
         resetPaymentMethods(); updatePaymentUI(); switchView('placilo');
-
-        localStorage.setItem('wii_projekcija_data', JSON.stringify({
-            status: 'payment',
-            total: total.toFixed(2),
-            paid: "0.00",
-            remaining: total.toFixed(2)
-        }));
     }
 
     function selectPaymentMethod(method) {
         if (method === 'gotovina') {
-            document.getElementById('btn-gotovina').style.display = 'block';
-            document.getElementById('btn-kartica').style.display = 'none';
-            document.getElementById('btn-narocilo').style.display = 'none';
-            document.getElementById('btn-nazaj').classList.remove('hidden');
+            document.getElementById('btn-gotovina').style.display = 'block'; document.getElementById('btn-kartica').style.display = 'none'; document.getElementById('btn-narocilo').style.display = 'none'; document.getElementById('btn-nazaj').classList.remove('hidden');
             paymentState.method = 'gotovina';
         } else if (method === 'kartica') {
             showModal({title: "Kartica (Banka)", message: "Skeniraj kartico ali vnesi PIN uporabnika:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
                 if (pin) { 
                     const user = db.users.find(u => u.card === pin || u.id === pin);
                     if(!user) return showModal({title:"Napaka", message:"Neveljavna kartica/PIN!"});
-                    
                     const userBankBal = parseFloat(user.bankBalance || 0);
-                    if(userBankBal < paymentState.total) {
-                        return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${userBankBal.toFixed(2)} WII)`});
-                    }
+                    if(userBankBal < paymentState.total) return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${userBankBal.toFixed(2)} WII)`});
                     
-                    paymentState.method = 'kartica'; 
-                    paymentState.paid = paymentState.total; 
-                    paymentState.paidUserId = user.id;
-                    updatePaymentUI(); 
+                    paymentState.method = 'kartica'; paymentState.paid = paymentState.total; paymentState.paidUserId = user.id; updatePaymentUI(); 
                 }
             }});
         } else if (method === 'narocilo') {
-            document.getElementById('btn-gotovina').style.display = 'none';
-            document.getElementById('btn-kartica').style.display = 'none';
-            document.getElementById('btn-narocilo').style.display = 'block';
-            document.getElementById('btn-nazaj').classList.remove('hidden');
-            paymentState.method = 'narocilo';
-            paymentState.paid = paymentState.total;
-            document.getElementById('pay-vracilo').value = "0.00";
-            document.getElementById('pay-ostanek').value = "0.00";
-            updatePaymentUI();
+            document.getElementById('btn-gotovina').style.display = 'none'; document.getElementById('btn-kartica').style.display = 'none'; document.getElementById('btn-narocilo').style.display = 'block'; document.getElementById('btn-nazaj').classList.remove('hidden');
+            paymentState.method = 'narocilo'; paymentState.paid = paymentState.total; document.getElementById('pay-vracilo').value = "0.00"; document.getElementById('pay-ostanek').value = "0.00"; updatePaymentUI();
         }
     }
 
     function resetPaymentMethods() {
-        document.getElementById('btn-gotovina').style.display = 'block';
-        document.getElementById('btn-kartica').style.display = 'block';
-        document.getElementById('btn-narocilo').style.display = 'block';
-        document.getElementById('btn-nazaj').classList.add('hidden');
+        document.getElementById('btn-gotovina').style.display = 'block'; document.getElementById('btn-kartica').style.display = 'block'; document.getElementById('btn-narocilo').style.display = 'block'; document.getElementById('btn-nazaj').classList.add('hidden');
         paymentState.method = '';
     }
 
-    function numpadInput(val) {
-        if(val === 'del') paymentState.inputBuffer = paymentState.inputBuffer.slice(0, -1);
-        else paymentState.inputBuffer += val;
-    }
+    function numpadInput(val) { if(val === 'del') paymentState.inputBuffer = paymentState.inputBuffer.slice(0, -1); else paymentState.inputBuffer += val; }
     function numpadClear() { paymentState.inputBuffer = ''; }
-    function numpadEnter() {
-        if(paymentState.inputBuffer !== '') {
-            paymentState.paid = parseFloat(paymentState.inputBuffer);
-            paymentState.inputBuffer = ''; updatePaymentUI();
-        }
-    }
+    function numpadEnter() { if(paymentState.inputBuffer !== '') { paymentState.paid = parseFloat(paymentState.inputBuffer); paymentState.inputBuffer = ''; updatePaymentUI(); } }
 
     function updatePaymentUI() {
         document.getElementById('pay-ze-placano').value = paymentState.paid.toFixed(2);
         let ostanek = paymentState.total - paymentState.paid;
-        let vracilo = 0;
         if (ostanek <= 0) {
             document.getElementById('pay-ostanek').value = "0.00";
-            vracilo = Math.abs(ostanek);
-            document.getElementById('pay-vracilo').value = vracilo.toFixed(2);
+            document.getElementById('pay-vracilo').value = Math.abs(ostanek).toFixed(2);
         } else {
             document.getElementById('pay-ostanek').value = ostanek.toFixed(2);
             document.getElementById('pay-vracilo').value = "0.00";
         }
-
-        localStorage.setItem('wii_projekcija_data', JSON.stringify({
-            status: 'payment',
-            total: paymentState.total.toFixed(2),
-            paid: paymentState.paid.toFixed(2),
-            remaining: (ostanek > 0 ? ostanek : 0).toFixed(2),
-            change: vracilo.toFixed(2)
-        }));
     }
 
     function finishTransaction() {
         let validItems = cart.filter(i => i.koda !== '' || i.naziv !== '');
         
         if (paymentState.method === 'narocilo') {
-            let newOrder = {
-                id: db.orderSeq, date: new Date().toISOString(),
-                customer: activeCustomer ? activeCustomer.name : '',
-                customerId: activeCustomer ? activeCustomer.id : null,
-                total: paymentState.total,
-                items: JSON.parse(JSON.stringify(validItems)),
-                status: 'NAROČENO'
-            };
-            db.orders.push(newOrder);
-            db.orderSeq++; 
-            saveDB();
+            let newOrder = { id: db.orderSeq, date: new Date().toISOString(), customer: activeCustomer ? activeCustomer.name : '', customerId: activeCustomer ? activeCustomer.id : null, total: paymentState.total, items: JSON.parse(JSON.stringify(validItems)), status: 'NAROČENO' };
+            db.orders.push(newOrder); db.orderSeq++; saveDB();
             
-            localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
-            
-            showModal({title: "NAROČILO ODDANO", message: `Račun je bil spremenjen v neplačano naročilo.\n\nŠTEVILKA NAROČILA: ${newOrder.id}`, onConfirm: () => {
-                initReceipt(); switchView('blagajna');
-            }});
+            showModal({title: "NAROČILO ODDANO", message: `Račun spremenjen v neplačano naročilo.\nŠTEVILKA: ${newOrder.id}`, onConfirm: () => { initReceipt(); switchView('blagajna'); }});
             return;
         }
 
         if (paymentState.paid < paymentState.total) return showModal({title: "Napaka", message: "Račun ni v celoti plačan!"});
         
         db.receipts.push({
-            id: db.seq, date: new Date().toISOString(),
-            cashier: activeCashier ? activeCashier.name : 'Neznan',
-            customer: activeCustomer ? activeCustomer.name : '',
-            customerId: activeCustomer ? activeCustomer.id : null,
-            total: paymentState.total, method: paymentState.method,
-            items: JSON.parse(JSON.stringify(validItems)) 
+            id: db.seq, date: new Date().toISOString(), cashier: activeCashier ? activeCashier.name : 'Neznan',
+            customer: activeCustomer ? activeCustomer.name : '', customerId: activeCustomer ? activeCustomer.id : null,
+            total: paymentState.total, method: paymentState.method, items: JSON.parse(JSON.stringify(validItems)) 
         });
 
+        // TUKAJ SE STATUS SPREMENI V PLAČANO (in se premakne v zeleno okence)
         if (currentOrderId !== null) {
             let orderToUpdate = db.orders.find(o => o.id === currentOrderId);
-            if (orderToUpdate) {
-                orderToUpdate.status = 'PLAČANO';
-                orderToUpdate.receiptId = db.seq;
-            }
+            if (orderToUpdate) { orderToUpdate.status = 'PLAČANO'; orderToUpdate.receiptId = db.seq; }
         }
         
-        // Obdelava denarja in beleženje transakcije za banko
         if(paymentState.method === 'gotovina') {
             db.register.expectedCash += paymentState.total;
         } else if(paymentState.method === 'kartica') {
             let u = db.users.find(usr => usr.id === paymentState.paidUserId);
             if(u) {
-                let oldBal = parseFloat(u.bankBalance || 0);
-                let newBal = oldBal - paymentState.total;
+                let newBal = parseFloat(u.bankBalance || 0) - paymentState.total;
                 u.bankBalance = newBal;
-
                 if(!u.transactions) u.transactions = [];
-                u.transactions.push({
-                    id: Date.now(),
-                    date: new Date().toISOString(),
-                    type: 'POS_PAYMENT',
-                    description: `Plačilo blagajna (Račun #${db.seq})`,
-                    amount: -paymentState.total,
-                    balanceAfter: newBal
-                });
+                u.transactions.push({ id: Date.now(), date: new Date().toISOString(), type: 'POS_PAYMENT', description: `Plačilo blagajna (Račun #${db.seq})`, amount: -paymentState.total, balanceAfter: newBal });
             }
         }
         
-        // Poraba bonov in plačilo kazni
         validItems.forEach(it => {
-            if(it.gcCode) {
-                let gc = db.giftCards.find(g => g.code === it.gcCode);
-                if(gc) gc.value -= Math.abs(it.cena);
-            }
-            if(it.fineRef !== undefined && activeCustomer) {
-                let dbUser = db.users.find(u => u.id === activeCustomer.id);
-                if(dbUser) dbUser.fines[it.fineRef].paid = true;
-            }
+            if(it.gcCode) { let gc = db.giftCards.find(g => g.code === it.gcCode); if(gc) gc.value -= Math.abs(it.cena); }
+            if(it.fineRef !== undefined && activeCustomer) { let dbUser = db.users.find(u => u.id === activeCustomer.id); if(dbUser) dbUser.fines[it.fineRef].paid = true; }
         });
         
         db.seq++; saveDB();
         
-        localStorage.setItem('wii_projekcija_data', JSON.stringify({ status: 'finished' }));
-
-        showModal({title: "ZAKLJUČENO", message: "Račun je bil uspešno shranjen.", onConfirm: () => {
-            initReceipt(); switchView('blagajna');
-        }});
+        showModal({title: "ZAKLJUČENO", message: "Račun je bil uspešno shranjen.", onConfirm: () => { initReceipt(); switchView('blagajna'); }});
     }
 
     /* ================= LOGIN & ZAKLEP ================= */
-    function requireManagerAccess() {
-        showModal({title: "Manager Prijava", message: "Vnesi šifro managerja:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
-            const user = db.users.find(u => u.id === pin && u.role === 'manager');
-            if (user) { switchView('manager'); } 
-            else { showModal({title: "Zavrnjeno", message: "Napačna šifra ali nimate pravic."}); }
-        }});
-    }
-
-    function lockScreen() {
-        showModal({title: "ZAKLENJENO", message: "Skeniraj kartico za odklep:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => {
-            const user = db.users.find(u => u.card === pin || u.id === pin);
-            if (user) { 
-                activeCashier = user;
-                document.getElementById('blagajnik-ime').innerText = user.name;
-            } else { lockScreen(); }
-        }});
-    }
+    function requireManagerAccess() { showModal({title: "Manager Prijava", message: "Vnesi šifro managerja:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => { const user = db.users.find(u => u.id === pin && u.role === 'manager'); if (user) { switchView('manager'); } else { showModal({title: "Zavrnjeno", message: "Napačna šifra ali nimate pravic."}); } }}); }
+    function lockScreen() { showModal({title: "ZAKLENJENO", message: "Skeniraj kartico za odklep:", type: "prompt", inputType: "password", showNumpad: true, onConfirm: (pin) => { const user = db.users.find(u => u.card === pin || u.id === pin); if (user) { activeCashier = user; document.getElementById('blagajnik-ime').innerText = user.name; } else { lockScreen(); } }}); }
 
     /* ================= MANAGER FUNKCIJE ================= */
-    function openWorkspace(title) {
-        document.getElementById('manager-buttons').style.display = 'none';
-        document.getElementById('manager-workspace').classList.add('active');
-        document.getElementById('ws-title').innerText = title;
-        return document.getElementById('ws-content');
-    }
+    function openWorkspace(title) { document.getElementById('manager-buttons').style.display = 'none'; document.getElementById('manager-workspace').classList.add('active'); document.getElementById('ws-title').innerText = title; return document.getElementById('ws-content'); }
+    function closeWorkspace() { document.getElementById('manager-workspace').classList.remove('active'); document.getElementById('manager-buttons').style.display = 'grid'; }
 
-    function closeWorkspace() {
-        document.getElementById('manager-workspace').classList.remove('active');
-        document.getElementById('manager-buttons').style.display = 'grid';
-    }
+    function mgrPrijava() { showModal({title:"Prijava", message:"Začetni depozit:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{ if(v) { db.register.expectedCash = parseFloat(v); saveDB(); showModal({title:"Info", message:`Prijavljeno z ${v} WII.`}); }}}); }
+    function mgrVmesno() { showModal({title: "Vmesno", message: `Pričakovana gotovina: ${db.register.expectedCash.toFixed(2)} WII`}); }
+    function mgrOdjava() { showModal({title:"Odjava", message:`Pričakovano: ${db.register.expectedCash.toFixed(2)} WII.\nDejansko stanje:`, type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{ if(v) { let act = parseFloat(v); let diff = act - db.register.expectedCash; let msg = `Razlika: ${diff.toFixed(2)} WII.\n`; if(diff < 0) { msg += `Manjko odštet od plače.`; let c = db.users.find(u => u.id === activeCashier.id); if(c) { c.salary += diff; saveDB(); } } db.register.expectedCash = 0; saveDB(); showModal({title:"Izvid Odjave", message: msg}); }}}); }
+    function mgrSkim() { showModal({title:"SKIM", message:"Znesek odvzema:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{ if(v) { db.register.expectedCash -= parseFloat(v); saveDB(); }}}); }
 
-    // 1. Prijava blagajne
-    function mgrPrijava() {
-        showModal({title:"Prijava Blagajne", message:"Vnesi začetni depozit (gotovina):", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
-            if(v) {
-                db.register.expectedCash = parseFloat(v); saveDB();
-                showModal({title:"Info", message:`Blagajna prijavljena z ${v} WII.`});
-            }
-        }});
-    }
-
-    // 2. Vmesno
-    function mgrVmesno() { showModal({title: "Vmesno Stanje", message: `Pričakovana gotovina v blagajni: ${db.register.expectedCash.toFixed(2)} WII`}); }
-
-    // 3. Odjava blagajne
-    function mgrOdjava() {
-        showModal({title:"Odjava", message:`Pričakovano: ${db.register.expectedCash.toFixed(2)} WII.\nVnesi dejansko stanje:`, type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
-            if(v) {
-                let actual = parseFloat(v);
-                let diff = actual - db.register.expectedCash;
-                let msg = `Dejansko: ${actual}\nRazlika: ${diff.toFixed(2)} WII.\n`;
-                if(diff < 0) {
-                    msg += `\nManjko bo odštet od plače blagajnika (${activeCashier.name}).`;
-                    let c = db.users.find(u => u.id === activeCashier.id);
-                    if(c) { c.salary += diff; saveDB(); }
-                }
-                db.register.expectedCash = 0; saveDB();
-                showModal({title:"Izvid Odjave", message: msg});
-            }
-        }});
-    }
-
-    // 4. Skim
-    function mgrSkim() {
-        showModal({title:"SKIM (Odvzem)", message:"Vnesi znesek, ki ga jemlješ iz blagajne:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
-            if(v) { db.register.expectedCash -= parseFloat(v); saveDB(); showModal({title:"Info", message:"Znesek odštet."}); }
-        }});
-    }
-
-    // 5. Storno
-    function mgrStorno() {
-        showModal({title:"Storno", message:"Vnesi številko računa:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
-            let recIndex = db.receipts.findIndex(r => r.id == v);
-            if(recIndex >= 0) {
-                renderStornoDetails(recIndex);
-            } else { showModal({title:"Napaka", message:"Račun ne obstaja."}); }
-        }});
-    }
-
+    function mgrStorno() { showModal({title:"Storno", message:"Številka računa:", type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{ let idx = db.receipts.findIndex(r => r.id == v); if(idx >= 0) renderStornoDetails(idx); else showModal({title:"Napaka", message:"Račun ne obstaja."}); }}); }
     function renderStornoDetails(recIndex) {
-        let rec = db.receipts[recIndex];
-        let ws = openWorkspace(`Storno - Račun #${rec.id}`);
-        let html = `<p>Stranka: ${rec.customer || 'Neznana'} | Skupaj: ${rec.total.toFixed(2)} WII | Plačilo: ${rec.method}</p>`;
-        html += `<button onclick="stornoWhole(${recIndex})" style="margin-bottom:10px; margin-top:10px; background:#ffcccc;">STORNO CELOTNEGA RAČUNA</button>`;
-        html += `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Kol</th><th>Cena</th><th>Popust(%)</th><th>Seštevek</th><th>Akcija</th></tr>`;
-        rec.items.forEach((it, i) => {
-            let storniranoTxt = it.stornirano ? `<span style="color:red;font-weight:bold;">STORNIRANO</span>` : "";
-            html += `<tr style="${it.stornirano ? 'opacity:0.6;' : ''}">
-                <td>${it.koda}</td><td>${it.naziv}</td><td>${it.kol}</td><td>${it.cena}</td><td>${it.popust}</td><td>${it.total.toFixed(2)}</td>
-                <td>${!it.stornirano ? `<button onclick="stornoItem(${recIndex}, ${i})">Storno Artikla</button>` : storniranoTxt}</td>
-            </tr>`;
-        });
-        html += `</table>`;
-        ws.innerHTML = html;
+        let rec = db.receipts[recIndex]; let ws = openWorkspace(`Storno - Račun #${rec.id}`);
+        let html = `<p>Stranka: ${rec.customer} | Skupaj: ${rec.total.toFixed(2)} | Plačilo: ${rec.method}</p><button onclick="stornoWhole(${recIndex})" style="margin:10px 0; background:#ffcccc;">STORNO CELOTNEGA RAČUNA</button><table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Kol</th><th>Cena</th><th>Popust</th><th>Skupaj</th><th>Akcija</th></tr>`;
+        rec.items.forEach((it, i) => { html += `<tr style="${it.stornirano ? 'opacity:0.6;' : ''}"><td>${it.koda}</td><td>${it.naziv}</td><td>${it.kol}</td><td>${it.cena}</td><td>${it.popust}</td><td>${it.total.toFixed(2)}</td><td>${!it.stornirano ? `<button onclick="stornoItem(${recIndex}, ${i})">Storno Artikla</button>` : 'STORNIRANO'}</td></tr>`; });
+        ws.innerHTML = html + `</table>`;
     }
+    window.processRefund = function(rec, amt) { if(rec.customerId) { let u = db.users.find(usr => usr.id === rec.customerId); if(u) { u.balance += amt; return "vrnjeno na DOBROIMETJE"; } } db.register.expectedCash -= amt; return "vrnjeno v GOTOVINI"; }
+    window.stornoWhole = function(idx) { let rec = db.receipts[idx]; if(rec.storniran) return showModal({title:"Napaka", message:"Že stornirano."}); let ref = 0; rec.items.forEach(it => { if(!it.stornirano) { it.stornirano = true; ref += it.total; } }); rec.storniran = true; rec.total -= ref; let msg = processRefund(rec, ref); saveDB(); showModal({title:"Uspeh", message:`Stornirano. ${ref.toFixed(2)} ${msg}.`}); closeWorkspace(); }
+    window.stornoItem = function(rIdx, iIdx) { let rec = db.receipts[rIdx]; let it = rec.items[iIdx]; it.stornirano = true; let msg = processRefund(rec, it.total); rec.total -= it.total; saveDB(); showModal({title:"Uspeh", message:`Artikel storniran. ${it.total.toFixed(2)} ${msg}.`}); renderStornoDetails(rIdx); }
 
-    window.processRefund = function(rec, amount) {
-        if(rec.customerId) {
-            let u = db.users.find(usr => usr.id === rec.customerId);
-            if(u) { u.balance += amount; return "vrnjeno na DOBROIMETJE stranke"; }
-        }
-        db.register.expectedCash -= amount;
-        return "vrnjeno v GOTOVINI (odšteto iz blagajne)";
-    }
-
-    window.stornoWhole = function(recIndex) {
-        let rec = db.receipts[recIndex];
-        if(rec.storniran) return showModal({title:"Napaka", message:"Račun je že storniran."});
-        
-        let amountToRefund = 0;
-        rec.items.forEach(it => { if(!it.stornirano) { it.stornirano = true; amountToRefund += it.total; } });
-        rec.storniran = true; rec.total -= amountToRefund;
-        
-        let msg = processRefund(rec, amountToRefund);
-        saveDB();
-        showModal({title:"Uspeh", message:`Celoten račun storniran.\nZnesek ${amountToRefund.toFixed(2)} WII je ${msg}.`});
-        closeWorkspace();
-    }
-
-    window.stornoItem = function(recIndex, itemIndex) {
-        let rec = db.receipts[recIndex];
-        let it = rec.items[itemIndex];
-        it.stornirano = true;
-        let msg = processRefund(rec, it.total);
-        rec.total -= it.total;
-        saveDB();
-        showModal({title:"Storno Artikla", message:`Artikel storniran.\nZnesek ${it.total.toFixed(2)} WII je ${msg}.`});
-        renderStornoDetails(recIndex);
-    }
-
-    // 6. SKUPINE (CRUD)
     function mgrSkupine() {
-        let ws = openWorkspace("Upravljanje Skupin Artiklov");
-        let html = `<table class="crud-table"><tr><th>Naziv Skupine</th><th>Akcija</th></tr>`;
-        
+        let ws = openWorkspace("Skupine"); let html = `<table class="crud-table"><tr><th>Naziv Skupine</th><th>Akcija</th></tr>`;
         if(!db.groups) db.groups = ['SHOP'];
-
-        db.groups.forEach((grp, i) => {
-            html += `<tr>
-                <td><input value="${grp}" onchange="db.groups[${i}]=this.value; saveDB();"></td>
-                <td><button class="action-btn" onclick="deleteGroup(${i})">Briši</button></td>
-            </tr>`;
-        });
-        html += `</table><br><button onclick="addNewGroup()">+ Dodaj Skupino</button>`;
-        ws.innerHTML = html;
+        db.groups.forEach((grp, i) => { html += `<tr><td><input value="${grp}" onchange="db.groups[${i}]=this.value; saveDB();"></td><td><button class="action-btn" onclick="deleteGroup(${i})">Briši</button></td></tr>`; });
+        ws.innerHTML = html + `</table><br><button onclick="addNewGroup()">+ Dodaj Skupino</button>`;
     }
+    window.addNewGroup = function() { showModal({title:"Nova Skupina", message:"Naziv:", type:"prompt", inputType:"text", onConfirm:(name)=>{ if(name) { db.groups.push(name.toUpperCase().trim()); saveDB(); mgrSkupine(); }}}); }
+    window.deleteGroup = function(i) { if(db.groups[i] === 'SHOP') return showModal({title:"Opozorilo", message:"Privzete skupine ne moreš izbrisati!"}); let dg = db.groups[i]; db.groups.splice(i, 1); db.items.forEach(it => { if(it.skupina === dg) it.skupina = 'SHOP'; }); saveDB(); mgrSkupine(); }
 
-    window.addNewGroup = function() {
-        showModal({title:"Nova Skupina", message:"Vnesi naziv nove skupine:", type:"prompt", inputType:"text", onConfirm:(name)=>{
-            if(name) {
-                if(!db.groups) db.groups = ['SHOP'];
-                db.groups.push(name.toUpperCase().trim());
-                saveDB();
-                mgrSkupine();
-            }
-        }});
-    }
-
-    window.deleteGroup = function(i) {
-        if(db.groups[i] === 'SHOP') {
-            return showModal({title:"Opozorilo", message:"Privzete skupine SHOP ni mogoče izbrisati!"});
-        }
-        let deletedGroup = db.groups[i];
-        db.groups.splice(i, 1);
-        
-        // Vsi artikli te izbrisane skupine se prenesejo v privzeto skupino SHOP
-        db.items.forEach(it => {
-            if(it.skupina === deletedGroup) it.skupina = 'SHOP';
-        });
-        
-        saveDB();
-        mgrSkupine();
-    }
-
-    // 7. Artikli (CRUD + Skupine)
     function mgrArtikli() {
-        let ws = openWorkspace("Urejanje Artiklov");
-        if(!db.groups || db.groups.length === 0) db.groups = ['SHOP'];
-
+        let ws = openWorkspace("Artikli"); if(!db.groups) db.groups = ['SHOP'];
         let html = `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Cena</th><th>Skupina</th><th>Akcija</th></tr>`;
         db.items.forEach((it, i) => {
-            if(!it.skupina) it.skupina = 'SHOP';
-            
-            let groupOptions = db.groups.map(g => `<option value="${g}" ${it.skupina === g ? 'selected' : ''}>${g}</option>`).join('');
-
-            html += `<tr>
-                <td><input value="${it.koda}" onchange="db.items[${i}].koda=this.value; saveDB()"></td>
-                <td><input value="${it.naziv}" onchange="db.items[${i}].naziv=this.value; saveDB()"></td>
-                <td><input type="number" value="${it.cena}" onchange="db.items[${i}].cena=parseFloat(this.value); saveDB()"></td>
-                <td>
-                    <select onchange="db.items[${i}].skupina=this.value; saveDB();">
-                        ${groupOptions}
-                    </select>
-                </td>
-                <td><button class="action-btn" onclick="db.items.splice(${i},1); saveDB(); mgrArtikli();">Briši</button></td>
-            </tr>`;
+            if(!it.skupina) it.skupina = 'SHOP'; let gOpt = db.groups.map(g => `<option value="${g}" ${it.skupina === g ? 'selected' : ''}>${g}</option>`).join('');
+            html += `<tr><td><input value="${it.koda}" onchange="db.items[${i}].koda=this.value; saveDB()"></td><td><input value="${it.naziv}" onchange="db.items[${i}].naziv=this.value; saveDB()"></td><td><input type="number" value="${it.cena}" onchange="db.items[${i}].cena=parseFloat(this.value); saveDB()"></td><td><select onchange="db.items[${i}].skupina=this.value; saveDB();">${gOpt}</select></td><td><button class="action-btn" onclick="db.items.splice(${i},1); saveDB(); mgrArtikli();">Briši</button></td></tr>`;
         });
-        html += `</table><br><button onclick="db.items.push({koda:'',naziv:'',cena:0, skupina:'SHOP'}); saveDB(); mgrArtikli();">+ Dodaj Artikel</button>`;
-        ws.innerHTML = html;
+        ws.innerHTML = html + `</table><br><button onclick="db.items.push({koda:'',naziv:'',cena:0,skupina:'SHOP'}); saveDB(); mgrArtikli();">+ Dodaj Artikel</button>`;
     }
 
-    // 8. Zaposleni / Stranke
-    function renderUsers(roleFilter, title) {
-        let ws = openWorkspace(title);
-        let html = `<table class="crud-table"><tr><th>ID/Šifra</th><th>Ime</th><th>Kartica</th><th>Vloga</th><th>Dobroimetje</th><th>Akcija</th></tr>`;
+    function renderUsers(role, title) {
+        let ws = openWorkspace(title); let html = `<table class="crud-table"><tr><th>ID</th><th>Ime</th><th>Kartica</th><th>Vloga</th><th>Dobroimetje</th><th>Banka</th><th>Akcija</th></tr>`;
         db.users.forEach((u, i) => {
-            if(roleFilter === 'all' || u.role === roleFilter || (roleFilter==='employee' && u.role!=='customer')) {
-                html += `<tr>
-                    <td><input value="${u.id}" onchange="db.users[${i}].id=this.value; saveDB()"></td>
-                    <td><input value="${u.name}" onchange="db.users[${i}].name=this.value; saveDB()"></td>
-                    <td><input value="${u.card}" onchange="db.users[${i}].card=this.value; saveDB()"></td>
-                    <td><select onchange="db.users[${i}].role=this.value; saveDB()">
-                        <option value="manager" ${u.role==='manager'?'selected':''}>Manager</option>
-                        <option value="cashier" ${u.role==='cashier'?'selected':''}>Blagajnik</option>
-                        <option value="customer" ${u.role==='customer'?'selected':''}>Stranka</option>
-                    </select></td>
-                    <td><input type="number" value="${u.balance}" onchange="db.users[${i}].balance=parseFloat(this.value); saveDB()"></td>
-                    <td><button class="action-btn" onclick="db.users.splice(${i},1); saveDB(); renderUsers('${roleFilter}','${title}');">Briši</button></td>
-                </tr>`;
+            if(role === 'all' || u.role === role || (role==='employee' && u.role!=='customer')) {
+                html += `<tr><td><input value="${u.id}" onchange="db.users[${i}].id=this.value; saveDB()"></td><td><input value="${u.name}" onchange="db.users[${i}].name=this.value; saveDB()"></td><td><input value="${u.card}" onchange="db.users[${i}].card=this.value; saveDB()"></td><td><select onchange="db.users[${i}].role=this.value; saveDB()"><option value="manager" ${u.role==='manager'?'selected':''}>Manager</option><option value="cashier" ${u.role==='cashier'?'selected':''}>Blagajnik</option><option value="customer" ${u.role==='customer'?'selected':''}>Stranka</option></select></td><td><input type="number" value="${u.balance}" onchange="db.users[${i}].balance=parseFloat(this.value); saveDB()"></td><td><input type="number" value="${u.bankBalance}" onchange="db.users[${i}].bankBalance=parseFloat(this.value); saveDB()"></td><td><button class="action-btn" onclick="db.users.splice(${i},1); saveDB(); renderUsers('${role}','${title}');">Briši</button></td></tr>`;
             }
         });
-        html += `</table><br><button onclick="db.users.push({id:'',name:'Nov',role:'customer',card:'',balance:0,bankBalance:500,salary:0,fines:[],transactions:[]}); saveDB(); renderUsers('${roleFilter}','${title}');">+ Dodaj Osebo</button>`;
-        ws.innerHTML = html;
+        ws.innerHTML = html + `</table><br><button onclick="db.users.push({id:'',name:'Nov',role:'customer',card:'',balance:0,bankBalance:500,salary:0,fines:[],transactions:[]}); saveDB(); renderUsers('${role}','${title}');">+ Dodaj Osebo</button>`;
     }
-    function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); }
-    function mgrStranke() { renderUsers('all', 'Stranke in Dobroimetje'); } 
+    function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); } function mgrStranke() { renderUsers('all', 'Stranke in Finance'); } 
 
-    // 9. Zgodovina Računov
-    function mgrZgodovina() {
-        let ws = openWorkspace("Zgodovina Računov");
-        let html = `<table class="crud-table"><tr><th>Št</th><th>Datum</th><th>Stranka</th><th>Znesek</th><th>Način</th><th>Podrobnosti</th></tr>`;
-        db.receipts.forEach((r, i) => {
-            let d = new Date(r.date);
-            html += `<tr><td>${r.id}</td><td>${d.toLocaleString()}</td><td>${r.customer}</td><td>${r.total.toFixed(2)}</td><td>${r.method}</td>
-            <td><button onclick="viewReceiptHistory(${i})">Poglej</button></td></tr>`;
-        });
-        html += `</table>`;
-        ws.innerHTML = html;
-    }
-
-    window.viewReceiptHistory = function(idx) {
-        let rec = db.receipts[idx];
-        let ws = openWorkspace(`Račun #${rec.id} Podrobnosti`);
-        let html = `<button onclick="mgrZgodovina()" style="margin-bottom:10px;">⬅ Nazaj</button><br>`;
-        html += `<p>Blagajnik: ${rec.cashier} | Stranka: ${rec.customer} | Plačano z: ${rec.method}</p><br>`;
-        html += `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Kol</th><th>Cena</th><th>Popust</th><th>Skupaj</th></tr>`;
-        if(rec.items) {
-            rec.items.forEach(it => {
-                html += `<tr><td>${it.koda}</td><td>${it.naziv}</td><td>${it.kol}</td><td>${it.cena}</td><td>${it.popust}%</td><td>${it.total.toFixed(2)}</td></tr>`;
-            });
-        }
-        html += `</table>`;
-        ws.innerHTML = html;
-    }
-
-    // 10. Plača
-    function mgrPlaca() {
-        let ws = openWorkspace("Plače Zaposlenih");
-        let html = `<table class="crud-table"><tr><th>Zaposleni</th><th>Dolg/Plača (WII)</th></tr>`;
-        db.users.filter(u=>u.role!=='customer').forEach((u, i) => {
-            let idx = db.users.indexOf(u);
-            html += `<tr><td>${u.name}</td><td><input type="number" value="${u.salary}" onchange="db.users[idx].salary=parseFloat(this.value); saveDB()"></td></tr>`;
-        });
-        html += `</table>`;
-        ws.innerHTML = html;
-    }
-
-    // 11. Kazni
-    function mgrKazni() {
-        let ws = openWorkspace("Kazni Strank");
-        let html = `<table class="crud-table"><tr><th>Stranka</th><th>Dodaj Kazen</th><th>Zgodovina Kazni (Zneski)</th></tr>`;
-        db.users.forEach((u, i) => {
-            let sums = u.fines ? u.fines.map(f=> f.paid ? `<span style="color:green">${f.amount}</span>` : `<span style="color:red">${f.amount}</span>`).join(', ') : '';
-            html += `<tr>
-                <td>${u.name}</td>
-                <td><button class="action-btn" onclick="addFine(${i})">Nova Kazen</button></td>
-                <td>${sums}</td>
-            </tr>`;
-        });
-        html += `</table>`;
-        ws.innerHTML = html;
-    }
-    window.addFine = function(userIndex) {
-        showModal({title:"Nova Kazen", message:`Znesek kazni za ${db.users[userIndex].name}:`, type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{
-            if(v) {
-                if(!db.users[userIndex].fines) db.users[userIndex].fines = [];
-                db.users[userIndex].fines.push({amount: parseFloat(v), date: new Date().toISOString(), paid: false});
-                saveDB(); mgrKazni();
-            }
-        }});
-    }
-
-    // 12. Darilni Boni
-    function mgrBoni() {
-        let ws = openWorkspace("Upravljanje z Darilnimi Boni");
-        let html = `<table class="crud-table"><tr><th>Koda Bona</th><th>Vrednost (WII)</th><th>Akcija</th></tr>`;
-        db.giftCards.forEach((g, i) => {
-            html += `<tr>
-                <td><input value="${g.code}" onchange="db.giftCards[${i}].code=this.value; saveDB()"></td>
-                <td><input type="number" value="${g.value}" onchange="db.giftCards[${i}].value=parseFloat(this.value); saveDB()"></td>
-                <td><button class="action-btn" onclick="db.giftCards.splice(${i},1); saveDB(); mgrBoni();">Briši</button></td>
-            </tr>`;
-        });
-        html += `</table><br><button onclick="db.giftCards.push({code:'', value:0}); saveDB(); mgrBoni();">+ Dodaj Bon</button>`;
-        ws.innerHTML = html;
-    }
+    function mgrZgodovina() { let ws = openWorkspace("Zgodovina Računov"); let html = `<table class="crud-table"><tr><th>Št</th><th>Datum</th><th>Stranka</th><th>Znesek</th><th>Način</th></tr>`; db.receipts.forEach((r) => { html += `<tr><td>${r.id}</td><td>${new Date(r.date).toLocaleString()}</td><td>${r.customer}</td><td>${r.total.toFixed(2)}</td><td>${r.method}</td></tr>`; }); ws.innerHTML = html + `</table>`; }
+    function mgrPlaca() { let ws = openWorkspace("Plače"); let html = `<table class="crud-table"><tr><th>Zaposleni</th><th>Dolg/Plača</th></tr>`; db.users.filter(u=>u.role!=='customer').forEach((u) => { let idx = db.users.indexOf(u); html += `<tr><td>${u.name}</td><td><input type="number" value="${u.salary}" onchange="db.users[${idx}].salary=parseFloat(this.value); saveDB()"></td></tr>`; }); ws.innerHTML = html + `</table>`; }
+    function mgrKazni() { let ws = openWorkspace("Kazni"); let html = `<table class="crud-table"><tr><th>Stranka</th><th>Dodaj Kazen</th></tr>`; db.users.forEach((u, i) => { html += `<tr><td>${u.name}</td><td><button class="action-btn" onclick="addFine(${i})">Nova Kazen</button></td></tr>`; }); ws.innerHTML = html + `</table>`; }
+    window.addFine = function(i) { showModal({title:"Kazen", message:`Znesek za ${db.users[i].name}:`, type:"prompt", inputType:"number", showNumpad:true, onConfirm:(v)=>{ if(v) { if(!db.users[i].fines) db.users[i].fines = []; db.users[i].fines.push({amount: parseFloat(v), date: new Date().toISOString(), paid: false}); saveDB(); }}}); }
+    function mgrBoni() { let ws = openWorkspace("Boni"); let html = `<table class="crud-table"><tr><th>Koda</th><th>Vrednost</th><th>Akcija</th></tr>`; db.giftCards.forEach((g, i) => { html += `<tr><td><input value="${g.code}" onchange="db.giftCards[${i}].code=this.value; saveDB()"></td><td><input type="number" value="${g.value}" onchange="db.giftCards[${i}].value=parseFloat(this.value); saveDB()"></td><td><button class="action-btn" onclick="db.giftCards.splice(${i},1); saveDB(); mgrBoni();">Briši</button></td></tr>`; }); ws.innerHTML = html + `</table><br><button onclick="db.giftCards.push({code:'', value:0}); saveDB(); mgrBoni();">+ Dodaj Bon</button>`; }
 
     /* Init */
-    window.onload = () => { 
-        setDate(); 
-        initReceipt(); 
-        initDB(() => {
-            lockScreen(); 
-        });
-    };
+    window.onload = () => { setDate(); initReceipt(); initDB(() => { lockScreen(); }); };
 </script>
 </body>
 </html>
