@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WII Blagajna - Polna Verzija v3 (Naročila & Banka Fix)</title>
+<title>WII Blagajna - Polna Verzija v3 (Skupine & Prenosnik Sync)</title>
 
 <!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -114,14 +114,22 @@
     .crud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--pos-blue); color: white; padding: 5px; }
     .crud-table { width: 100%; border-collapse: collapse; }
     .crud-table th, .crud-table td { border: 1px solid #aaa; padding: 5px; text-align: left; }
-    .crud-table input { width: 100%; border: none; border-bottom: 1px solid #ccc; }
+    .crud-table input, .crud-table select { width: 100%; border: none; border-bottom: 1px solid #ccc; background: transparent; }
     .action-btn { font-size: 12px; padding: 2px 5px; margin: 0 2px; }
 
-    /* --- NAROČILA POGLED --- */
+    /* --- NAROČILA & PRENOSNIK POGLED --- */
     .orders-layout { display: flex; flex-direction: column; height: 100%; }
     .orders-tabs { display: flex; gap: 5px; padding: 10px; background: #a9b8c2; }
     .orders-tabs button { flex: 1; font-size: 18px; padding: 10px; }
     .orders-workspace { flex: 1; overflow-y: auto; background: white; margin: 10px; padding: 10px; border: 2px inset #808080; }
+
+    /* DLANČNIK / PRENOSNIK KARTICE */
+    .prenosnik-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 10px; }
+    .order-card { background: #fdfdfd; border: 2px solid var(--pos-blue); padding: 10px; border-radius: 4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; }
+    .order-card-header { background: var(--pos-blue); color: white; padding: 4px 8px; font-weight: bold; display: flex; justify-content: space-between; }
+    .order-card-body { font-size: 14px; max-height: 120px; overflow-y: auto; border: 1px solid #eee; padding: 4px; background: #fff; }
+    .order-card-footer { display: flex; gap: 5px; margin-top: 5px; }
+    .order-card-footer button { flex: 1; font-size: 13px; padding: 6px; }
 
     /* --- MODALNI SISTEM --- */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
@@ -139,6 +147,7 @@
 
     <div class="top-menu">
         <button onclick="switchView('blagajna')">🛒 Blagajna</button>
+        <button onclick="switchView('prenosnik')">📱 Prenosnik</button>
         <button onclick="switchView('narocila')">📦 Naročila</button>
         <button onclick="requireManagerAccess()">💼 Manager</button>
         <button onclick="lockScreen()">🔒 Pavza</button>
@@ -187,6 +196,19 @@
             <button onclick="viewCustomerInfo()">👤 Stranka</button>
             <button onclick="applyGiftCard()">🎁 Darilni bon</button>
             <button onclick="openPaymentView()">💳 Plačilo</button>
+        </div>
+    </div>
+
+    <!-- POGLED PRENOSNIK / DLANČNIK V ŽIVO -->
+    <div id="view-prenosnik" class="view-container">
+        <div class="orders-layout">
+            <div class="orders-tabs" style="background:#3a6ea5; color:white; align-items:center;">
+                <h2 style="font-size:20px; padding-left:10px;">📱 PRENOSNIK / DLANČNIK (Naročila v živo)</h2>
+                <span style="margin-left:auto; padding-right:15px; font-size:14px; color:#ccffcc;">🟢 Real-time Firebase Sync Aktiven</span>
+            </div>
+            <div class="orders-workspace" id="prenosnik-content">
+                <!-- Dinamični prikaz kartic naročil -->
+            </div>
         </div>
     </div>
 
@@ -253,6 +275,7 @@
                 <button onclick="mgrStorno()">🚫 STORNO</button>
                 <button onclick="mgrSkim()">💸 SKIM</button>
                 <button onclick="mgrZaposleni()">👥 ZAPOSLENI</button>
+                <button onclick="mgrSkupine()">📁 SKUPINE</button>
                 <button onclick="mgrArtikli()">📦 ARTIKLI</button>
                 <button onclick="mgrZgodovina()">📜 ZGODOVINA RAČUNOV</button>
                 <button onclick="mgrPlaca()">💼 PLAČA</button>
@@ -300,8 +323,8 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    /* ================= BAZA PODATKOV (FIREBASE SYNC) ================= */
-    let db = { users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
+    /* ================= BAZA PODATKOV (FIREBASE SYNC IN REAL TIME) ================= */
+    let db = { groups: ['SHOP'], users: [], items: [], receipts: [], orders: [], giftCards: [], register: { expectedCash: 0, actualCash: 0 }, seq: 3, orderSeq: 100 };
     let isDbLoaded = false;
 
     function initDB(callback) {
@@ -309,31 +332,43 @@
             const stored = snapshot.val();
             if (stored) {
                 db = stored;
+                if(!db.groups || db.groups.length === 0) db.groups = ['SHOP'];
                 if(!db.giftCards) db.giftCards = [];
                 if(!db.orders) db.orders = [];
                 if(!db.receipts) db.receipts = [];
                 if(!db.items) db.items = [];
                 if(!db.users) db.users = [];
                 if(!db.orderSeq) db.orderSeq = 100;
+                
+                // Nastavitev privzete skupine SHOP za vse artikle
+                db.items.forEach(it => {
+                    if(!it.skupina) it.skupina = 'SHOP';
+                });
+
                 db.users.forEach(u => { 
                     if(u.bankBalance === undefined) u.bankBalance = 500; 
                     if(!u.fines) u.fines = [];
-                    if(!u.transactions) u.transactions = []; // Inicializacija transakcij
+                    if(!u.transactions) u.transactions = [];
                 });
                 
+                // Osvežitev pogledov v živo ob spremembah
                 if (document.getElementById('view-narocila').classList.contains('active')) {
                     renderOrdersView('open');
                 }
+                if (document.getElementById('view-prenosnik').classList.contains('active')) {
+                    renderPrenosnikView();
+                }
             } else {
                 db = {
+                    groups: ['SHOP'],
                     users: [
                         { id: '832937461', name: 'EMPLOY', role: 'manager', card: '832937461', balance: 0, bankBalance: 1000, salary: 0, fines: [], transactions: [] },
                         { id: '111', name: 'Zaposleni 1', role: 'cashier', card: '111', balance: 0, bankBalance: 500, salary: 500, fines: [], transactions: [] },
                         { id: '222', name: 'Janez Stranka', role: 'customer', card: '222', balance: 50, bankBalance: 1500, salary: 0, fines: [{amount: 25, date: new Date().toISOString(), paid: false}], transactions: [] }
                     ],
                     items: [
-                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48 },
-                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00 }
+                        { koda: '1001', naziv: 'TORBICA ZA GSM NOGAVICA', cena: 4.48, skupina: 'SHOP' },
+                        { koda: '1002', naziv: 'ZAŠČITNO STEKLO', cena: 15.00, skupina: 'SHOP' }
                     ],
                     receipts: [],
                     orders: [],
@@ -373,6 +408,7 @@
         
         if (viewId === 'blagajna') updateCartUI();
         if (viewId === 'narocila') renderOrdersView('open');
+        if (viewId === 'prenosnik') renderPrenosnikView();
         closeWorkspace(); 
     }
 
@@ -520,6 +556,46 @@
         }});
     }
 
+    /* ================= PRENOSNIK / DLANČNIK REAL-TIME POGLED ================= */
+    window.renderPrenosnikView = function() {
+        let container = document.getElementById('prenosnik-content');
+        let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
+
+        if(openOrders.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 40px; color: #777;">
+                <h3>Ni aktivnih naročil iz dlančnika.</h3>
+                <p>Naročila ustvarjena na dlančniku se bodo tukaj pojavila samodejno v isti sekundi.</p>
+            </div>`;
+            return;
+        }
+
+        let html = `<div class="prenosnik-grid">`;
+        openOrders.forEach(o => {
+            let itemLines = o.items.map(i => `<div>- ${i.kol}x ${i.naziv} (${i.total.toFixed(2)} WII)</div>`).join('');
+            let statusColor = o.status === 'PLAČANO' ? '#d4edda' : '#fff3cd';
+
+            html += `
+                <div class="order-card" style="background:${statusColor};">
+                    <div class="order-card-header">
+                        <span>#${o.id} - ${o.customer || 'Stranka'}</span>
+                        <span>${o.status}</span>
+                    </div>
+                    <div class="order-card-body">
+                        ${itemLines}
+                    </div>
+                    <div style="font-weight:bold; text-align:right; font-size:16px;">
+                        Skupaj: ${o.total.toFixed(2)} WII
+                    </div>
+                    <div class="order-card-footer">
+                        <button onclick="loadOrderToRegister(${o.id})" style="background:#ccffcc;">📥 Prevzemi na blagajno</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
     /* ================= NAROČILA - POKLIČI ================= */
     function openFetchOrder() {
         let openOrders = db.orders.filter(o => o.status !== 'ODDANO');
@@ -561,6 +637,7 @@
             }
         }
         
+        switchView('blagajna');
         updateCartUI();
         closeModal(false);
         showModal({title: "Naloženo", message: `Naročilo #${id} uspešno preneseno na blagajno.`});
@@ -738,7 +815,6 @@
                     const user = db.users.find(u => u.card === pin || u.id === pin);
                     if(!user) return showModal({title:"Napaka", message:"Neveljavna kartica/PIN!"});
                     
-                    // Popravek pretvorbe v številko (parseFloat)
                     const userBankBal = parseFloat(user.bankBalance || 0);
                     if(userBankBal < paymentState.total) {
                         return showModal({title:"Zavrnjeno", message:`Na bančnem računu ni dovolj sredstev!\n(Stanje: ${userBankBal.toFixed(2)} WII)`});
@@ -858,7 +934,6 @@
                 let newBal = oldBal - paymentState.total;
                 u.bankBalance = newBal;
 
-                // Vpis transakcije v profil uporabnika za aplikacijo banke
                 if(!u.transactions) u.transactions = [];
                 u.transactions.push({
                     id: Date.now(),
@@ -1023,23 +1098,78 @@
         renderStornoDetails(recIndex);
     }
 
-    // 6. Artikli (CRUD)
+    // 6. SKUPINE (CRUD)
+    function mgrSkupine() {
+        let ws = openWorkspace("Upravljanje Skupin Artiklov");
+        let html = `<table class="crud-table"><tr><th>Naziv Skupine</th><th>Akcija</th></tr>`;
+        
+        if(!db.groups) db.groups = ['SHOP'];
+
+        db.groups.forEach((grp, i) => {
+            html += `<tr>
+                <td><input value="${grp}" onchange="db.groups[${i}]=this.value; saveDB();"></td>
+                <td><button class="action-btn" onclick="deleteGroup(${i})">Briši</button></td>
+            </tr>`;
+        });
+        html += `</table><br><button onclick="addNewGroup()">+ Dodaj Skupino</button>`;
+        ws.innerHTML = html;
+    }
+
+    window.addNewGroup = function() {
+        showModal({title:"Nova Skupina", message:"Vnesi naziv nove skupine:", type:"prompt", inputType:"text", onConfirm:(name)=>{
+            if(name) {
+                if(!db.groups) db.groups = ['SHOP'];
+                db.groups.push(name.toUpperCase().trim());
+                saveDB();
+                mgrSkupine();
+            }
+        }});
+    }
+
+    window.deleteGroup = function(i) {
+        if(db.groups[i] === 'SHOP') {
+            return showModal({title:"Opozorilo", message:"Privzete skupine SHOP ni mogoče izbrisati!"});
+        }
+        let deletedGroup = db.groups[i];
+        db.groups.splice(i, 1);
+        
+        // Vsi artikli te izbrisane skupine se prenesejo v privzeto skupino SHOP
+        db.items.forEach(it => {
+            if(it.skupina === deletedGroup) it.skupina = 'SHOP';
+        });
+        
+        saveDB();
+        mgrSkupine();
+    }
+
+    // 7. Artikli (CRUD + Skupine)
     function mgrArtikli() {
         let ws = openWorkspace("Urejanje Artiklov");
-        let html = `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Cena</th><th>Akcija</th></tr>`;
+        if(!db.groups || db.groups.length === 0) db.groups = ['SHOP'];
+
+        let html = `<table class="crud-table"><tr><th>Koda</th><th>Naziv</th><th>Cena</th><th>Skupina</th><th>Akcija</th></tr>`;
         db.items.forEach((it, i) => {
+            if(!it.skupina) it.skupina = 'SHOP';
+            
+            let groupOptions = db.groups.map(g => `<option value="${g}" ${it.skupina === g ? 'selected' : ''}>${g}</option>`).join('');
+
             html += `<tr>
                 <td><input value="${it.koda}" onchange="db.items[${i}].koda=this.value; saveDB()"></td>
                 <td><input value="${it.naziv}" onchange="db.items[${i}].naziv=this.value; saveDB()"></td>
                 <td><input type="number" value="${it.cena}" onchange="db.items[${i}].cena=parseFloat(this.value); saveDB()"></td>
+                <td>
+                    <select onchange="db.items[${i}].skupina=this.value; saveDB();">
+                        ${groupOptions}
+                    </select>
+                </td>
                 <td><button class="action-btn" onclick="db.items.splice(${i},1); saveDB(); mgrArtikli();">Briši</button></td>
             </tr>`;
         });
-        html += `</table><br><button onclick="db.items.push({koda:'',naziv:'',cena:0}); saveDB(); mgrArtikli();">+ Dodaj Artikel</button>`;
+        html += `</table><br><button onclick="db.items.push({koda:'',naziv:'',cena:0, skupina:'SHOP'}); saveDB(); mgrArtikli();">+ Dodaj Artikel</button>`;
         ws.innerHTML = html;
     }
 
-    // 7. Zaposleni / Stranke
+    // 8. Zaposleni / Stranke
     function renderUsers(roleFilter, title) {
         let ws = openWorkspace(title);
         let html = `<table class="crud-table"><tr><th>ID/Šifra</th><th>Ime</th><th>Kartica</th><th>Vloga</th><th>Dobroimetje</th><th>Akcija</th></tr>`;
@@ -1065,7 +1195,7 @@
     function mgrZaposleni() { renderUsers('employee', 'Zaposleni'); }
     function mgrStranke() { renderUsers('all', 'Stranke in Dobroimetje'); } 
 
-    // 8. Zgodovina Računov
+    // 9. Zgodovina Računov
     function mgrZgodovina() {
         let ws = openWorkspace("Zgodovina Računov");
         let html = `<table class="crud-table"><tr><th>Št</th><th>Datum</th><th>Stranka</th><th>Znesek</th><th>Način</th><th>Podrobnosti</th></tr>`;
@@ -1093,7 +1223,7 @@
         ws.innerHTML = html;
     }
 
-    // 9. Plača
+    // 10. Plača
     function mgrPlaca() {
         let ws = openWorkspace("Plače Zaposlenih");
         let html = `<table class="crud-table"><tr><th>Zaposleni</th><th>Dolg/Plača (WII)</th></tr>`;
@@ -1105,7 +1235,7 @@
         ws.innerHTML = html;
     }
 
-    // 10. Kazni
+    // 11. Kazni
     function mgrKazni() {
         let ws = openWorkspace("Kazni Strank");
         let html = `<table class="crud-table"><tr><th>Stranka</th><th>Dodaj Kazen</th><th>Zgodovina Kazni (Zneski)</th></tr>`;
@@ -1130,7 +1260,7 @@
         }});
     }
 
-    // 11. Darilni Boni
+    // 12. Darilni Boni
     function mgrBoni() {
         let ws = openWorkspace("Upravljanje z Darilnimi Boni");
         let html = `<table class="crud-table"><tr><th>Koda Bona</th><th>Vrednost (WII)</th><th>Akcija</th></tr>`;
