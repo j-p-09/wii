@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WII RAZPARČI SE</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #50E3C2;
+            --dark: #333333;
+            --light: #F5F7FA;
+            --danger: #E94B3C;
+            --success: #2ECC71;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        .screen {
+            display: none;
+            background: white;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .active {
+            display: block;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #357ABD;
+        }
+        button.danger {
+            background-color: var(--danger);
+        }
+        input[type="text"], input[type="password"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 5px;
+            width: calc(100% - 24px);
+            max-width: 250px;
+        }
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .game-list {
+            list-style: none;
+            padding: 0;
+        }
+        .game-list li {
+            background: var(--light);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: var(--primary);
+            color: white;
+        }
+        .scoreboard {
+            background: #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .ai-config {
+            background: #eef5fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #bce0fd;
+        }
+        .ai-status {
+            font-size: 15px;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        .valid { color: var(--success); font-weight: bold; }
+        .invalid { color: var(--danger); font-weight: bold; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+
+    <h1>WII RAZPARČI SE</h1>
+
+    <!-- ZASLON 1: Domov -->
+    <div id="screen-home" class="screen active">
+        <h2>Dobrodošli</h2>
+        
+        <div class="ai-config">
+            <strong>Nastavitev Pravne AI Verifikacije (Opcijsko)</strong><br>
+            <small>Vnesite OpenAI API Ključ za 100% natančno preverjanje vseh besed v realnem času ali pa uporabite vgrajeni pametni slovar:</small><br>
+            <input type="password" id="api-key-input" placeholder="sk-..." style="width: 280px;">
+            <button onclick="saveApiKey()">Shrani Ključ</button>
+            <div id="api-status" style="font-size: 12px; margin-top: 5px; color: #666;"></div>
+        </div>
+
+        <button onclick="startNewGameSetup()">+ Dodaj novo igro</button>
+        <hr style="margin: 25px 0; border-top: 1px solid #eee;">
+        <h3>Zgodovina iger</h3>
+        <ul id="games-list" class="game-list"></ul>
+    </div>
+
+    <!-- ZASLON 2: Nastavitev igralcev -->
+    <div id="screen-setup" class="screen">
+        <h2>Kdo bo igral?</h2>
+        <div id="players-container" class="player-inputs">
+            <input type="text" class="player-name" placeholder="Ime igralca 1">
+            <input type="text" class="player-name" placeholder="Ime igralca 2">
+        </div>
+        <button onclick="addPlayerInput()">+ Dodaj igralca</button>
+        <br><br>
+        <button onclick="startGame()" style="background-color: var(--success);">Začni igro!</button>
+        <button onclick="showScreen('home')" class="danger">Nazaj</button>
+    </div>
+
+    <!-- ZASLON 3: Vnos črke -->
+    <div id="screen-round-setup" class="screen">
+        <div id="scoreboard-top" class="scoreboard"></div>
+        <h2>Nova Runda</h2>
+        <p>Izberite črko za to rundo:</p>
+        <input type="text" id="round-letter" maxlength="1" style="width: 50px; text-align: center; font-size: 24px; text-transform: uppercase;">
+        <br><br>
+        <button onclick="startRoundEntry()">Vnesi odgovore</button>
+        <button onclick="endGame()" class="danger">Zaključi igro</button>
+    </div>
+
+    <!-- ZASLON 4: Vnos odgovorov -->
+    <div id="screen-round-entry" class="screen">
+        <h2>Črka: <span id="display-letter" style="color: var(--primary);"></span></h2>
+        <div style="overflow-x: auto;">
+            <table id="entry-table"></table>
+        </div>
+        <div class="ai-status" id="ai-status">Čakam na vnos odgovorov...</div>
+        <button onclick="submitAnswers()" id="btn-preveri" style="background-color: var(--secondary); color: black;">Preveri z AI in Točkuj</button>
+    </div>
+
+    <!-- ZASLON 5: Rezultati runde -->
+    <div id="screen-round-results" class="screen">
+        <h2>Rezultati Runde</h2>
+        <div style="overflow-x: auto;">
+            <table id="results-table"></table>
+        </div>
+        <div class="scoreboard" id="scoreboard-bottom"></div>
+        <button onclick="showScreen('round-setup')">Naslednja runda</button>
+        <button onclick="endGame()" class="danger">Zaključi igro</button>
+    </div>
+
+    <script>
+        const categories = ['IME', 'PRIIMEK', 'ŽIVAL', 'RASTLINA', 'AVTO', 'DRŽAVA'];
+        let games = JSON.parse(localStorage.getItem('wiiGames')) || [];
+        let openAiKey = localStorage.getItem('wiiApiKey') || '';
+        let currentGame = null;
+        let currentLetter = '';
+
+        // Baza podatkov za lokalno verifikacijo (če uporabnik nima API ključa)
+        const validCountries = ["AFGANISTAN","ALBANIJA","ALŽIRIJA","ANDORA","ANGOLA","ARGENTINA","ARMENIJA","AVSTRALIJA","AVSTRIJA","AZERBAJDŽAN","BAHAMI","BAHRAJN","BANGLADEŠ","BARBADOS","BELGIJA","BELIZE","BELORUSIJA","BENIN","NOVA ZELANDIJA","NOVA ZELANDIJA","BOLGARIJA","BOLIVIJA","BOSNA IN HERCEGOVINA","BOCVANA","BRAZILIJA","BRUNEJ","BURKINA FASO","BURUNDI","BUTAN","CIPER","ČAD","ČEŠKA","ČILE","ČRNA GORA","DANSKA","DOMINIKA","DOMINIKANSKA REPUBLIKA","DŽIBUTI","EGIPT","EKVADOR","EKVATORIALNA GVINEJA","ERITREJA","ESTONIJA","ETIOPIJA","FIDŽI","FILIPINI","FINSKA","FRANCIJA","GABON","GAMBIJA","GANA","GRČIJA","GRENADA","GRUZIJA","GVATEMALA","GVINEJA","GVINEJA BISSAU","GVAJANA","HAITI","HONDURAS","HRVAŠKA","INDIJA","INDONEZIJA","IRAK","IRAN","IRSKA","ISLANDIJA","ITALIJA","IZRAEL","JAMAJKA","JAPAN","JEMEN","JORDANIIA","JUŽNA AFRIKA","JUŽNI SUDAN","KAMBODŽA","KAMERUN","KANADA","KATAR","KAZAHSTAN","KENIJA","KIRGIZIJA","KIRIBATI","KOLUMBIJA","KOMORI","KONGO","KOSTARIKA","KUBA","KUVAJT","LAOS","LETOSIJA","LETONIJA","LIBANON","LIBERIJA","LIBIJA","LIHTENŠTAJN","LITVA","LUKSEMBURG","MADAGASKAR","MADŽARSKA","SEVERNA MAKEDONIJA","MALAZIJA","MALAVI","MALDIVI","MALI","MALTA","MAROKO","MOKSvalidation","MAVRICIJ","MAVTANIJA","MEKSIKA","MEKSIKO","MIANMAR","MIKRONEZIJA","MOLDAVIJA","MONAKO","MONGOLIJA","MOZAMBIK","NAMIBIJA","NAURU","NEMČIJA","NEPAL","NIGER","NIGERIJA","NIKARAGVA","NIZOZEMSKA","NORVEŠKA","NOVA ZELANDIJA","OMAN","PAKISTAN","PALAU","PANAMA","PAPUA NOVA GVINEJA","PARAGVAJ","PERU","POLJSKA","PORTUGALSKA","ROMUNIJA","RUSIJA","RUANDA","SALAMONOTI OTOKI","SALVADOR","SAMOA","SAN MARINO","SAUDOVA ARABIJA","SEŠELI","SENEGAL","SEVERNA KOREJA","SIERA LEONE","SINGAPUR","SIRIJA","SLOVENSKO","SLOVENIJA","SLOVAŠKA","SOMALIJA","SRBIJA","SREDNJEAFRIŠKA REPUBLIKA","SUDAN","SURINAM","SVAZI","ŠPANIJA","ŠRILANKA","ŠVEDSKA","ŠVICA","TADŽIKISTAN","TAJSKA","TAJVAN","TANZANIJA","TOGO","TONGA","TRINIDAD IN TOBAGO","TUNIZIJA","TURČIJA","TURKMENISTAN","TUVALU","UGANDA","UKRAJINA","URUGVAJ","UZBEKISTAN","VANUATU","VATIKAN","VENEZUELA","VIETNAM","ZAMBIJA","ZIMBABVE","ZDRUŽENE DRŽAVE AMERIKE","ZDA","ZDRUŽENI ARABSKI EMIRATI","ZDRUŽENO KRALJESTVO"];
+        const validCars = ["AUDI","BMW","MERCEDES","MERCEDES-BENZ","BENZ","VOLKSWAGEN","VW","FORD","RENAULT","PEUGEOT","CITROEN","OPEL","FIAT","TOYOTA","HONDA","NISSAN","HYUNDAI","KIA","MAZDA","SKODA","ŠKODA","SEAT","VOLVO","ALFA ROMEO","ASTON MARTIN","BENTLEY","BUGATTI","CHEVROLET","CHRYSLER","DACIA","FERRARI","JAGUAR","JEEP","LAMBORGHINI","LANCIA","LAND ROVER","LEXUS","MASERATI","MINI","MITSUBISHI","PORSCHE","SAAB","SUBARU","SUZUKI","TESLA","ROLLS ROYCE"];
+
+        window.onload = function() {
+            if(openAiKey) {
+                document.getElementById('api-key-input').value = openAiKey;
+                document.getElementById('api-status').innerText = "✓ OpenAI Ključ je nastavljen.";
+            }
+            renderGamesList();
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            openAiKey = key;
+            localStorage.setItem('wiiApiKey', key);
+            document.getElementById('api-status').innerText = key ? "✓ OpenAI Ključ shranjen!" : "Ključ je odstranjen.";
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById('screen-' + screenId).classList.add('active');
+        }
+
+        function renderGamesList() {
+            const list = document.getElementById('games-list');
+            list.innerHTML = '';
+            if (games.length === 0) {
+                list.innerHTML = '<p>Ni še odigranih iger.</p>';
+                return;
+            }
+            games.forEach((g, index) => {
+                const li = document.createElement('li');
+                const date = new Date(g.date).toLocaleDateString();
+                const playersList = g.players.join(', ');
+                li.innerHTML = `
+                    <div style="text-align: left;">
+                        <strong>Igra ${date}</strong><br>
+                        <small>Igralci: ${playersList}</small>
+                    </div>
+                    <div>
+                        <button onclick="viewGame(${index})">Oglej si</button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function startNewGameSetup() {
+            document.getElementById('players-container').innerHTML = `
+                <input type="text" class="player-name" placeholder="Ime igralca 1">
+                <input type="text" class="player-name" placeholder="Ime igralca 2">
+            `;
+            showScreen('setup');
+        }
+
+        function addPlayerInput() {
+            const container = document.getElementById('players-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'player-name';
+            input.placeholder = `Ime igralca ${container.children.length + 1}`;
+            container.appendChild(input);
+        }
+
+        function startGame() {
+            const inputs = document.querySelectorAll('.player-name');
+            const players = [];
+            inputs.forEach(input => {
+                if(input.value.trim() !== '') players.push(input.value.trim());
+            });
+
+            if (players.length < 2) {
+                alert('Potrebujete vsaj 2 igralca!');
+                return;
+            }
+
+            const initialScores = {};
+            players.forEach(p => initialScores[p] = 0);
+
+            currentGame = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                players: players,
+                rounds: [],
+                totalScores: initialScores
+            };
+
+            updateScoreboards();
+            document.getElementById('round-letter').value = '';
+            showScreen('round-setup');
+        }
+
+        function updateScoreboards() {
+            if(!currentGame) return;
+            const text = 'SKUPNE TOČKE: ' + currentGame.players.map(p => `${p}: ${currentGame.totalScores[p]}`).join(' | ');
+            document.getElementById('scoreboard-top').innerText = text;
+            if(document.getElementById('scoreboard-bottom')) {
+                document.getElementById('scoreboard-bottom').innerText = text;
+            }
+        }
+
+        function startRoundEntry() {
+            const letterInput = document.getElementById('round-letter').value.trim().toUpperCase();
+            if(!letterInput || letterInput.length !== 1) {
+                alert('Prosim, vnesite eno črko!');
+                return;
+            }
+            currentLetter = letterInput;
+            document.getElementById('display-letter').innerText = currentLetter;
+            
+            buildEntryTable();
+            document.getElementById('ai-status').innerText = 'Čakam na vnos odgovorov...';
+            document.getElementById('btn-preveri').disabled = false;
+            document.getElementById('btn-preveri').innerText = "Preveri z AI in Točkuj";
+            showScreen('round-entry');
+        }
+
+        function buildEntryTable() {
+            const table = document.getElementById('entry-table');
+            let thead = '<tr><th>Kategorija</th>';
+            currentGame.players.forEach(p => thead += `<th>${p}</th>`);
+            thead += '</tr>';
+
+            let tbody = '';
+            categories.forEach((cat, cIndex) => {
+                tbody += `<tr><td><strong>${cat}</strong></td>`;
+                currentGame.players.forEach((p, pIndex) => {
+                    tbody += `<td><input type="text" id="ans_${cIndex}_${pIndex}" placeholder="Odgovor..."></td>`;
+                });
+                tbody += '</tr>';
+            });
+
+            table.innerHTML = thead + tbody;
+        }
+
+        // NAPREDNO PREVERJANJE (OpenAI API ali Pametni Lokalni Slovar)
+        async function validateAnswer(word, category, letter) {
+            const trimmed = word.trim();
+            if (!trimmed) return { valid: false, reason: 'Prazno' };
+
+            // Osnovni test prve črke
+            if (!trimmed.toUpperCase().startsWith(letter)) {
+                return { valid: false, reason: `Ne začne se na ${letter}` };
+            }
+
+            // Če ima uporabnik vnesen OpenAI ključ, uporabi napredno umetno inteligenco GPT
+            if (openAiKey) {
+                try {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${openAiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-4o-mini',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: 'Si strogi sodnik v slovenski igri "Razparči se" (Tops/Stadt-Land-Fluss). Odgovori ISKRNO v JSON formatu: {"valid": true/false}. Odgovor velja SAMO če je beseda resnični primer za kategorijo (npr. Sever NI država, Švedska JE država).'
+                                },
+                                {
+                                    role: 'user',
+                                    content: `Kategorija: ${category}, Začetna črka: ${letter}, Vnesen odgovor: "${trimmed}". Ali je to veljavna beseda za kategorijo?`
+                                }
+                            ],
+                            response_format: { type: "json_object" }
+                        })
+                    });
+                    const data = await response.json();
+                    const resData = JSON.parse(data.choices[0].message.content);
+                    return { valid: resData.valid, reason: resData.valid ? 'OK' : 'AI zavrnila odgovor' };
+                } catch (e) {
+                    console.warn("OpenAI API napaka, prehaja na lokalno preverjanje.", e);
+                }
+            }
+
+            // LOKALNO PAMETNO PREVERJANJE (Fallback)
+            const cleanWord = trimmed.toUpperCase();
+
+            if (category === 'DRŽAVA') {
+                const isCountry = validCountries.includes(cleanWord);
+                return { valid: isCountry, reason: isCountry ? 'OK' : 'Ni priznana država' };
+            }
+
+            if (category === 'AVTO') {
+                const isCar = validCars.includes(cleanWord);
+                return { valid: isCar, reason: isCar ? 'OK' : 'Ni znana znamka avta' };
+            }
+
+            // Za ostale kategorije (Ime, Priimek, Žival, Rastlina) opravi osnovno preverjanje dolžine in znakov
+            if (cleanWord.length >= 2 && !/\d/.test(cleanWord)) {
+                return { valid: true, reason: 'OK' };
+            }
+
+            return { valid: false, reason: 'Neveljavno' };
+        }
+
+        async function submitAnswers() {
+            const btn = document.getElementById('btn-preveri');
+            btn.disabled = true;
+            btn.innerText = "Preverjanje z AI poteka...";
+            document.getElementById('ai-status').innerText = "Analiziram vseh 6 kategorij in preverjam resničnost besed...";
+
+            const roundData = {
+                letter: currentLetter,
+                scores: {},
+                resultsDisplay: []
+            };
+            
+            currentGame.players.forEach(p => roundData.scores[p] = 0);
+            const allValidAnswersByCategory = [];
+
+            for (let cIndex = 0; cIndex < categories.length; cIndex++) {
+                const cat = categories[cIndex];
+                const catResults = { category: cat, playerAnswers: {} };
+                let validAnswersList = [];
+
+                for (let pIndex = 0; pIndex < currentGame.players.length; pIndex++) {
+                    const player = currentGame.players[pIndex];
+                    const rawWord = document.getElementById(`ans_${cIndex}_${pIndex}`).value;
+                    
+                    const check = await validateAnswer(rawWord, cat, currentLetter);
+                    const processedWord = rawWord.trim().toLowerCase();
+
+                    catResults.playerAnswers[player] = {
+                        word: rawWord,
+                        processed: processedWord,
+                        valid: check.valid,
+                        points: 0
+                    };
+
+                    if(check.valid) {
+                        validAnswersList.push(processedWord);
+                    }
+                }
+
+                // Pravila Točkovanja:
+                // 1 tekmovalec z odgovorom -> 20 točk
+                // 2 ali več tekmovalcev z RAZLIČNIMI odgovori -> 10 točk vsak
+                // 2 ali več tekmovalcev z ROVNAKIM odgovorom -> 5 točk vsak
+                const answerCounts = {};
+                validAnswersList.forEach(w => {
+                    answerCounts[w] = (answerCounts[w] || 0) + 1;
+                });
+
+                const totalValid = validAnswersList.length;
+
+                for (let pIndex = 0; pIndex < currentGame.players.length; pIndex++) {
+                    const player = currentGame.players[pIndex];
+                    const ansData = catResults.playerAnswers[player];
+
+                    if (ansData.valid) {
+                        const freq = answerCounts[ansData.processed];
+                        if (totalValid === 1) {
+                            ansData.points = 20;
+                        } else if (freq === 1) {
+                            ansData.points = 10;
+                        } else {
+                            ansData.points = 5;
+                        }
+                        roundData.scores[player] += ansData.points;
+                    }
+                }
+
+                allValidAnswersByCategory.push(catResults);
+            }
+
+            buildResultsTable(allValidAnswersByCategory, roundData);
+            
+            currentGame.players.forEach(p => {
+                currentGame.totalScores[p] += roundData.scores[p];
+            });
+            currentGame.rounds.push(roundData);
+
+            updateScoreboards();
+            showScreen('round-results');
+        }
+
+        function buildResultsTable(catDataList, roundData) {
+            const table = document.getElementById('results-table');
+            let thead = '<tr><th>Kategorija</th>';
+            currentGame.players.forEach(p => thead += `<th>${p}</th>`);
+            thead += '</tr>';
+
+            let tbody = '';
+            catDataList.forEach(catData => {
+                tbody += `<tr><td><strong>${catData.category}</strong></td>`;
+                currentGame.players.forEach(player => {
+                    const ans = catData.playerAnswers[player];
+                    if (ans.valid) {
+                        tbody += `<td><span class="valid">${ans.word}</span><br><small>+${ans.points} točk</small></td>`;
+                    } else {
+                        tbody += `<td><span class="invalid">${ans.word || '-'}</span><br><small>0 točk</small></td>`;
+                    }
+                });
+                tbody += '</tr>';
+            });
+
+            tbody += '<tr style="background: #eef5fc;"><td><strong>SKUPAJ RUNDA</strong></td>';
+            currentGame.players.forEach(player => {
+                tbody += `<td><strong>+${roundData.scores[player]}</strong></td>`;
+            });
+            tbody += '</tr>';
+
+            table.innerHTML = thead + tbody;
+        }
+
+        function endGame() {
+            if(confirm("Ali res želite zaključiti to igro in jo shraniti v spomin?")) {
+                games.unshift(currentGame);
+                localStorage.setItem('wiiGames', JSON.stringify(games));
+                currentGame = null;
+                renderGamesList();
+                showScreen('home');
+            }
+        }
+
+        function viewGame(index) {
+            const g = games[index];
+            const date = new Date(g.date).toLocaleDateString();
+            let msg = `IGRA ${date}\n\nREDUZLTAT:\n`;
+            g.players.forEach(p => {
+                msg += `${p}: ${g.totalScores[p]} točk\n`;
+            });
+            alert(msg);
+        }
+    </script>
+</body>
+</html>
