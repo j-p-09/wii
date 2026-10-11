@@ -1,0 +1,16 @@
+{
+  "id": "./blagajna.html",
+  "name": "WII Blagajna",
+  "short_name": "Blagajna",
+  "start_url": "./blagajna.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a58ca",
+  "theme_color": "#0a58ca",
+  "lang": "sl",
+  "icons": [
+    {"src": "icon-blagajna-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-blagajna-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#4c2a9a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WII Terminal">
+<link rel="manifest" href="manifest-terminal.webmanifest">
+<link rel="apple-touch-icon" href="icon-terminal-180.png">
+<link rel="icon" type="image/png" href="icon-terminal-192.png">
+<title>WII POS Terminal</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{--bg1:#2b1a63;--bg2:#4c2a9a;--primary:#6f42c1;--ok:#198754;--bad:#dc3545;--text:#1f2937;--muted:#6b7280}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden;touch-action:manipulation}
+body{background:linear-gradient(160deg,var(--bg1),var(--bg2));color:#fff}
+button{font-family:inherit;border:none;cursor:pointer}
+#stage{height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;padding-top:calc(18px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom));overflow-y:auto}
+.panel{width:100%;max-width:440px;text-align:center}
+.brand{font-size:15px;letter-spacing:4px;font-weight:700;opacity:.8;margin-bottom:6px}
+h1{font-size:30px;margin-bottom:6px}
+.sub{opacity:.85;font-size:16px;margin-bottom:16px}
+.amount{font-size:52px;font-weight:800;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.disp{background:rgba(255,255,255,.14);border-radius:16px;padding:16px;font-size:36px;font-weight:700;letter-spacing:6px;min-height:72px;display:flex;align-items:center;justify-content:center;margin:10px 0 14px;font-variant-numeric:tabular-nums;word-break:break-all}
+.disp.ph{opacity:.5;font-size:20px;letter-spacing:1px;font-weight:600}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pad button{height:64px;border-radius:16px;background:rgba(255,255,255,.95);color:var(--text);font-size:28px;font-weight:700}
+.pad button:active{background:#d9ccf5}
+.pad button.fn{background:rgba(255,255,255,.3);color:#fff;font-size:20px}
+.cta{width:100%;margin-top:12px;padding:18px;border-radius:16px;font-size:20px;font-weight:800;background:#22c55e;color:#04290f}
+.cta:disabled{opacity:.4}
+.cta.sec{background:rgba(255,255,255,.18);color:#fff}
+.tips{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.tips button{padding:20px 8px;border-radius:16px;background:#fff;color:var(--text);font-weight:800;font-size:20px;line-height:1.2}
+.tips button small{display:block;font-size:14px;color:var(--primary);margin-top:4px;font-weight:700}
+.tips button.wide{grid-column:1/-1}
+.tips button.no{background:rgba(255,255,255,.18);color:#fff}
+.err{color:#ffb3b9;font-weight:700;min-height:22px;margin-top:8px}
+.pulse{width:90px;height:90px;border-radius:50%;margin:20px auto;background:rgba(255,255,255,.18);position:relative}
+.pulse::after{content:"💳";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px}
+.pulse::before{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid rgba(255,255,255,.6);animation:ring 1.8s infinite}
+@keyframes ring{from{transform:scale(1);opacity:.9}to{transform:scale(1.7);opacity:0}}
+.spinner{width:64px;height:64px;border:7px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;margin:20px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.anim{width:150px;height:150px;display:block;margin:10px auto 6px}
+.anim .c{stroke-dasharray:151;stroke-dashoffset:151;animation:dash .6s ease forwards}
+.anim .p{stroke-dasharray:50;stroke-dashoffset:50;animation:dash .4s .5s ease forwards}
+@keyframes dash{to{stroke-dashoffset:0}}
+.status{display:inline-block;margin-top:18px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.15)}
+.link{background:none;color:rgba(255,255,255,.7);font-size:13px;margin-top:22px;text-decoration:underline}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<script>
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const P = 'wii_db_v3/pos';
+const BANK_USERS = 'wii_db_v3/users';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2 = n => Math.round((+n || 0) * 100) / 100;
+const money = n => r2(n).toFixed(2);
+
+const T = {
+  code: '', sessRef: null, session: null, curReq: null, handled: null,
+  screen: 'connect', buf: '', card: '', user: null, users: [], onOk: null, dec: false, mask: false, maxLen: 12, timer: null, msg: ''
+};
+
+db.ref(BANK_USERS).on('value', s => { const v = s.val(); T.users = v ? Object.values(v).filter(Boolean) : []; });
+
+/* ---------- Zaslon ---------- */
+function setScreen(name, extra) {
+  clearTimeout(T.timer);
+  T.screen = name; T.buf = ''; Object.assign(T, extra || {});
+  render();
+}
+function pad(opts) {
+  T.dec = !!opts.dec; T.mask = !!opts.mask; T.maxLen = opts.max || 12; T.onOk = opts.onOk;
+  return `<div class="disp ph" id="disp">${opts.ph || ''}</div>
+    <div class="pad">${['1','2','3','4','5','6','7','8','9'].map(k => `<button onclick="np('${k}')">${k}</button>`).join('')}
+      <button class="fn" onclick="np('C')">C</button><button onclick="np('0')">0</button><button class="fn" onclick="np('B')">⌫</button></div>
+    ${opts.dec ? '<button class="cta sec" style="margin-top:10px;padding:12px" onclick="np(\'.\')">decimalna pika  ( . )</button>' : ''}`;
+}
+function np(k) {
+  if (k === 'C') T.buf = '';
+  else if (k === 'B') T.buf = T.buf.slice(0, -1);
+  else if (k === '.') { if (!T.dec || T.buf.includes('.')) return; T.buf = T.buf ? T.buf + '.' : '0.'; }
+  else if (T.buf.length < T.maxLen) T.buf += k;
+  updDisp();
+}
+function updDisp() {
+  const d = $('disp'); if (!d) return;
+  if (!T.buf) { d.classList.add('ph'); d.textContent = d.dataset.ph || d.textContent; }
+  else { d.classList.remove('ph'); d.textContent = T.mask ? '•'.repeat(T.buf.length) : T.buf; }
+  const ok = $('okbtn'); if (ok) ok.disabled = !T.buf;
+}
+function okPress() { if (T.buf && T.onOk) T.onOk(T.buf); }
+
+function render() {
+  const s = $('stage'); const sc = T.screen;
+  const emp = T.session ? esc(T.session.empName || '') : '';
+  const req = T.curReq;
+
+  if (sc === 'connect') {
+    s.innerHTML = `<div class="panel"><div class="brand">WII</div><h1>POS Terminal</h1>
+      <div class="sub">Vnesi kodo iz blagajne (zavihek POVEŽI)</div>
+      ${pad({ ph: 'KODA', max: 6, onOk: connect })}
+      <button class="cta" id="okbtn" disabled onclick="okPress()">POVEŽI</button>
+      <div class="err">${esc(T.msg)}</div></div>`;
+    $('disp').dataset.ph = 'KODA'; return;
+  }
+  if (sc === 'idle') {
+    s.innerHTML = `<div class="panel"><div class="brand">WII SHOP</div><div class="pulse"></div>
+      <h1>Pripravljen za plačilo</h1><div class="sub">Blagajnik: ${emp}</div>
+      <span class="status">● Povezan · koda ${esc(T.code)}</span><br>
+      <button class="link" onclick="disconnect(true)">Odklopi terminal</button></div>`; return;
+  }
+  if (sc === 'card') {
+    s.innerHTML = `<div class="panel"><div class="sub" style="margin-bottom:0">Za plačilo</div><div class="amount">${money(req.total)} WII</div>
+      <div class="sub">Vnesi številko svoje kartice</div>
+      ${pad({ ph: 'ŠTEVILKA KARTICE', mask: true, max: 20, onOk: cardEntered })}
+      <button class="cta" id="okbtn" disabled onclick="okPress()">POTRDI</button>
+      <div class="err">${esc(T.msg)}</div></div>`;
+    $('disp').dataset.ph = 'ŠTEVILKA KARTICE'; return;
+  }
+  if (sc === 'tip') {
+    const t = req.total, a = p => r2(t * p / 100);
+    s.innerHTML = `<div class="panel"><div class="sub" style="margin-bottom:0">${T.user ? 'Pozdravljen/a, ' + esc(T.user.name) : ''}</div>
+      <h1 style="margin-top:6px">Napitnina?</h1><div class="amount" style="font-size:40px">${money(t)} WII</div>
+      <div class="tips">
+        <button onclick="payWith(${a(5)})">5%<small>${money(a(5))} WII</small></button>
+        <button onclick="payWith(${a(10)})">10%<small>${money(a(10))} WII</small></button>
+        <button onclick="payWith(${a(15)})">15%<small>${money(a(15))} WII</small></button>
+        <button onclick="setScreen('tipcustom')">Po meri<small>vnesi znesek</small></button>
+        <button class="wide no" onclick="payWith(0)">Brez napitnine</button></div></div>`; return;
+  }
+  if (sc === 'tipcustom') {
+    s.innerHTML = `<div class="panel"><h1>Napitnina po meri</h1><div class="sub">Račun ${money(req.total)} WII</div>
+      ${pad({ ph: '0.00', dec: true, max: 8, onOk: v => { const n = parseFloat(v); if (isNaN(n) || n < 0) return; payWith(r2(n)); } })}
+      <button class="cta" id="okbtn" disabled onclick="okPress()">PLAČAJ</button>
+      <button class="cta sec" onclick="setScreen('tip')">Nazaj</button></div>`;
+    $('disp').dataset.ph = '0.00'; return;
+  }
+  if (sc === 'busy') {
+    s.innerHTML = `<div class="panel"><div class="spinner"></div><h1>Obdelava plačila…</h1></div>`; return;
+  }
+  if (sc === 'ok') {
+    s.innerHTML = `<div class="panel"><svg class="anim" viewBox="0 0 52 52"><circle class="c" cx="26" cy="26" r="24" fill="none" stroke="#22c55e" stroke-width="3"/><path class="p" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M14 27l8 8 16-17"/></svg>
+      <h1>Plačilo uspešno</h1><div class="sub">Hvala!</div></div>`; return;
+  }
+  if (sc === 'fail') {
+    s.innerHTML = `<div class="panel"><svg class="anim" viewBox="0 0 52 52"><circle class="c" cx="26" cy="26" r="24" fill="none" stroke="#ff6b78" stroke-width="3"/><path class="p" fill="none" stroke="#ff6b78" stroke-width="4" stroke-linecap="round" d="M16 16l20 20M36 16L16 36"/></svg>
+      <h1>Plačilo ni uspelo</h1><div class="sub">${esc(T.msg)}</div>
+      <button class="cta" onclick="retry()">POSKUSI ZNOVA</button></div>`; return;
+  }
+  if (sc === 'info') {
+    s.innerHTML = `<div class="panel"><h1>${esc(T.msg)}</h1></div>`; return;
+  }
+}
+
+/* ---------- Povezava ---------- */
+function connect(code) {
+  code = String(code).trim();
+  db.ref(P + '/sessions/' + code).once('value').then(s => {
+    if (!s.exists()) { T.msg = 'Koda ne obstaja ali je izmena zaključena.'; render(); $('disp').dataset.ph = 'KODA'; return; }
+    attach(code);
+  }).catch(e => { T.msg = 'Napaka povezave: ' + e.message; render(); });
+}
+function attach(code) {
+  detach();
+  T.code = code; T.msg = '';
+  try { localStorage.setItem('wii_term_code', code); } catch (e) {}
+  T.sessRef = db.ref(P + '/sessions/' + code);
+  const online = T.sessRef.child('terminalOnline');
+  online.set(true); online.onDisconnect().set(false);
+  T.sessRef.on('value', onSession, () => {});
+  setScreen('idle');
+}
+function detach() {
+  if (T.sessRef) { T.sessRef.off(); T.sessRef.child('terminalOnline').onDisconnect().cancel(); }
+  T.sessRef = null;
+}
+function disconnect(manual) {
+  if (T.sessRef && manual) T.sessRef.child('terminalOnline').set(false);
+  detach(); T.session = null; T.curReq = null;
+  try { localStorage.removeItem('wii_term_code'); } catch (e) {}
+  setScreen('connect');
+}
+function onSession(snap) {
+  const v = snap.val();
+  if (!v) { // izmena zaključena
+    detach(); T.session = null; T.curReq = null;
+    try { localStorage.removeItem('wii_term_code'); } catch (e) {}
+    T.msg = 'Izmena je zaključena. Vnesi novo kodo.'; setScreen('connect', { msg: T.msg }); return;
+  }
+  T.session = v;
+  const req = v.request;
+  const interactive = ['card', 'tip', 'tipcustom'].includes(T.screen);
+  if (!req || !req.status) {
+    if (interactive && T.curReq) { T.curReq = null; setScreen('info', { msg: 'Plačilo je bilo preklicano.' }); T.timer = setTimeout(() => setScreen('idle'), 2500); }
+    else if (T.screen === 'idle') render();
+    return;
+  }
+  if (req.status === 'pending' && req.id !== T.handled && (!T.curReq || T.curReq.id !== req.id)) {
+    T.curReq = req; T.user = null; T.card = ''; T.msg = '';
+    setScreen('card');
+  }
+}
+
+/* ---------- Plačilo ---------- */
+function cardEntered(no) {
+  const u = T.users.find(x => x && (x.card === no || x.id === no));
+  if (!u) { T.msg = ''; setScreen('fail', { msg: 'Kartica ne obstaja.', retryTo: 'card' }); return; }
+  T.card = no; T.user = u;
+  setScreen('tip');
+}
+function retry() { setScreen(T.retryTo === 'tip' && T.card ? 'tip' : 'card', { msg: '' }); }
+
+function payWith(tip) {
+  const req = T.curReq; if (!req) return;
+  setScreen('busy');
+  const reqRef = db.ref(P + '/sessions/' + T.code + '/request');
+  reqRef.transaction(r => {
+    if (r && r.id === req.id && r.status === 'pending') { r.status = 'processing'; return r; }
+  }, async (err, committed) => {
+    if (err || !committed) { T.curReq = null; setScreen('info', { msg: 'Plačilo je bilo preklicano.' }); T.timer = setTimeout(() => setScreen('idle'), 2500); return; }
+    const res = await bankCharge(T.card, req.total, tip);
+    if (res.ok) {
+      T.handled = req.id;
+      await reqRef.update({ status: 'paid', tip: r2(tip), charged: r2(req.total + tip), customerName: res.name });
+      T.curReq = null; T.card = ''; T.user = null;
+      setScreen('ok'); T.timer = setTimeout(() => setScreen('idle'), 3500);
+    } else {
+      await reqRef.update({ status: 'pending' });
+      setScreen('fail', { msg: res.reason, retryTo: /Premalo/.test(res.reason) ? 'tip' : 'card' });
+    }
+  });
+}
+
+/* Banka: atomarno odštej znesek in napitnino */
+function bankCharge(cardNo, total, tip) {
+  return new Promise(resolve => {
+    let result = { ok: false, reason: 'Napaka pri plačilu.' };
+    db.ref(BANK_USERS).transaction(cur => {
+      result = { ok: false, reason: 'Kartica ne obstaja.' };
+      if (cur === null || cur === undefined) return cur;
+      const key = Object.keys(cur).find(k => cur[k] && (cur[k].card === cardNo || cur[k].id === cardNo));
+      if (!key) return;
+      const u = cur[key], bal = parseFloat(u.bankBalance || 0), need = r2(total + tip);
+      if (bal + 0.0001 < need) { result = { ok: false, reason: 'Premalo sredstev na kartici.' }; return; }
+      u.bankBalance = r2(bal - need);
+      let tx = u.transactions; if (!tx) tx = []; else if (!Array.isArray(tx)) tx = Object.values(tx);
+      const now = new Date().toISOString();
+      tx.push({ description: 'Plačilo POS WII Shop', amount: -r2(total), date: now, type: 'POS_PAYMENT' });
+      if (tip > 0) tx.push({ description: 'Napitnina', amount: -r2(tip), date: now, type: 'POS_TIP' });
+      u.transactions = tx;
+      result = { ok: true, name: u.name || '' };
+      return cur;
+    }, (err, committed) => {
+      if (err) return resolve({ ok: false, reason: 'Napaka povezave: ' + err.message });
+      if (!committed && result.ok) result = { ok: false, reason: 'Plačilo ni bilo potrjeno. Poskusi znova.' };
+      resolve(result);
+    });
+  });
+}
+
+/* ---------- Zagon ---------- */
+render();
+(function auto() {
+  let c = ''; try { c = localStorage.getItem('wii_term_code') || ''; } catch (e) {}
+  if (!c) return;
+  db.ref(P + '/sessions/' + c).once('value').then(s => { if (s.exists()) attach(c); else { try { localStorage.removeItem('wii_term_code'); } catch (e) {} } }).catch(() => {});
+})();
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>

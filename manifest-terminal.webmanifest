@@ -1,0 +1,16 @@
+{
+  "id": "./terminal.html",
+  "name": "WII POS Terminal",
+  "short_name": "Terminal",
+  "start_url": "./terminal.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#4c2a9a",
+  "theme_color": "#4c2a9a",
+  "lang": "sl",
+  "icons": [
+    {"src": "icon-terminal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-terminal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
