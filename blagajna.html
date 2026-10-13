@@ -234,6 +234,10 @@ firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.
 const db = firebase.database();
 const P = 'wii_db_v3/pos';              // vsi podatki blagajne
 const BANK_USERS = 'wii_db_v3/users';   // banka (obstoječa baza)
+const FIRM_ID = '000';                  // račun podjetja v banki
+// true  = prihodek se knjiži po polni ceni (+), popusti in boni so odhodek (−) → neto = kar je stranka dejansko plačala
+// false = prihodek se knjiži samo v višini plačanega zneska, popusti in boni se odštejejo še enkrat
+const LEDGER_GROSS = true;
 
 /* =====================================================================
    POMOŽNE FUNKCIJE
@@ -425,7 +429,10 @@ function startListeners() {
   listen('locks', P + '/settings/locks');
   listen('shifts', P + '/shifts', 500);
   listen('receipts', P + '/receipts', 500);
-  db.ref(BANK_USERS).on('value', s => { const v = s.val(); S.users = v ? Object.values(v).filter(Boolean) : []; });
+  db.ref(BANK_USERS).on('value', s => {
+    const v = s.val(); S.users = v ? Object.values(v).filter(Boolean) : [];
+    if (S.emp && S.view === 'settings') viewSettings();
+  });
 }
 function onData(key) {
   if (key === 'employees') {
@@ -1052,6 +1059,7 @@ async function makeReceipt(d) {
   if (r.tip > 0) up[`tips/${d.cashierId}/${key}`] = { date: r.date, amount: r.tip, receiptId: id, shiftId: d.shiftId };
   await db.ref(P).update(up);
   S.lastReceipt = r;
+  firmPost(receiptLedger(r));
   return r;
 }
 function baseReceipt() {
@@ -1116,6 +1124,60 @@ function bankCharge(cardNo, total, tip) {
       resolve(result);
     });
   });
+}
+
+/* ---------- Račun podjetja (000): skrito knjiženje prihodkov in odhodkov ----------
+   Stranke tega ne vidijo – v svoji banki vidijo samo svoje plačilo. */
+function firmFind(cur) { return Object.keys(cur).find(k => cur[k] && (String(cur[k].id) === FIRM_ID || String(cur[k].card) === FIRM_ID)); }
+function firmApply(entries) {
+  entries = (entries || []).filter(e => e && Math.abs(e.amount) > 0.004);
+  if (!entries.length) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let okFlag = false;
+    db.ref(BANK_USERS).transaction(cur => {
+      okFlag = false;
+      if (cur === null || cur === undefined) return cur;
+      let key = firmFind(cur), u;
+      if (key === undefined) {
+        u = { id: FIRM_ID, name: 'WII Shop (račun podjetja)', card: FIRM_ID, bankBalance: 0, transactions: [] };
+        if (Array.isArray(cur)) cur.push(u); else cur['firm' + FIRM_ID] = u;
+      } else u = cur[key];
+      let tx = u.transactions; if (!tx) tx = []; else if (!Array.isArray(tx)) tx = Object.values(tx);
+      let bal = parseFloat(u.bankBalance || 0);
+      const now = new Date().toISOString();
+      entries.forEach(e => {
+        if (e.ref && tx.some(t => t && t.ref === e.ref && t.description === e.description)) return; // že knjiženo
+        bal = r2(bal + e.amount);
+        tx.push({ description: e.description, amount: r2(e.amount), date: now, type: 'POS_FIRM', ref: e.ref || null });
+      });
+      u.bankBalance = bal; u.transactions = tx;
+      okFlag = true;
+      return cur;
+    }, (err, committed) => resolve(!err && committed && okFlag));
+  });
+}
+const firmQueueGet = () => { try { return JSON.parse(localStorage.getItem('wii_firm_pending') || '[]'); } catch (e) { return []; } };
+const firmQueueSet = q => { try { localStorage.setItem('wii_firm_pending', JSON.stringify(q)); } catch (e) {} };
+async function flushFirm() {
+  const q = firmQueueGet(); if (!q.length) return;
+  firmQueueSet([]);
+  if (!(await firmApply(q))) firmQueueSet(q.concat(firmQueueGet()));
+}
+async function firmPost(entries) {
+  const ok = await firmApply(entries);
+  if (!ok) {
+    firmQueueSet(firmQueueGet().concat(entries.filter(e => Math.abs(e.amount) > 0.004)));
+    toast('Knjiženje na račun podjetja ni uspelo – poskusim znova pozneje.', 'warn');
+  } else flushFirm();
+}
+function receiptLedger(r) {
+  const L = [], tag = '#' + r.id, ref = 'rcpt-' + r.id;
+  L.push({ description: `Račun ${tag} (${methodLabel(r.method)})`, amount: LEDGER_GROSS ? r.subtotal : paidAmt(r), ref });
+  const disc = r2((r.itemDiscount || 0) + (r.discount || 0));
+  if (disc > 0) L.push({ description: `Popust - račun ${tag}`, amount: -disc, ref });
+  (r.vouchers || []).forEach(v => L.push({ description: `Darilni bon ${v.number} - račun ${tag}`, amount: -v.amount, ref }));
+  if (r.tip > 0) L.push({ description: `Napitnina (prejeta) - račun ${tag}`, amount: r.tip, ref });
+  return L;
 }
 
 /* ---------- Kartica (vezano) ---------- */
@@ -1434,13 +1496,21 @@ function editShift(id) {
     const pwS = ov.querySelector('#s-pw').value.trim(), ptS = ov.querySelector('#s-pt').value.trim();
     const pw = pwS === '' ? null : r2(parseNum(pwS)), pt = ptS === '' ? null : r2(parseNum(ptS));
     if ((pw !== null && (isNaN(pw) || pw < 0)) || (pt !== null && (isNaN(pt) || pt < 0))) return toast('Neveljaven znesek', 'err');
+    // plača in napitnina se samodejno odštejeta od računa podjetja (000) – knjižimo samo razliko od prej vpisanega
+    const dW = r2((pw || 0) - (s.paidWage || 0)), dT = r2((pt || 0) - (s.paidTips || 0));
+    const lbl = `${s.empName} (${fmtDT(s.start).slice(0, 10)})`, L = [];
+    if (Math.abs(dW) > 0.004) L.push({ description: (dW > 0 ? 'Plača: ' : 'Popravek plače: ') + lbl, amount: -dW, ref: 'wage-' + id + '-' + Date.now() });
+    if (Math.abs(dT) > 0.004) L.push({ description: (dT > 0 ? 'Izplačilo napitnine: ' : 'Popravek napitnine: ') + lbl, amount: -dT, ref: 'tip-' + id + '-' + Date.now() });
     const up = {};
     up[`shifts/${id}/start`] = st.toISOString();
     if (s.end) up[`shifts/${id}/end`] = en.toISOString();
     up[`shifts/${id}/paidWage`] = pw; up[`shifts/${id}/paidTips`] = pt;
     up[`shifts/${id}/paidAt`] = (pw !== null || pt !== null) ? new Date().toISOString() : null;
     const act = S.active[s.empId]; if (act && act.shiftId === id) up[`active/${s.empId}/start`] = st.toISOString();
-    db.ref(P).update(up).then(() => { ov.close(); toast('Izmena shranjena', 'ok'); }).catch(e => toast('Napaka: ' + e.message, 'err'));
+    db.ref(P).update(up).then(() => {
+      ov.close(); toast(L.length ? 'Izmena shranjena, knjiženo na račun podjetja' : 'Izmena shranjena', 'ok');
+      if (L.length) firmPost(L);
+    }).catch(e => toast('Napaka: ' + e.message, 'err'));
   };
 }
 function delShift(id) {
@@ -1460,7 +1530,13 @@ function viewSettings() {
     return `<div class="list-row"><div class="grow"><div class="t">${methodLabel(m)}</div><div class="s">${l.locked ? '🔒 ' + lockText(m) : 'omogočeno'}</div></div>
       ${l.locked ? `<button class="mini green" onclick="setLock('${m}',0,true)">Odkleni</button>` : ''}<button class="mini red" onclick="lockDlg('${m}')">${l.locked ? 'Spremeni' : 'Zakleni'}</button></div>`;
   }).join('');
-  $('page').innerHTML = `<div class="box"><h3>Zaklep načinov plačila</h3>${locks}</div>
+  const f = S.users.find(u => u && (String(u.id) === FIRM_ID || String(u.card) === FIRM_ID));
+  const ftx = f ? (Array.isArray(f.transactions) ? f.transactions : Object.values(f.transactions || {})).filter(Boolean).slice(-10).reverse() : [];
+  const firm = `<div class="box"><h3>Račun podjetja (${FIRM_ID})</h3>
+    ${f ? `<div class="kv"><span>Stanje</span><b style="color:${(f.bankBalance || 0) < 0 ? 'var(--danger)' : 'var(--success)'}">${money(f.bankBalance || 0)} WII</b></div>
+    <div class="hist" style="max-height:200px">${ftx.map(t => `<div>${fmtDT(t.date)} · ${esc(t.description)} · <b>${t.amount > 0 ? '+' : ''}${money(t.amount)}</b></div>`).join('') || 'Ni knjiženj.'}</div>` : '<div class="muted">Račun bo ustvarjen ob prvem knjiženju (prvi račun, plača ali napitnina).</div>'}
+    <div class="muted" style="margin-top:6px">Samodejno: računi (+), popusti, darilni boni, plače in izplačane napitnine (−). Stranke tega ne vidijo.</div></div>`;
+  $('page').innerHTML = `${firm}<div class="box"><h3>Zaklep načinov plačila</h3>${locks}</div>
     <div class="box"><h3>Uporabniki</h3>
     ${list.map(e => `<div class="list-row"><div class="grow"><div class="t">${esc(e.name)} ${e.role === 'admin' ? '<span class="status ok">admin</span>' : ''}</div>
       <div class="s">@${esc(e.username)} · artikli: ${e.role === 'admin' || (e.perms && e.perms.artikli) ? 'da' : 'ne'} · popust: ${e.role === 'admin' || (e.perms && e.perms.popust) ? 'da' : 'ne'} · artikli s pooblastili: ${e.role === 'admin' || (e.perms && e.perms.omejeni) ? 'da' : 'ne'}</div></div>
@@ -1473,15 +1549,15 @@ function lockDlg(m) {
     <label class="lbl" style="margin-top:10px">Ali vpiši minute</label>
     <input id="l-min" class="inp big kb" data-kb="num" data-dec="0" maxlength="4" readonly inputmode="none" autocomplete="off" placeholder="min">
     <div class="row"><button class="btn ghost" id="l-x">Prekliči</button><button class="btn red" id="l-ok">Zakleni</button></div>`);
-  ov.querySelector('.qgrid').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (!b) return; const mi = +b.dataset.m; ov.close(); setLock(m, mi, !mi); });
+  ov.querySelector('.qgrid').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (!b) return; const mi = +b.dataset.m; ov.close(); setLock(m, mi, false); });
   ov.querySelector('#l-x').onclick = () => ov.close();
   ov.querySelector('#l-ok').onclick = () => { const v = parseInt(ov.querySelector('#l-min').value, 10); if (!v || v <= 0) return toast('Vnesi minute', 'err'); ov.close(); setLock(m, v, false); };
 }
-function setLock(m, minutes, manualOrClear) {
-  if (manualOrClear && minutes === 0 && lockInfo(m).locked && arguments.length === 3 && S.locks[m] && !arguments[3]) {
-    // odklep
-  }
-  return null;
+function setLock(m, minutes, clear) {
+  const ref = db.ref(P + '/settings/locks/' + m);
+  if (clear) return ref.remove().then(() => toast(methodLabel(m) + ' je odklenjeno.', 'ok'));
+  const rec = { manual: !minutes, until: minutes ? new Date(Date.now() + minutes * 60000).toISOString() : null, by: S.emp.name, at: new Date().toISOString() };
+  return ref.set(rec).then(() => toast(methodLabel(m) + (minutes ? ` zaklenjeno za ${minutes} min.` : ' zaklenjeno do preklica.'), 'warn'));
 }
 function editEmp(id) {
   const e = id ? S.employees[id] : null;
@@ -1664,6 +1740,7 @@ kbInit();
 $('lg-user').addEventListener('kbenter', () => kbShow($('lg-pass')));
 $('lg-pass').addEventListener('kbenter', login);
 startListeners();
+setTimeout(flushFirm, 5000);
 
 // samodejna ponovna prijava po osvežitvi
 (function autoLogin() {
