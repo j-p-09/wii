@@ -1,6 +1,6 @@
 // WII POS – service worker (omogoča namestitev kot aplikacijo in hitrejši zagon)
-const CACHE = 'wii-pos-v1';
-const SHELL = ['./blagajna.html', './terminal.html', './manifest-blagajna.webmanifest', './manifest-terminal.webmanifest',
+const CACHE = 'wii-pos-v3';
+const SHELL = ['./blagajna.html', './terminal.html', './wii-mail.html', './manifest-mail.webmanifest', './icon-mail-192.png', './icon-mail-512.png', './icon-mail-180.png', './manifest-blagajna.webmanifest', './manifest-terminal.webmanifest',
   './icon-blagajna-192.png', './icon-blagajna-512.png', './icon-blagajna-180.png',
   './icon-terminal-192.png', './icon-terminal-512.png', './icon-terminal-180.png'];
 
