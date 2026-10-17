@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f6cbd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WII Mail">
+<link rel="manifest" href="manifest-mail.webmanifest">
+<link rel="apple-touch-icon" href="icon-mail-180.png">
+<link rel="icon" type="image/png" href="icon-mail-192.png">
+<title>WII Mail</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{
+  --bg:#f3f5f9; --panel:#ffffff; --panel2:#f8f9fc; --text:#1b2330; --muted:#667085; --line:#e3e7ee;
+  --pri:#0f6cbd; --pri-d:#0b559a; --pri-soft:#e6f1fb; --danger:#c42b1c; --ok:#107c10; --warn:#b45309; --star:#f5b301;
+  --sel:#dcebfa; --shadow:0 8px 30px rgba(15,30,60,.18);
+}
+html[data-theme="dark"]{
+  --bg:#12161d; --panel:#1b212b; --panel2:#171c24; --text:#e8ecf3; --muted:#9aa5b5; --line:#2b3340;
+  --pri:#4aa3f0; --pri-d:#2f86d4; --pri-soft:#1c2c40; --danger:#ff6b5e; --ok:#4cc26a; --warn:#f0a23b; --sel:#223348;
+  --shadow:0 8px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;font-size:15px}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border:none;background:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,textarea,select{font-family:inherit;font-size:16px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;outline:none;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+.btn{background:var(--pri);color:#fff;border-radius:8px;padding:10px 18px;font-weight:600}
+.btn:hover{background:var(--pri-d)}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--sel)}
+.btn.red{background:var(--danger)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* ---------- LOGIN ---------- */
+#login{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:linear-gradient(145deg,#0b3d6e,#0f6cbd 55%,#3a9be0);overflow-y:auto}
+.lg-card{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:30px 26px;width:100%;max-width:400px}
+.lg-logo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.lg-logo .ic{width:46px;height:46px;border-radius:12px;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.lg-logo h1{font-size:26px}
+.lg-card p.sub{color:var(--muted);margin-bottom:18px}
+.lg-card label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px}
+.lg-err{color:var(--danger);font-weight:600;min-height:22px;margin-top:10px;font-size:14px}
+.lg-ver{color:rgba(255,255,255,.8);margin-top:18px;font-size:12px;letter-spacing:2px;font-weight:700}
+
+/* ---------- APP SHELL ---------- */
+#app{position:fixed;inset:0;display:none;flex-direction:column}
+#topbar{height:56px;flex:none;background:var(--pri);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;padding-top:env(safe-area-inset-top);box-sizing:content-box}
+#topbar .burger{font-size:22px;width:38px;height:38px;border-radius:8px;color:#fff;display:none}
+#topbar .brand{font-weight:800;font-size:18px;letter-spacing:.3px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+#topbar .search{flex:1;max-width:560px;margin:0 auto;position:relative}
+#topbar .search input{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);color:#fff;padding:9px 12px 9px 36px;border-radius:8px}
+#topbar .search input::placeholder{color:rgba(255,255,255,.75)}
+#topbar .search input:focus{background:#fff;color:#111;box-shadow:none}
+#topbar .search input:focus::placeholder{color:#888}
+#topbar .search span{position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex:none;user-select:none}
+#fab{display:none;position:absolute;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--pri);color:#fff;font-size:24px;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:20}
+#me{width:36px;height:36px;border:2px solid rgba(255,255,255,.6)}
+
+#body{flex:1;display:flex;min-height:0;position:relative}
+#folders{width:230px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px 8px;overflow-y:auto}
+#folders .newbtn{margin:0 6px 12px;padding:12px;border-radius:10px;font-weight:700;font-size:15px}
+.fold{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;width:100%;text-align:left;color:var(--text)}
+.fold:hover{background:var(--panel2)}
+.fold.on{background:var(--pri-soft);color:var(--pri);font-weight:700}
+.fold .n{margin-left:auto;font-size:12px;font-weight:700;color:var(--pri)}
+.fold .ic{width:22px;text-align:center}
+.fsep{height:1px;background:var(--line);margin:10px 6px}
+#list{width:380px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#read{flex:1;min-width:0;background:var(--bg);display:flex;flex-direction:column;min-height:0}
+
+.lhead{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lhead h2{font-size:18px;flex:1;min-width:100px}
+.fchips{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto}
+.fchip{padding:5px 12px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.fchip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.bulk{display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--pri-soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bulk .cnt{font-weight:700;margin-right:6px;color:var(--pri)}
+.ib{width:36px;height:36px;border-radius:8px;font-size:17px;display:inline-flex;align-items:center;justify-content:center}
+.ib:hover{background:var(--sel)}
+#items{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.grp{padding:8px 14px 4px;font-size:12px;font-weight:700;color:var(--pri);text-transform:uppercase;letter-spacing:.5px}
+.it{display:flex;gap:11px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;align-items:flex-start}
+.it:hover{background:var(--panel2)}
+.it.sel{background:var(--sel)}
+.it.unread::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pri)}
+.it .avatar{width:40px;height:40px}
+.it .avatar.chk{background:var(--pri)!important}
+.it .mid{flex:1;min-width:0}
+.it .l1{display:flex;gap:6px;align-items:baseline}
+.it .from{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .time{font-size:12px;color:var(--muted);white-space:nowrap}
+.it .subj{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.it .snip{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.it.unread .from,.it.unread .subj{font-weight:700}
+.it .flags{display:flex;gap:4px;font-size:13px;margin-top:2px;align-items:center}
+.it .star{font-size:16px;color:var(--line);line-height:1}
+.it .star.on{color:var(--star)}
+.empty{padding:50px 20px;text-align:center;color:var(--muted)}
+.empty .big{font-size:44px;margin-bottom:8px}
+
+/* reading pane */
+.rd-ph{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-direction:column;gap:8px}
+.rd-ph .big{font-size:56px;opacity:.6}
+.rd-bar{display:flex;align-items:center;gap:2px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rd-bar .back{display:none;margin-right:6px}
+.rd-bar .sp{flex:1}
+.rbtn{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;font-size:14px}
+.rbtn:hover{background:var(--sel)}
+.rd-scroll{flex:1;overflow-y:auto;padding:18px;-webkit-overflow-scrolling:touch}
+.rd-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:900px;margin:0 auto 14px}
+.rd-subj{font-size:21px;font-weight:700;margin-bottom:14px;word-break:break-word}
+.rd-meta{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.rd-meta .who{flex:1;min-width:0;font-size:14px}
+.rd-meta .who b{font-size:15px}
+.rd-meta .small{color:var(--muted);font-size:13px;word-break:break-word}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin-left:6px;vertical-align:middle}
+.badge.hi{background:#fde7e4;color:var(--danger);border-color:#f5c6c0}
+.msgbody{line-height:1.55;word-break:break-word;overflow-wrap:anywhere;font-size:15px}
+.msgbody blockquote{border-left:3px solid var(--line);margin:8px 0 8px 2px;padding-left:12px;color:var(--muted)}
+.msgbody a{color:var(--pri)}
+.msgbody ul,.msgbody ol{margin-left:22px}
+.atts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.att{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-size:13px;max-width:100%}
+.att:hover{background:var(--sel)}
+.att .nm{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.thread{max-width:900px;margin:0 auto}
+.thread h4{font-size:12px;text-transform:uppercase;color:var(--muted);margin:6px 2px;letter-spacing:.5px}
+.thread .it{border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:var(--panel)}
+
+/* ---------- COMPOSE ---------- */
+#compose{position:fixed;right:22px;bottom:0;width:680px;max-width:100vw;height:min(660px,92vh);background:var(--panel);border-radius:12px 12px 0 0;box-shadow:var(--shadow);z-index:900;display:flex;flex-direction:column;border:1px solid var(--line)}
+.c-head{background:var(--pri);color:#fff;padding:11px 14px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:10px}
+.c-head b{flex:1}
+.c-head .sv{font-size:12px;opacity:.85}
+.c-head button{color:#fff;font-size:18px;width:30px;height:30px;border-radius:6px}
+.c-head button:hover{background:rgba(255,255,255,.2)}
+.c-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.c-row{display:flex;align-items:center;gap:8px;padding:4px 14px;border-bottom:1px solid var(--line);position:relative;min-height:44px}
+.c-row>label{width:54px;flex:none;color:var(--muted);font-size:14px}
+.c-row input.plain{border:none;box-shadow:none;padding:8px 2px;border-radius:0;background:transparent}
+.chipbox{flex:1;display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:0}
+.chipbox input{flex:1;min-width:120px;border:none;box-shadow:none!important;padding:8px 2px;background:transparent;border-radius:0}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--pri-soft);color:var(--pri);padding:4px 6px 4px 10px;border-radius:14px;font-size:13px;font-weight:600;max-width:100%}
+.chip.bad{background:#fde7e4;color:var(--danger)}
+.chip b{cursor:pointer;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+.chip b:hover{background:rgba(0,0,0,.12)}
+.lnk{color:var(--pri);font-weight:600;font-size:13px;white-space:nowrap}
+.sug{position:absolute;left:68px;right:14px;top:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:20;max-height:240px;overflow-y:auto}
+.sug div{padding:9px 12px;cursor:pointer;display:flex;gap:10px;align-items:center}
+.sug div:hover,.sug div.on{background:var(--sel)}
+.sug small{color:var(--muted)}
+.tb{display:flex;gap:2px;padding:6px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center;background:var(--panel2);position:relative}
+.tb button{min-width:32px;height:32px;border-radius:6px;font-size:14px;padding:0 6px}
+.tb button:hover{background:var(--sel)}
+.tb .vsep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.colors{position:absolute;top:100%;left:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;display:grid;grid-template-columns:repeat(6,26px);gap:6px;box-shadow:var(--shadow);z-index:30}
+.colors button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0;min-width:0}
+#ed{flex:1;min-height:180px;padding:14px;outline:none;line-height:1.55;overflow-y:auto}
+#ed:empty:before{content:attr(data-ph);color:var(--muted)}
+#ed blockquote{border-left:3px solid var(--line);margin:8px 0 8px 2px;padding-left:12px;color:var(--muted)}
+.sigblock{padding:0 14px 10px;color:var(--muted);font-size:14px;border-top:1px dashed var(--line);margin:0 14px;padding-top:8px;user-select:none}
+.c-atts{padding:6px 14px;display:flex;gap:8px;flex-wrap:wrap}
+.c-foot{padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.c-foot .sp{flex:1}
+.c-foot label{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.c-foot input[type=checkbox]{width:auto}
+
+/* ---------- MODALI ---------- */
+.ov{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto}
+.md{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);width:100%;max-width:520px;max-height:94vh;overflow-y:auto;padding:20px;margin:auto}
+.md.wide{max-width:760px}
+.md h3{font-size:19px;margin-bottom:12px}
+.md label.l{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 5px}
+.md .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{padding:8px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-weight:600}
+.tabs button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.urow{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.urow .nfo{flex:1;min-width:0}
+.urow .nfo b{display:block}
+.urow .nfo span{font-size:13px;color:var(--muted)}
+.tgl{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.tgl .sw{width:44px;height:24px;border-radius:24px;background:#c3cad6;position:relative;transition:.2s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on .sw{background:var(--ok)}.tgl.on .sw::after{left:23px}
+.mem{display:flex;gap:8px;align-items:center;padding:6px 0}
+.mem input{width:auto}
+.menu{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:3000;min-width:190px;padding:6px}
+.menu button{display:flex;gap:10px;width:100%;padding:9px 12px;border-radius:6px;text-align:left}
+.menu button:hover{background:var(--sel)}
+
+#toast{position:fixed;left:50%;top:68px;transform:translateX(-50%);z-index:5000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:92%;max-width:420px}
+.toast{background:#1f2937;color:#fff;padding:11px 16px;border-radius:10px;box-shadow:var(--shadow);font-weight:600;font-size:14px;animation:tin .2s}
+.toast.err{background:var(--danger)}.toast.ok{background:var(--ok)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+
+/* ---------- MOBILE ---------- */
+@media (max-width:900px){
+  #topbar .burger{display:inline-block}
+  #topbar .brand span.t{display:none}
+  #folders{position:absolute;left:0;top:0;bottom:0;z-index:50;transform:translateX(-102%);transition:transform .2s;box-shadow:none;width:270px}
+  #app.drawer #folders{transform:none;box-shadow:var(--shadow)}
+  #fab{display:flex}
+  #app.m-read #fab{display:none}
+  #scrim{display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:40}
+  #app.drawer #scrim{display:block}
+  #list{width:100%;border-right:none}
+  #read{position:absolute;inset:0;z-index:30;transform:translateX(102%);transition:transform .2s}
+  #app.m-read #read{transform:none}
+  .rd-bar .back{display:inline-flex}
+  .rd-scroll{padding:10px}
+  .rd-card{padding:14px}
+  #compose{right:0;left:0;width:100%;height:100%;max-height:none;border-radius:0}
+  .c-head{border-radius:0;padding-top:calc(11px + env(safe-area-inset-top))}
+}
+@media print{
+  #topbar,#folders,#list,.rd-bar,.thread,#compose,#toast{display:none!important}
+  html,body,#app,#body,#read,.rd-scroll{position:static!important;overflow:visible!important;height:auto!important;transform:none!important;background:#fff!important}
+  .rd-card{border:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= PRIJAVA ================= -->
+<div id="login">
+  <div class="lg-card">
+    <div class="lg-logo"><div class="ic">✉️</div><h1>WII Mail</h1></div>
+    <p class="sub">Interna pošta podjetja WII</p>
+    <form id="lg-form" autocomplete="on">
+      <label for="lg-user">Uporabniško ime</label>
+      <input id="lg-user" name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="lg-pass">Geslo</label>
+      <input id="lg-pass" name="password" type="password" autocomplete="current-password">
+      <button class="btn" style="width:100%;margin-top:18px;padding:13px" type="submit">Prijava</button>
+      <div class="lg-err" id="lg-err"></div>
+    </form>
+  </div>
+  <div class="lg-ver">WII MAIL · VERZIJA 1.0</div>
+</div>
+
+<!-- ================= APLIKACIJA ================= -->
+<div id="app">
+  <div id="topbar">
+    <button class="burger" id="burger" aria-label="Meni">☰</button>
+    <div class="brand">✉️ <span class="t">WII Mail</span></div>
+    <div class="search"><span>🔍</span><input id="q" placeholder="Išči po pošti…" autocomplete="off"></div>
+    <div class="avatar" id="me" title="Nastavitve"></div>
+  </div>
+  <div id="body">
+    <div id="scrim"></div>
+    <nav id="folders"></nav>
+    <section id="list">
+      <div class="lhead"><h2 id="l-title">Prejeto</h2><button class="ib" id="l-refresh" title="Osveži">🔄</button></div>
+      <div class="fchips" id="fchips"></div>
+      <div class="bulk hidden" id="bulk"></div>
+      <div id="items"></div>
+    </section>
+    <section id="read"></section>
+    <button id="fab" aria-label="Novo sporočilo">✏️</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   FIREBASE  (ista baza kot ostale aplikacije; vse pošte je pod wii_db_v3/mail)
+   ===================================================================== */
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const P = 'wii_db_v3/mail';
+const DOMAIN = '@wii.shop';
+const MAX_FILE = 2 * 1024 * 1024, MAX_TOTAL = 4 * 1024 * 1024, MAX_FILES = 8;
+
+/* =====================================================================
+   POMOŽNE FUNKCIJE
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const arr = v => Array.isArray(v) ? v : (v ? Object.values(v) : []);
+const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+function toast(msg, type = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+  $('#toast').appendChild(t); setTimeout(() => t.remove(), 3500);
+}
+function fmtList(ts) {
+  const d = new Date(ts), n = new Date();
+  if (d.toDateString() === n.toDateString()) return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (d.getFullYear() === n.getFullYear()) return d.getDate() + '. ' + (d.getMonth() + 1) + '.';
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+}
+function fmtFull(ts) { return new Date(ts).toLocaleString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function groupLabel(ts) {
+  const d = new Date(ts), n = new Date(), day = 86400000;
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), b = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+  const diff = Math.round((b - a) / day);
+  if (diff <= 0) return 'Danes'; if (diff === 1) return 'Včeraj'; if (diff < 7) return 'Ta teden'; if (diff < 31) return 'Ta mesec'; return 'Starejše';
+}
+const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+function colorOf(s) { let h = 0; s = String(s); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return `hsl(${h % 360},55%,45%)`; }
+const avatar = (name, email, cls = '') => `<div class="avatar ${cls}" style="background:${colorOf(email || name)}">${esc(initials(name))}</div>`;
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' kB' : (n / 1048576).toFixed(1) + ' MB';
+
+async function hashPw(username, pw) {
+  const t = 'wii-mail:' + String(username).toLowerCase() + ':' + pw;
+  if (window.crypto && crypto.subtle) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+    return 'h:' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  return 'p:' + pw;
+}
+async function pwOk(u, pw) { if (String(u.pw).startsWith('p:')) return u.pw === 'p:' + pw; return u.pw === await hashPw(u.username, pw); }
+
+/* ---------- Čiščenje HTML (pošta je tuja vsebina → bela lista) ---------- */
+const OK_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'BR', 'P', 'DIV', 'SPAN', 'UL', 'OL', 'LI', 'A', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'HR', 'FONT', 'SUB', 'SUP', 'PRE', 'CODE']);
+const DROP_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META', 'SVG', 'MATH', 'FORM', 'INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'IMG', 'VIDEO', 'AUDIO', 'NOSCRIPT', 'TEMPLATE', 'CANVAS', 'BASE', 'TITLE', 'HEAD']);
+function cleanStyle(st) {
+  const out = [];
+  String(st).split(';').forEach(p => {
+    const i = p.indexOf(':'); if (i < 0) return;
+    const k = p.slice(0, i).trim().toLowerCase(), v = p.slice(i + 1).trim();
+    if (!['color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'text-align'].includes(k)) return;
+    if (!/^[#a-z0-9(),.\s%-]+$/i.test(v) || /url|expression|javascript/i.test(v)) return;
+    out.push(k + ':' + v);
+  });
+  return out.join(';');
+}
+function sanitize(html) {
+  const doc = new DOMParser().parseFromString('<body>' + String(html || ''), 'text/html');
+  (function walk(node) {
+    [...node.childNodes].forEach(ch => {
+      if (ch.nodeType === 3) return;
+      if (ch.nodeType !== 1) { ch.remove(); return; }
+      const tag = ch.tagName;
+      if (DROP_TAGS.has(tag)) { ch.remove(); return; }
+      if (!OK_TAGS.has(tag)) { walk(ch); ch.replaceWith(...ch.childNodes); return; }
+      [...ch.attributes].forEach(a => {
+        const n = a.name.toLowerCase();
+        if (tag === 'A' && n === 'href') { if (!/^(https?:|mailto:)/i.test(a.value.trim())) ch.removeAttribute(a.name); }
+        else if (n === 'style') { const s = cleanStyle(a.value); if (s) ch.setAttribute('style', s); else ch.removeAttribute('style'); }
+        else if (tag === 'FONT' && n === 'color' && /^[#a-z0-9]+$/i.test(a.value)) { /* ok */ }
+        else if (tag === 'FONT' && n === 'size' && /^[1-7]$/.test(a.value)) { /* ok */ }
+        else ch.removeAttribute(a.name);
+      });
+      if (tag === 'A') { ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener noreferrer'); }
+      walk(ch);
+    });
+  })(doc.body);
+  return doc.body.innerHTML;
+}
+const htmlToText = h => { const d = document.createElement('div'); d.innerHTML = sanitize(h); return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
+
+/* =====================================================================
+   STANJE
+   ===================================================================== */
+const M = {
+  user: null, users: {}, groups: {}, boxes: {}, ready: {}, boxRef: null,
+  folder: 'inbox', sel: null, filter: 'all', q: '', allFolders: false, checked: new Set(), cache: {}, known: null, comp: null, boot: false
+};
+const FOLDERS = [
+  ['inbox', '📥', 'Prejeto'], ['starred', '⭐', 'Označeno'], ['sent', '📤', 'Poslano'],
+  ['drafts', '📝', 'Osnutki'], ['archive', '🗄️', 'Arhiv'], ['trash', '🗑️', 'Izbrisano']
+];
+const isAdmin = () => M.user && M.user.role === 'admin';
+
+/* =====================================================================
+   UPORABNIKI IN PRIJAVA
+   ===================================================================== */
+db.ref(P + '/users').on('value', s => {
+  M.users = s.val() || {}; M.ready.users = true;
+  if (!Object.keys(M.users).length) { bootstrapAdmin(); return; }
+  if (M.user) {
+    const u = M.users[M.user.id];
+    if (!u || u.active === false) { toast('Tvoj račun je onemogočen.', 'err'); doLogout(true); return; }
+    M.user = u; renderFolders();
+  }
+  if ($('#admin-ov')) renderAdmin();
+});
+db.ref(P + '/groups').on('value', s => { M.groups = s.val() || {}; M.ready.groups = true; if ($('#admin-ov')) renderAdmin(); });
+
+async function bootstrapAdmin() {
+  if (M.boot) return; M.boot = true;
+  const id = db.ref(P + '/users').push().key;
+  const u = { id, name: 'Administrator', username: 'ADMIN', pw: await hashPw('ADMIN', 'ADMIN'), email: 'admin' + DOMAIN, role: 'admin', signature: 'Administrator\nWII Shop\nadmin' + DOMAIN, canSend: true, active: true, createdAt: Date.now() };
+  db.ref(P + '/users').transaction(cur => cur === null ? { [id]: u } : undefined);
+}
+$('#lg-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!M.ready.users) { $('#lg-err').textContent = 'Baza se še nalaga…'; return; }
+  const un = $('#lg-user').value.trim().toLowerCase(), pw = $('#lg-pass').value;
+  const u = Object.values(M.users).find(x => String(x.username).toLowerCase() === un);
+  if (!u || !(await pwOk(u, pw))) { $('#lg-err').textContent = 'Napačno uporabniško ime ali geslo.'; return; }
+  if (u.active === false) { $('#lg-err').textContent = 'Ta račun je onemogočen.'; return; }
+  $('#lg-err').textContent = ''; $('#lg-pass').value = '';
+  try { localStorage.setItem('wii_mail_uid', u.id); } catch (x) {}
+  startSession(u);
+});
+function startSession(u) {
+  M.user = u; M.folder = 'inbox'; M.sel = null; M.q = ''; M.filter = 'all'; M.checked.clear(); M.known = null; M.boxes = {};
+  $('#q').value = '';
+  $('#login').style.display = 'none'; $('#app').style.display = 'flex';
+  const me = $('#me'); me.textContent = initials(u.name); me.style.background = colorOf(u.email);
+  if (M.boxRef) M.boxRef.off();
+  M.boxRef = db.ref(P + '/boxes/' + u.id);
+  M.boxRef.on('value', s => {
+    M.boxes = s.val() || {};
+    if (M.known) Object.entries(M.boxes).forEach(([k, e]) => { if (e.folder === 'inbox' && !e.read && !M.known.has(k)) notifyNew(e); });
+    M.known = new Set(Object.keys(M.boxes));
+    renderAll();
+  });
+  purgeTrash();
+  renderAll();
+}
+function doLogout(silent) {
+  if (M.comp) closeCompose(true);
+  if (M.boxRef) { M.boxRef.off(); M.boxRef = null; }
+  M.user = null; M.boxes = {}; M.sel = null;
+  try { localStorage.removeItem('wii_mail_uid'); } catch (x) {}
+  $$('.ov,.menu').forEach(e => e.remove());
+  $('#app').style.display = 'none'; $('#login').style.display = 'flex'; $('#app').classList.remove('drawer', 'm-read');
+  document.title = 'WII Mail';
+  if (navigator.clearAppBadge) try { navigator.clearAppBadge(); } catch (x) {}
+}
+function purgeTrash() {
+  const lim = Date.now() - 30 * 86400000, up = {};
+  Object.entries(M.boxes).forEach(([k, e]) => { if (e.folder === 'trash' && (e.deletedAt || 0) < lim && e.deletedAt) up[k] = null; });
+  if (Object.keys(up).length) db.ref(P + '/boxes/' + M.user.id).update(up);
+}
+function notifyNew(e) {
+  toast(`✉️ ${e.from ? e.from.name : ''}: ${e.subject || '(brez zadeve)'}`, 'ok');
+  if (navigator.vibrate) try { navigator.vibrate(120); } catch (x) {}
+  if (window.Notification && Notification.permission === 'granted' && document.hidden) {
+    try { new Notification(e.from ? e.from.name : 'WII Mail', { body: e.subject || '', icon: 'icon-mail-192.png' }); } catch (x) {}
+  }
+}
+
+/* =====================================================================
+   IMENIK
+   ===================================================================== */
+function dirList() {
+  const l = [];
+  Object.values(M.users).forEach(u => { if (u.active !== false) l.push({ type: 'user', id: u.id, name: u.name, email: String(u.email).toLowerCase() }); });
+  Object.values(M.groups).forEach(g => l.push({ type: 'group', id: g.id, name: g.name, email: String(g.email).toLowerCase(), members: arr(g.members) }));
+  return l;
+}
+const findEmail = e => dirList().find(x => x.email === String(e).toLowerCase());
+const nameOf = e => { const d = findEmail(e); return d ? d.name : e; };
+
+/* =====================================================================
+   PRIKAZ: MAPE, SEZNAM
+   ===================================================================== */
+function entries() { return Object.entries(M.boxes).map(([key, e]) => Object.assign({ key }, e)); }
+function inFolder(e, f) { return f === 'starred' ? (e.star && e.folder !== 'trash') : e.folder === f; }
+function renderAll() { renderFolders(); renderList(); renderRead(); updateBadge(); }
+function updateBadge() {
+  const n = entries().filter(e => e.folder === 'inbox' && !e.read).length;
+  document.title = (n ? `(${n}) ` : '') + 'WII Mail';
+  if (navigator.setAppBadge) try { n ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } catch (x) {}
+}
+function renderFolders() {
+  if (!M.user) return;
+  const all = entries();
+  const cnt = f => f === 'inbox' ? all.filter(e => e.folder === 'inbox' && !e.read).length : f === 'drafts' ? all.filter(e => e.folder === 'drafts').length : 0;
+  $('#folders').innerHTML = `<button class="btn newbtn" id="b-new">✏️ Novo sporočilo</button>`
+    + FOLDERS.map(f => { const n = cnt(f[0]); return `<button class="fold ${M.folder === f[0] ? 'on' : ''}" data-f="${f[0]}"><span class="ic">${f[1]}</span>${f[2]}${n ? `<span class="n">${n}</span>` : ''}</button>`; }).join('')
+    + `<div class="fsep"></div>`
+    + (isAdmin() ? `<button class="fold" id="b-admin"><span class="ic">🛠️</span>Skrbništvo</button>` : '')
+    + `<button class="fold" id="b-set"><span class="ic">⚙️</span>Nastavitve</button>`
+    + `<button class="fold" id="b-out"><span class="ic">🚪</span>Odjava</button>`
+    + `<div style="flex:1"></div><div class="muted" style="font-size:12px;padding:8px 12px">${esc(M.user.name)}<br>${esc(M.user.email)}</div>`;
+}
+$('#folders').addEventListener('click', e => {
+  if (e.target.closest('#b-new')) { closeDrawer(); return openCompose({}); }
+  if (e.target.closest('#b-admin')) { closeDrawer(); return openAdmin(); }
+  if (e.target.closest('#b-set')) { closeDrawer(); return openSettings(); }
+  if (e.target.closest('#b-out')) return doLogout();
+  const f = e.target.closest('.fold[data-f]');
+  if (f) { M.folder = f.dataset.f; M.sel = null; M.checked.clear(); M.q = ''; $('#q').value = ''; closeDrawer(); $('#app').classList.remove('m-read'); renderAll(); }
+});
+function closeDrawer() { $('#app').classList.remove('drawer'); }
+$('#burger').onclick = () => $('#app').classList.toggle('drawer');
+$('#scrim').onclick = closeDrawer;
+$('#me').onclick = openSettings;
+$('#fab').onclick = () => openCompose({});
+$('#l-refresh').onclick = () => { renderAll(); toast('Osveženo'); };
+
+function visibleEntries() {
+  let l = entries();
+  const q = norm(M.q.trim());
+  if (q && M.allFolders) l = l.filter(e => e.folder !== 'trash');
+  else l = l.filter(e => inFolder(e, M.folder));
+  if (q) l = l.filter(e => norm([e.subject, e.snippet, e.from && e.from.name, e.from && e.from.email, arr(e.to).join(' '), arr(e.to).map(nameOf).join(' ')].join(' ')).includes(q));
+  if (M.filter === 'unread') l = l.filter(e => !e.read);
+  if (M.filter === 'star') l = l.filter(e => e.star);
+  if (M.filter === 'att') l = l.filter(e => e.att > 0);
+  return l.sort((a, b) => b.date - a.date);
+}
+function renderList() {
+  if (!M.user) return;
+  const f = FOLDERS.find(x => x[0] === M.folder);
+  $('#l-title').textContent = M.q.trim() ? `Iskanje: ${M.q.trim()}` : f[2];
+  $('#fchips').innerHTML = [['all', 'Vse'], ['unread', 'Neprebrano'], ['star', 'Označeno'], ['att', 'S prilogo']].map(c => `<button class="fchip ${M.filter === c[0] ? 'on' : ''}" data-c="${c[0]}">${c[1]}</button>`).join('')
+    + (M.q.trim() ? `<button class="fchip ${M.allFolders ? 'on' : ''}" data-c="allf">Vse mape</button>` : '')
+    + (M.folder === 'trash' ? `<button class="fchip" data-c="empty">Izprazni koš</button>` : '');
+  const list = visibleEntries();
+  [...M.checked].forEach(k => { if (!M.boxes[k]) M.checked.delete(k); });
+  const bulk = $('#bulk');
+  if (M.checked.size) {
+    bulk.classList.remove('hidden');
+    bulk.innerHTML = `<span class="cnt">${M.checked.size}</span><button class="ib" data-b="del" title="Izbriši">🗑️</button><button class="ib" data-b="arch" title="Arhiviraj">🗄️</button><button class="ib" data-b="read" title="Označi kot prebrano">📖</button><button class="ib" data-b="unread" title="Označi kot neprebrano">✉️</button><button class="ib" data-b="star" title="Označi z zvezdico">⭐</button><button class="ib" data-b="move" title="Premakni">📂</button><button class="ib" data-b="none" title="Prekliči izbiro">✕</button>`;
+  } else bulk.classList.add('hidden');
+  if (!list.length) {
+    $('#items').innerHTML = `<div class="empty"><div class="big">${M.q.trim() ? '🔍' : '📭'}</div>${M.q.trim() ? 'Ni zadetkov.' : M.filter !== 'all' ? 'Ni sporočil za ta filter.' : 'V tej mapi ni sporočil.'}</div>`;
+    return;
+  }
+  let html = '', last = '';
+  list.forEach(e => {
+    const g = groupLabel(e.date); if (g !== last) { html += `<div class="grp">${g}</div>`; last = g; }
+    const out = e.folder === 'sent' || e.folder === 'drafts';
+    const who = out ? 'Za: ' + (arr(e.to).map(nameOf).join(', ') || (e.folder === 'drafts' ? '(brez prejemnika)' : '')) : (e.from ? e.from.name : '');
+    const chk = M.checked.has(e.key);
+    html += `<div class="it ${e.read ? '' : 'unread'} ${M.sel === e.key ? 'sel' : ''}" data-k="${e.key}">
+      <div data-av="1">${chk ? `<div class="avatar chk">✓</div>` : avatar(out ? (arr(e.to)[0] ? nameOf(arr(e.to)[0]) : '?') : e.from.name, out ? arr(e.to)[0] : e.from.email)}</div>
+      <div class="mid"><div class="l1"><div class="from">${esc(who)}</div><div class="time">${fmtList(e.date)}</div></div>
+        <div class="subj">${e.folder === 'drafts' ? '<span style="color:var(--danger)">[Osnutek] </span>' : ''}${esc(e.subject || '(brez zadeve)')}</div>
+        <div class="snip">${esc(e.snippet || '')}</div>
+        <div class="flags">${e.imp === 'high' ? '<span title="Pomembno">❗</span>' : ''}${e.att > 0 ? '<span title="Priloge">📎</span>' : ''}</div></div>
+      <button class="star ${e.star ? 'on' : ''}" data-star="1" title="Označi">★</button></div>`;
+  });
+  $('#items').innerHTML = html;
+}
+$('#fchips').addEventListener('click', e => {
+  const c = e.target.closest('.fchip'); if (!c) return;
+  const v = c.dataset.c;
+  if (v === 'allf') M.allFolders = !M.allFolders;
+  else if (v === 'empty') { emptyTrash(); return; }
+  else M.filter = v;
+  renderList();
+});
+$('#items').addEventListener('click', e => {
+  const it = e.target.closest('.it'); if (!it) return;
+  const k = it.dataset.k;
+  if (e.target.closest('[data-star]')) { e.stopPropagation(); return patchBox(k, { star: !M.boxes[k].star }); }
+  if (e.target.closest('[data-av]')) { M.checked.has(k) ? M.checked.delete(k) : M.checked.add(k); return renderList(); }
+  if (M.checked.size) { M.checked.has(k) ? M.checked.delete(k) : M.checked.add(k); return renderList(); }
+  openEntry(k);
+});
+$('#bulk').addEventListener('click', e => {
+  const b = e.target.closest('[data-b]'); if (!b) return;
+  const keys = [...M.checked], a = b.dataset.b;
+  if (a === 'none') { M.checked.clear(); return renderList(); }
+  if (a === 'del') deleteKeys(keys);
+  if (a === 'arch') moveKeys(keys, 'archive');
+  if (a === 'read') keys.forEach(k => patchBox(k, { read: true }));
+  if (a === 'unread') keys.forEach(k => patchBox(k, { read: false }));
+  if (a === 'star') keys.forEach(k => patchBox(k, { star: true }));
+  if (a === 'move') { moveMenu(b, keys); return; }
+  M.checked.clear(); renderList();
+});
+let searchT;
+$('#q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(() => { M.q = $('#q').value; M.sel = null; renderAll(); }, 150); });
+
+/* ---------- Operacije nad zapisi ---------- */
+function patchBox(k, o) {
+  if (!M.boxes[k]) return;
+  const up = {}; Object.entries(o).forEach(([f, v]) => { up[f] = v; });
+  Object.assign(M.boxes[k], o); // takojšen odziv
+  db.ref(P + '/boxes/' + M.user.id + '/' + k).update(up);
+  renderList(); renderFolders(); updateBadge();
+}
+function moveKeys(keys, folder) {
+  keys.forEach(k => { if (M.boxes[k]) patchBox(k, { folder, deletedAt: folder === 'trash' ? Date.now() : null }); });
+  if (keys.includes(M.sel)) closeReader();
+  toast(folder === 'archive' ? 'Arhivirano' : folder === 'trash' ? 'Premaknjeno v koš' : 'Premaknjeno');
+}
+function deleteKeys(keys) {
+  const up = {}; let perm = 0;
+  keys.forEach(k => {
+    const e = M.boxes[k]; if (!e) return;
+    if (e.folder === 'trash' || e.folder === 'drafts') { up[k] = null; perm++; if (e.folder === 'drafts') db.ref(P + '/attachments/' + e.mid).remove(); }
+    else { e.folder = 'trash'; e.deletedAt = Date.now(); up[k + '/folder'] = 'trash'; up[k + '/deletedAt'] = Date.now(); }
+  });
+  db.ref(P + '/boxes/' + M.user.id).update(up);
+  if (keys.includes(M.sel)) closeReader();
+  toast(perm ? 'Trajno izbrisano' : 'Premaknjeno v koš');
+  renderAll();
+}
+function emptyTrash() {
+  const keys = entries().filter(e => e.folder === 'trash').map(e => e.key);
+  if (!keys.length) return toast('Koš je že prazen.');
+  if (!confirm(`Trajno izbrišem ${keys.length} sporočil?`)) return;
+  const up = {}; keys.forEach(k => up[k] = null); db.ref(P + '/boxes/' + M.user.id).update(up); toast('Koš izpraznjen');
+}
+function moveMenu(anchor, keys) {
+  $$('.menu').forEach(m => m.remove());
+  const m = document.createElement('div'); m.className = 'menu';
+  m.innerHTML = [['inbox', '📥', 'Prejeto'], ['archive', '🗄️', 'Arhiv'], ['trash', '🗑️', 'Izbrisano']].filter(f => keys.some(k => M.boxes[k] && M.boxes[k].folder !== f[0]))
+    .map(f => `<button data-m="${f[0]}"><span>${f[1]}</span>${f[2]}</button>`).join('');
+  const r = anchor.getBoundingClientRect();
+  m.style.top = Math.min(r.bottom + 4, innerHeight - 170) + 'px'; m.style.left = Math.max(8, Math.min(r.left, innerWidth - 210)) + 'px';
+  document.body.appendChild(m);
+  m.onclick = ev => { const b = ev.target.closest('[data-m]'); if (!b) return; m.remove(); moveKeys(keys.filter(k => M.boxes[k]), b.dataset.m); M.checked.clear(); renderList(); };
+  setTimeout(() => document.addEventListener('click', function h(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', h); } }), 0);
+}
+
+/* =====================================================================
+   BRANJE SPOROČILA
+   ===================================================================== */
+function loadMessage(mid) {
+  if (M.cache[mid]) return Promise.resolve(M.cache[mid]);
+  return db.ref(P + '/messages/' + mid).once('value').then(s => { const v = s.val(); if (v) M.cache[mid] = v; return v; });
+}
+function openEntry(k) {
+  const e = M.boxes[k]; if (!e) return;
+  if (e.folder === 'drafts') return openDraft(k);
+  M.sel = k;
+  if (!e.read) patchBox(k, { read: true });
+  $('#app').classList.add('m-read');
+  renderList(); renderRead();
+}
+function closeReader() { M.sel = null; $('#app').classList.remove('m-read'); renderRead(); renderList(); }
+function renderRead() {
+  const el = $('#read'); if (!el || !M.user) return;
+  const e = M.sel && M.boxes[M.sel];
+  if (!e) { el.innerHTML = `<div class="rd-ph"><div class="big">✉️</div><div>Izberi sporočilo za branje</div></div>`; return; }
+  const token = M.sel + ':' + (e.mid);
+  el.dataset.token = token;
+  const out = e.folder === 'sent';
+  el.innerHTML = `<div class="rd-bar">
+      <button class="rbtn back" data-a="back">←</button>
+      <button class="rbtn" data-a="reply">↩️ <span>Odgovori</span></button>
+      <button class="rbtn" data-a="replyall">↩️↩️ <span>Vsem</span></button>
+      <button class="rbtn" data-a="fwd">➡️ <span>Posreduj</span></button>
+      <span class="sp"></span>
+      <button class="rbtn" data-a="star" title="Označi">${e.star ? '⭐' : '☆'}</button>
+      <button class="rbtn" data-a="unread" title="Označi kot neprebrano">✉️</button>
+      <button class="rbtn" data-a="arch" title="Arhiviraj">🗄️</button>
+      <button class="rbtn" data-a="print" title="Natisni">🖨️</button>
+      <button class="rbtn" data-a="del" title="Izbriši">🗑️</button>
+    </div>
+    <div class="rd-scroll"><div class="rd-card">
+      <div class="rd-subj">${esc(e.subject || '(brez zadeve)')}${e.imp === 'high' ? '<span class="badge hi">❗ Pomembno</span>' : ''}</div>
+      <div class="rd-meta">${avatar(e.from.name, e.from.email)}<div class="who"><b>${esc(e.from.name)}</b> <span class="small">&lt;${esc(e.from.email)}&gt;</span><div class="small" id="rd-to">…</div><div class="small">${fmtFull(e.date)}</div></div></div>
+      <div class="msgbody" id="rd-body"><span class="muted">Nalaganje…</span></div>
+      <div class="atts hidden" id="rd-atts"></div>
+    </div><div class="thread" id="rd-thread"></div></div>`;
+  loadMessage(e.mid).then(m => {
+    if ($('#read').dataset.token !== token) return;
+    if (!m) { $('#rd-body').innerHTML = '<span class="muted">Sporočila ni mogoče naložiti.</span>'; return; }
+    $('#rd-body').innerHTML = sanitize(m.body);
+    const to = arr(m.to).map(x => esc(nameOf(x))).join(', '), cc = arr(m.cc).map(x => esc(nameOf(x))).join(', '), bcc = arr(e.bcc).map(x => esc(nameOf(x))).join(', ');
+    $('#rd-to').innerHTML = `Za: ${to || '—'}${cc ? `<br>Kp: ${cc}` : ''}${bcc ? `<br>Skp: ${bcc}` : ''}`;
+    const at = arr(m.atts);
+    if (at.length) {
+      const box = $('#rd-atts'); box.classList.remove('hidden');
+      box.innerHTML = at.map(a => `<button class="att" data-att="${esc(a.id)}" data-mid="${esc(m.id)}"><span>📎</span><span class="nm">${esc(a.name)}</span><span class="muted">${fmtSize(a.size)}</span></button>`).join('');
+    }
+  });
+  // pogovor
+  const th = e.threadId ? entries().filter(x => x.threadId === e.threadId && x.key !== M.sel && x.folder !== 'trash' && x.folder !== 'drafts').sort((a, b) => a.date - b.date) : [];
+  if (th.length) $('#rd-thread').innerHTML = `<h4>Pogovor (${th.length + 1})</h4>` + th.map(x => `<div class="it" data-tk="${x.key}">${avatar(x.from.name, x.from.email)}<div class="mid"><div class="l1"><div class="from">${esc(x.from.name)}</div><div class="time">${fmtList(x.date)}</div></div><div class="subj">${esc(x.subject)}</div><div class="snip">${esc(x.snippet || '')}</div></div></div>`).join('');
+}
+$('#read').addEventListener('click', async e => {
+  const t = e.target.closest('[data-tk]'); if (t) return openEntry(t.dataset.tk);
+  const at = e.target.closest('[data-att]'); if (at) return downloadAtt(at.dataset.mid, at.dataset.att);
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const k = M.sel, en = M.boxes[k]; if (!en) return;
+  const a = b.dataset.a;
+  if (a === 'back') return closeReader();
+  if (a === 'star') return patchBox(k, { star: !en.star }) || renderRead();
+  if (a === 'unread') { patchBox(k, { read: false }); return closeReader(); }
+  if (a === 'arch') return moveKeys([k], 'archive');
+  if (a === 'del') return deleteKeys([k]);
+  if (a === 'print') return window.print();
+  const m = await loadMessage(en.mid); if (!m) return toast('Sporočila ni mogoče naložiti.', 'err');
+  if (a === 'reply') return replyTo(m, en, false);
+  if (a === 'replyall') return replyTo(m, en, true);
+  if (a === 'fwd') return forwardMsg(m);
+});
+async function downloadAtt(mid, aid) {
+  try {
+    const s = await db.ref(P + '/attachments/' + mid + '/' + aid).once('value'), v = s.val();
+    if (!v) return toast('Priloga ni na voljo.', 'err');
+    const bin = atob(v.data), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: v.type || 'application/octet-stream' }));
+    const a = document.createElement('a'); a.href = url; a.download = v.name || 'priloga'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e) { toast('Napaka pri prenosu priloge.', 'err'); }
+}
+
+/* =====================================================================
+   SESTAVLJANJE SPOROČILA
+   ===================================================================== */
+const COLORS = ['#000000', '#c42b1c', '#e67e22', '#f1c40f', '#107c10', '#0f6cbd', '#6f42c1', '#d63384', '#666666', '#00a5a5', '#8b5a2b', '#ffffff'];
+function stripSubj(s) { return String(s || '').replace(/^\s*((re|fw|fwd|odg)\s*:\s*)+/i, '').trim(); }
+function replyTo(m, en, all) {
+  const me = M.user.email.toLowerCase();
+  const to = en.folder === 'sent' ? arr(m.to).slice() : [m.from.email.toLowerCase()];
+  let cc = [];
+  if (all) {
+    const rest = [...arr(m.to), ...arr(m.cc), ...(en.folder === 'sent' ? [] : [])].map(x => x.toLowerCase());
+    rest.forEach(x => { if (x !== me && !to.includes(x) && !cc.includes(x)) cc.push(x); });
+  }
+  const q = `<br><br><div style="color:#667085">Dne ${esc(fmtFull(m.date))}, ${esc(m.from.name)} &lt;${esc(m.from.email)}&gt; je napisal/a:</div><blockquote>${sanitize(m.body)}</blockquote>`;
+  openCompose({ to: to.filter(x => x !== me || en.folder === 'sent' || to.length === 1), cc, subject: 'Odg: ' + stripSubj(m.subject), bodyHtml: q, threadId: m.threadId || m.id, inReplyTo: m.id, focusTop: true });
+}
+async function forwardMsg(m) {
+  const hdr = `<br><br><div style="color:#667085">---------- Posredovano sporočilo ----------<br>Od: ${esc(m.from.name)} &lt;${esc(m.from.email)}&gt;<br>Datum: ${esc(fmtFull(m.date))}<br>Zadeva: ${esc(m.subject)}<br>Za: ${arr(m.to).map(x => esc(x)).join(', ')}</div><blockquote>${sanitize(m.body)}</blockquote>`;
+  const atts = [];
+  if (arr(m.atts).length) {
+    try { const s = await db.ref(P + '/attachments/' + m.id).once('value'), map = s.val() || {};
+      arr(m.atts).forEach(a => { const v = map[a.id]; if (v) atts.push({ id: db.ref(P).push().key, name: v.name, type: v.type, size: v.size, data: v.data }); }); } catch (e) {}
+  }
+  openCompose({ subject: 'Posr: ' + stripSubj(m.subject), bodyHtml: hdr, atts, threadId: m.threadId || m.id, focusTop: true });
+}
+async function openDraft(k) {
+  const e = M.boxes[k], d = e.d || {};
+  let atts = [];
+  if (e.att > 0) {
+    try { const s = await db.ref(P + '/attachments/' + e.mid).once('value'), map = s.val() || {};
+      atts = Object.entries(map).map(([id, v]) => ({ id, name: v.name, type: v.type, size: v.size, data: v.data })); } catch (x) {}
+  }
+  openCompose({ draftId: e.mid, to: arr(d.to), cc: arr(d.cc), bcc: arr(d.bcc), subject: e.subject || '', bodyHtml: d.body || '', atts, imp: e.imp === 'high', threadId: d.threadId || e.threadId, inReplyTo: d.inReplyTo, fromDraft: true });
+}
+function chipField(host, list, onChange) {
+  const row = host.closest('.c-row');
+  const inp = document.createElement('input'); inp.autocomplete = 'off'; inp.setAttribute('autocapitalize', 'off'); inp.setAttribute('autocorrect', 'off'); inp.spellcheck = false;
+  const sug = document.createElement('div'); sug.className = 'sug hidden'; row.appendChild(sug);
+  let items = [], idx = -1;
+  const paint = () => {
+    host.innerHTML = '';
+    list.forEach((em, i) => {
+      const d = findEmail(em), c = document.createElement('span'); c.className = 'chip' + (d ? '' : ' bad'); c.title = em;
+      c.appendChild(document.createTextNode(d ? d.name : em));
+      const x = document.createElement('b'); x.textContent = '×'; x.onclick = () => { list.splice(i, 1); paint(); onChange(); }; c.appendChild(x); host.appendChild(c);
+    });
+    host.appendChild(inp);
+  };
+  const add = em => { em = String(em).trim().toLowerCase(); if (!em || list.includes(em)) return; list.push(em); paint(); onChange(); };
+  const commit = () => {
+    const parts = inp.value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean); inp.value = ''; hide();
+    parts.forEach(p => {
+      if (EMAIL_RE.test(p)) return add(p);
+      const q = norm(p), hit = dirList().find(x => norm(x.name).startsWith(q) || x.email.startsWith(q));
+      add(hit ? hit.email : p);
+    });
+  };
+  const hide = () => { sug.classList.add('hidden'); items = []; idx = -1; };
+  const show = () => {
+    const q = norm(inp.value.trim()); if (!q) return hide();
+    items = dirList().filter(x => !list.includes(x.email) && (norm(x.name).includes(q) || x.email.includes(q))).slice(0, 6);
+    if (!items.length) return hide();
+    idx = 0;
+    sug.innerHTML = items.map((x, i) => `<div data-i="${i}" class="${i === 0 ? 'on' : ''}">${avatar(x.name, x.email).replace('class="avatar', 'style2 class="avatar')}<span><b>${esc(x.name)}</b>${x.type === 'group' ? ' <small>(skupina)</small>' : ''}<br><small>${esc(x.email)}</small></span></div>`).join('').replace(/style2 /g, '');
+    sug.classList.remove('hidden');
+    $$('.avatar', sug).forEach(a => { a.style.width = a.style.height = '30px'; a.style.fontSize = '11px'; });
+  };
+  inp.addEventListener('input', show);
+  inp.addEventListener('keydown', ev => {
+    if ((ev.key === 'Enter' || ev.key === 'Tab') && items.length && idx >= 0 && !sug.classList.contains('hidden')) { ev.preventDefault(); add(items[idx].email); inp.value = ''; hide(); return; }
+    if (['Enter', ',', ';', ' '].includes(ev.key) && inp.value.trim()) { ev.preventDefault(); commit(); return; }
+    if (ev.key === 'Tab' && inp.value.trim()) commit();
+    if (ev.key === 'Backspace' && !inp.value && list.length) { list.pop(); paint(); onChange(); }
+    if (ev.key === 'ArrowDown' && items.length) { ev.preventDefault(); idx = (idx + 1) % items.length; $$('div', sug).forEach((d, i) => d.classList.toggle('on', i === idx)); }
+    if (ev.key === 'ArrowUp' && items.length) { ev.preventDefault(); idx = (idx - 1 + items.length) % items.length; $$('div', sug).forEach((d, i) => d.classList.toggle('on', i === idx)); }
+  });
+  inp.addEventListener('blur', () => setTimeout(() => { if (inp.value.trim()) commit(); hide(); }, 160));
+  sug.addEventListener('mousedown', ev => { ev.preventDefault(); const d = ev.target.closest('[data-i]'); if (d) { add(items[+d.dataset.i].email); inp.value = ''; hide(); inp.focus(); } });
+  sug.addEventListener('touchstart', ev => { const d = ev.target.closest('[data-i]'); if (d) { ev.preventDefault(); add(items[+d.dataset.i].email); inp.value = ''; hide(); } }, { passive: false });
+  host.addEventListener('click', ev => { if (ev.target === host) inp.focus(); });
+  paint();
+  return { focus: () => inp.focus(), commit };
+}
+function openCompose(o) {
+  if (M.comp) { toast('Sestavljanje sporočila je že odprto.', 'err'); return; }
+  const sig = M.user.signature || '';
+  const C = M.comp = {
+    id: o.draftId || db.ref(P + '/messages').push().key, to: (o.to || []).slice(), cc: (o.cc || []).slice(), bcc: (o.bcc || []).slice(),
+    atts: (o.atts || []).slice(), attsDirty: !!(o.atts && o.atts.length && !o.fromDraft), dirty: false, sending: false, imp: !!o.imp,
+    threadId: o.threadId || null, inReplyTo: o.inReplyTo || null, timer: null
+  };
+  const el = document.createElement('div'); el.id = 'compose';
+  el.innerHTML = `<div class="c-head"><b>${o.subject ? esc(o.subject) : 'Novo sporočilo'}</b><span class="sv" id="c-sv"></span><button id="c-x" title="Zapri (shrani osnutek)">✕</button></div>
+    <div class="c-body">
+      <div class="c-row"><label>Za</label><div class="chipbox" id="f-to"></div><button class="lnk" id="c-ccb">Kp / Skp</button></div>
+      <div class="c-row ${C.cc.length ? '' : 'hidden'}" id="r-cc"><label>Kp</label><div class="chipbox" id="f-cc"></div></div>
+      <div class="c-row ${C.bcc.length ? '' : 'hidden'}" id="r-bcc"><label>Skp</label><div class="chipbox" id="f-bcc"></div></div>
+      <div class="c-row"><label>Zadeva</label><input class="plain" id="c-subj" autocomplete="off" value="${esc(o.subject || '')}"></div>
+      <div class="tb" id="c-tb">
+        <button data-c="bold" title="Krepko"><b>B</b></button><button data-c="italic" title="Ležeče"><i>I</i></button><button data-c="underline" title="Podčrtano"><u>U</u></button><button data-c="strikeThrough" title="Prečrtano"><s>S</s></button>
+        <span class="vsep"></span>
+        <button data-c="insertUnorderedList" title="Alineje">• ≡</button><button data-c="insertOrderedList" title="Oštevilčeno">1. ≡</button><button data-c="formatBlock" data-v="blockquote" title="Citat">❝</button>
+        <span class="vsep"></span>
+        <button data-c="justifyLeft" title="Levo">⇤</button><button data-c="justifyCenter" title="Sredina">↔</button><button data-c="justifyRight" title="Desno">⇥</button>
+        <span class="vsep"></span>
+        <button data-c="fontSize" data-v="2" title="Majhno">A-</button><button data-c="fontSize" data-v="3" title="Normalno">A</button><button data-c="fontSize" data-v="5" title="Veliko">A+</button>
+        <button id="c-col" title="Barva besedila" style="color:#c42b1c">A▾</button><button id="c-link" title="Povezava">🔗</button><button data-c="removeFormat" title="Počisti oblikovanje">⌫</button>
+        <button data-c="undo" title="Razveljavi">↶</button><button data-c="redo" title="Uveljavi">↷</button>
+      </div>
+      <div id="ed" contenteditable="true" data-ph="Napiši sporočilo…" spellcheck="true"></div>
+      <div class="sigblock" id="c-sig">${sig ? '-- <br>' + esc(sig).replace(/\n/g, '<br>') : '<span style="opacity:.6">(brez podpisa – podpis določi administrator)</span>'}</div>
+      <div class="c-atts" id="c-atts"></div>
+    </div>
+    <div class="c-foot"><button class="btn" id="c-send">📨 Pošlji</button><button class="btn ghost" id="c-att">📎 Priloži</button>
+      <label><input type="checkbox" id="c-imp" ${C.imp ? 'checked' : ''}> ❗ Pomembno</label><span class="sp"></span><button class="btn ghost" id="c-del">🗑️ Zavrži</button></div>
+    <input type="file" id="c-file" multiple class="hidden">`;
+  document.body.appendChild(el);
+  $('#ed', el).innerHTML = o.bodyHtml ? sanitize(o.bodyHtml) : '';
+  if (!o.bodyHtml) $('#ed', el).innerHTML = '';
+  const mark = () => { C.dirty = true; $('#c-sv').textContent = ''; };
+  const fTo = chipField($('#f-to', el), C.to, mark), fCc = chipField($('#f-cc', el), C.cc, mark), fBcc = chipField($('#f-bcc', el), C.bcc, mark);
+  C.fields = [fTo, fCc, fBcc];
+  $('#c-subj', el).addEventListener('input', () => { mark(); $('.c-head b', el).textContent = $('#c-subj', el).value || 'Novo sporočilo'; });
+  $('#ed', el).addEventListener('input', mark);
+  // prilepljena vsebina gre skozi isto belo listo kot prejeta pošta; spuščene datoteke postanejo priloge
+  $('#ed', el).addEventListener('paste', e => {
+    e.preventDefault();
+    const cd = e.clipboardData, html = cd.getData('text/html'), txt = cd.getData('text/plain');
+    if (cd.files && cd.files.length && !txt && !html) { [...cd.files].forEach(addFile); return; }
+    document.execCommand('insertHTML', false, html ? sanitize(html) : esc(txt).replace(/\n/g, '<br>')); mark();
+  });
+  $('#ed', el).addEventListener('dragover', e => e.preventDefault());
+  $('#ed', el).addEventListener('drop', e => { e.preventDefault(); [...(e.dataTransfer.files || [])].forEach(addFile); });
+  $('#c-imp', el).addEventListener('change', e => { C.imp = e.target.checked; mark(); });
+  $('#c-ccb', el).onclick = () => { $('#r-cc', el).classList.remove('hidden'); $('#r-bcc', el).classList.remove('hidden'); $('#f-cc input', el).focus(); };
+  const tb = $('#c-tb', el);
+  tb.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+  tb.addEventListener('click', e => {
+    const b = e.target.closest('button[data-c]'); if (!b) return;
+    $('#ed', el).focus(); document.execCommand(b.dataset.c, false, b.dataset.v || null); mark();
+  });
+  $('#c-col', el).onclick = ev => {
+    const old = $('.colors', el); if (old) return old.remove();
+    const p = document.createElement('div'); p.className = 'colors';
+    p.innerHTML = COLORS.map(c => `<button data-col="${c}" style="background:${c}"></button>`).join('');
+    p.onmousedown = e2 => e2.preventDefault();
+    p.onclick = e2 => { const b = e2.target.closest('[data-col]'); if (!b) return; $('#ed', el).focus(); document.execCommand('foreColor', false, b.dataset.col); p.remove(); mark(); };
+    tb.appendChild(p);
+  };
+  $('#c-link', el).onclick = () => {
+    const sel = getSelection(); const saved = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    const url = prompt('Naslov povezave (https://…):', 'https://'); if (!url) return;
+    if (!/^(https?:|mailto:)/i.test(url.trim())) return toast('Dovoljene so samo povezave http(s) in mailto.', 'err');
+    $('#ed', el).focus(); if (saved) { sel.removeAllRanges(); sel.addRange(saved); }
+    if (sel.isCollapsed) document.execCommand('insertHTML', false, `<a href="${esc(url.trim())}">${esc(url.trim())}</a>`); else document.execCommand('createLink', false, url.trim());
+    mark();
+  };
+  $('#c-att', el).onclick = () => $('#c-file', el).click();
+  $('#c-file', el).onchange = async e => { for (const f of [...e.target.files]) await addFile(f); e.target.value = ''; };
+  $('#c-send', el).onclick = sendMail;
+  $('#c-del', el).onclick = () => { if (confirm('Zavržem to sporočilo?')) discardCompose(); };
+  $('#c-x', el).onclick = () => closeCompose(false);
+  paintAtts();
+  C.timer = setInterval(() => { if (C.dirty && !C.sending) saveDraft(true); }, 4000);
+  if (o.focusTop) { const ed = $('#ed', el); ed.focus(); const r = document.createRange(); r.setStart(ed, 0); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  else if (!C.to.length) fTo.focus(); else $('#c-subj', el).focus();
+}
+function totalAttSize() { return M.comp.atts.reduce((s, a) => s + a.size, 0); }
+function addFile(f) {
+  const C = M.comp; if (!C) return Promise.resolve();
+  if (f.size > MAX_FILE) { toast(`»${f.name}« je prevelika (največ ${fmtSize(MAX_FILE)}).`, 'err'); return Promise.resolve(); }
+  if (C.atts.length >= MAX_FILES) { toast(`Največ ${MAX_FILES} prilog.`, 'err'); return Promise.resolve(); }
+  if (totalAttSize() + f.size > MAX_TOTAL) { toast(`Skupna velikost prilog je omejena na ${fmtSize(MAX_TOTAL)}.`, 'err'); return Promise.resolve(); }
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => { C.atts.push({ id: db.ref(P).push().key, name: f.name, type: f.type || 'application/octet-stream', size: f.size, data: String(r.result).split(',')[1] || '' }); C.attsDirty = true; C.dirty = true; paintAtts(); res(); };
+    r.onerror = () => { toast('Datoteke ni mogoče prebrati.', 'err'); res(); };
+    r.readAsDataURL(f);
+  });
+}
+function paintAtts() {
+  const C = M.comp; if (!C) return;
+  const box = $('#c-atts'); if (!box) return;
+  box.innerHTML = C.atts.map((a, i) => `<div class="att"><span>📎</span><span class="nm">${esc(a.name)}</span><span class="muted">${fmtSize(a.size)}</span><button data-rm="${i}" style="font-weight:700">✕</button></div>`).join('');
+  $$('[data-rm]', box).forEach(b => b.onclick = () => { C.atts.splice(+b.dataset.rm, 1); C.attsDirty = true; C.dirty = true; paintAtts(); });
+}
+function compBody() { return sanitize($('#ed').innerHTML); }
+function attMap() { const m = {}; M.comp.atts.forEach(a => { m[a.id] = { name: a.name, type: a.type, size: a.size, data: a.data }; }); return Object.keys(m).length ? m : null; }
+async function saveDraft(quiet) {
+  const C = M.comp; if (!C) return;
+  C.fields.forEach(f => f.commit());
+  const body = compBody(), subject = $('#c-subj').value.trim();
+  const hdr = {
+    mid: C.id, folder: 'drafts', kind: 'draft', read: true, star: false, date: Date.now(), from: { name: M.user.name, email: M.user.email },
+    to: C.to.slice(), subject, snippet: htmlToText(body).slice(0, 120), att: C.atts.length, imp: C.imp ? 'high' : 'normal', threadId: C.threadId || C.id,
+    d: { to: C.to.slice(), cc: C.cc.slice(), bcc: C.bcc.slice(), body, threadId: C.threadId || C.id, inReplyTo: C.inReplyTo || null }
+  };
+  const up = {}; up['boxes/' + M.user.id + '/' + C.id] = hdr;
+  if (C.attsDirty) up['attachments/' + C.id] = attMap();
+  try {
+    await db.ref(P).update(up); C.dirty = false; C.attsDirty = false; C.saved = true;
+    const sv = $('#c-sv'); if (sv) sv.textContent = 'Osnutek shranjen ✓';
+    if (!quiet) toast('Osnutek shranjen');
+  } catch (e) { if (!quiet) toast('Osnutka ni bilo mogoče shraniti: ' + e.message, 'err'); }
+}
+function compHasContent() {
+  const C = M.comp; return C.to.length || C.cc.length || C.bcc.length || $('#c-subj').value.trim() || $('#ed').textContent.trim() || C.atts.length;
+}
+async function closeCompose(force) {
+  const C = M.comp; if (!C) return;
+  if (!force && C.dirty && compHasContent() && !C.sending) await saveDraft(false);
+  clearInterval(C.timer); $('#compose').remove(); M.comp = null;
+}
+function discardCompose() {
+  const C = M.comp; if (!C) return;
+  const id = C.id, wasSaved = C.saved || C.fromDraft;
+  clearInterval(C.timer); $('#compose').remove(); M.comp = null;
+  if (wasSaved) { const up = {}; up['boxes/' + M.user.id + '/' + id] = null; up['attachments/' + id] = null; db.ref(P).update(up); }
+  toast('Sporočilo zavrženo');
+}
+async function sendMail() {
+  const C = M.comp; if (!C || C.sending) return;
+  if (M.user.canSend === false) return toast('Pošiljanje ti je onemogočil administrator.', 'err');
+  C.fields.forEach(f => f.commit());
+  const recips = [...C.to, ...C.cc, ...C.bcc];
+  if (!recips.length) return toast('Dodaj vsaj enega prejemnika.', 'err');
+  const bad = recips.filter(x => !findEmail(x));
+  if (bad.length) return toast(`Naslov ne obstaja: ${bad[0]}. Pošiljanje je mogoče samo znotraj ${DOMAIN}.`, 'err');
+  const subject = $('#c-subj').value.trim();
+  if (!subject && !confirm('Sporočilo nima zadeve. Vseeno pošljem?')) return;
+  const bodyRaw = compBody();
+  if (!htmlToText(bodyRaw) && !C.atts.length && !confirm('Sporočilo je prazno. Vseeno pošljem?')) return;
+  const sig = M.user.signature ? `<br><div class="sig" style="color:#667085">-- <br>${esc(M.user.signature).replace(/\n/g, '<br>')}</div>` : '';
+  const body = bodyRaw + sig;
+  if (body.length > 400000) return toast('Sporočilo je predolgo.', 'err');
+  // razširi skupine → uporabniki
+  const uids = new Set();
+  recips.forEach(r => { const d = findEmail(r); if (!d) return; if (d.type === 'user') uids.add(d.id); else d.members.forEach(m => { if (M.users[m] && M.users[m].active !== false) uids.add(m); }); });
+  if (!uids.size) return toast('Za izbrane skupine ni prejemnikov.', 'err');
+  C.sending = true; $('#c-send').disabled = true; $('#c-send').textContent = 'Pošiljam…';
+  const id = C.id, now = Date.now(), threadId = C.threadId || id;
+  const msg = {
+    id, threadId, from: { uid: M.user.id, name: M.user.name, email: M.user.email }, to: C.to.slice(), cc: C.cc.slice(), subject, body, date: now,
+    imp: C.imp ? 'high' : 'normal', atts: C.atts.map(a => ({ id: a.id, name: a.name, type: a.type, size: a.size })), inReplyTo: C.inReplyTo || null
+  };
+  const snippet = htmlToText(bodyRaw).slice(0, 120);
+  const hdr = { mid: id, folder: 'inbox', kind: 'in', read: false, star: false, date: now, from: msg.from && { name: M.user.name, email: M.user.email }, to: C.to.slice(), subject, snippet, att: C.atts.length, imp: msg.imp, threadId };
+  const up = {}; up['messages/' + id] = msg;
+  if (C.attsDirty || !(C.saved || C.fromDraft)) up['attachments/' + id] = attMap();
+  uids.forEach(u => { up['boxes/' + u + '/' + id] = Object.assign({}, hdr); });
+  up['boxes/' + M.user.id + '/' + id + '~s'] = Object.assign({}, hdr, { folder: 'sent', kind: 'out', read: true, bcc: C.bcc.slice() });
+  up['boxes/' + M.user.id + '/' + id] = null; // osnutek
+  try {
+    await db.ref(P).update(up);
+    M.cache[id] = msg;
+    clearInterval(C.timer); $('#compose').remove(); M.comp = null;
+    toast('Sporočilo poslano ✓', 'ok');
+  } catch (e) {
+    C.sending = false; $('#c-send').disabled = false; $('#c-send').textContent = '📨 Pošlji';
+    toast('Pošiljanje ni uspelo: ' + e.message, 'err');
+  }
+}
+
+/* =====================================================================
+   NASTAVITVE UPORABNIKA
+   ===================================================================== */
+function openModal(html, wide) {
+  const ov = document.createElement('div'); ov.className = 'ov'; ov.innerHTML = `<div class="md ${wide ? 'wide' : ''}">${html}</div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov) ov._down = true; }); ov.addEventListener('click', e => { if (e.target === ov && ov._down && !ov.dataset.sticky) ov.remove(); ov._down = false; });
+  document.body.appendChild(ov); return ov;
+}
+function openSettings() {
+  const u = M.user, dark = document.documentElement.dataset.theme === 'dark';
+  const perm = window.Notification ? Notification.permission : 'unsupported';
+  const ov = openModal(`<h3>Nastavitve</h3>
+    <div class="urow">${avatar(u.name, u.email)}<div class="nfo"><b>${esc(u.name)}</b><span>${esc(u.email)} · ${u.role === 'admin' ? 'administrator' : 'uporabnik'}</span></div></div>
+    <label class="l">Podpis (določi administrator)</label>
+    <div style="padding:10px 12px;border:1px dashed var(--line);border-radius:8px;white-space:pre-wrap;color:var(--muted);font-size:14px">${u.signature ? esc(u.signature) : '— brez podpisa —'}</div>
+    <button class="tgl ${dark ? 'on' : ''}" id="s-dark" style="margin-top:10px"><span>Temni način</span><span class="sw"></span></button>
+    <button class="tgl ${perm === 'granted' ? 'on' : ''}" id="s-not"><span>Obvestila o novi pošti<br><small class="muted">${perm === 'unsupported' ? 'Ta naprava ne podpira obvestil' : perm === 'denied' ? 'Blokirano v nastavitvah brskalnika' : 'Prikaže se, ko je aplikacija v ozadju'}</small></span><span class="sw"></span></button>
+    <label class="l">Zamenjava gesla</label>
+    <input id="s-old" type="password" placeholder="Trenutno geslo" autocomplete="current-password" style="margin-bottom:8px">
+    <input id="s-new" type="password" placeholder="Novo geslo (vsaj 4 znaki)" autocomplete="new-password" style="margin-bottom:8px">
+    <button class="btn sm" id="s-pw">Zamenjaj geslo</button>
+    <div class="acts"><button class="btn ghost" id="s-x">Zapri</button></div>`);
+  $('#s-x', ov).onclick = () => ov.remove();
+  $('#s-dark', ov).onclick = e => { const d = document.documentElement.dataset.theme === 'dark'; document.documentElement.dataset.theme = d ? 'light' : 'dark'; e.currentTarget.classList.toggle('on', !d); try { localStorage.setItem('wii_mail_theme', d ? 'light' : 'dark'); } catch (x) {} };
+  $('#s-not', ov).onclick = async e => {
+    if (!window.Notification) return;
+    if (Notification.permission === 'default') { const r = await Notification.requestPermission(); e.currentTarget.classList.toggle('on', r === 'granted'); }
+    else if (Notification.permission === 'denied') toast('Obvestila so blokirana v nastavitvah brskalnika.', 'err');
+  };
+  $('#s-pw', ov).onclick = async () => {
+    const o = $('#s-old', ov).value, n = $('#s-new', ov).value;
+    if (!(await pwOk(M.user, o))) return toast('Trenutno geslo ni pravilno.', 'err');
+    if (n.length < 4) return toast('Novo geslo je prekratko.', 'err');
+    await db.ref(P + '/users/' + M.user.id + '/pw').set(await hashPw(M.user.username, n));
+    $('#s-old', ov).value = $('#s-new', ov).value = ''; toast('Geslo zamenjano ✓', 'ok');
+  };
+}
+
+/* =====================================================================
+   SKRBNIŠTVO (samo administrator)
+   ===================================================================== */
+let ADM_TAB = 'users';
+function openAdmin() {
+  if (!isAdmin()) return;
+  const ov = openModal('<div id="adm"></div>', true); ov.id = 'admin-ov'; ov.dataset.sticky = '1';
+  renderAdmin();
+}
+function renderAdmin() {
+  const host = $('#adm'); if (!host) return;
+  const users = Object.values(M.users).sort((a, b) => a.name.localeCompare(b.name)), groups = Object.values(M.groups).sort((a, b) => a.name.localeCompare(b.name));
+  host.innerHTML = `<h3>Skrbništvo</h3>
+    <div class="tabs"><button data-t="users" class="${ADM_TAB === 'users' ? 'on' : ''}">Uporabniki (${users.length})</button><button data-t="groups" class="${ADM_TAB === 'groups' ? 'on' : ''}">Skupine (${groups.length})</button></div>
+    ${ADM_TAB === 'users' ? users.map(u => `<div class="urow">${avatar(u.name, u.email)}<div class="nfo"><b>${esc(u.name)} ${u.role === 'admin' ? '<span class="badge">admin</span>' : ''}${u.active === false ? '<span class="badge hi">onemogočen</span>' : ''}${u.canSend === false ? '<span class="badge">ne pošilja</span>' : ''}</b><span>@${esc(u.username)} · ${esc(u.email)}</span></div>
+        <button class="btn ghost sm" data-eu="${u.id}">Uredi</button><button class="btn red sm" data-du="${u.id}">Briši</button></div>`).join('') + `<div class="acts" style="justify-content:flex-start"><button class="btn" data-eu="">+ Nov uporabnik</button></div>`
+    : (groups.map(g => `<div class="urow"><div class="avatar" style="background:${colorOf(g.email)}">👥</div><div class="nfo"><b>${esc(g.name)}</b><span>${esc(g.email)} · ${arr(g.members).length} članov</span></div><button class="btn ghost sm" data-eg="${g.id}">Uredi</button><button class="btn red sm" data-dg="${g.id}">Briši</button></div>`).join('') || '<div class="muted" style="padding:10px 0">Ni skupin. Skupina je skupni naslov (npr. vsi@wii.shop), ki pošlje pošto vsem članom.</div>')
+      + `<div class="acts" style="justify-content:flex-start"><button class="btn" data-eg="">+ Nova skupina</button></div>`}
+    <div class="acts"><button class="btn ghost" id="adm-x">Zapri</button></div>`;
+}
+document.addEventListener('click', e => {
+  const host = $('#adm'); if (!host || !host.contains(e.target)) return;
+  const t = e.target.closest('[data-t]'); if (t) { ADM_TAB = t.dataset.t; return renderAdmin(); }
+  if (e.target.closest('#adm-x')) return $('#admin-ov').remove();
+  const eu = e.target.closest('[data-eu]'); if (eu) return editUser(eu.dataset.eu);
+  const du = e.target.closest('[data-du]'); if (du) return delUser(du.dataset.du);
+  const eg = e.target.closest('[data-eg]'); if (eg) return editGroup(eg.dataset.eg);
+  const dg = e.target.closest('[data-dg]'); if (dg) return delGroup(dg.dataset.dg);
+});
+function emailTaken(em, exceptUser, exceptGroup) {
+  em = em.toLowerCase();
+  return Object.values(M.users).some(u => u.id !== exceptUser && String(u.email).toLowerCase() === em) || Object.values(M.groups).some(g => g.id !== exceptGroup && String(g.email).toLowerCase() === em);
+}
+function editUser(id) {
+  const u = id ? M.users[id] : null;
+  let role = u ? u.role : 'user', canSend = u ? u.canSend !== false : true, active = u ? u.active !== false : true;
+  const ov = openModal(`<h3>${u ? 'Uredi uporabnika' : 'Nov uporabnik'}</h3>
+    <label class="l">Ime in priimek</label><input id="u-name" value="${esc(u ? u.name : '')}" autocomplete="off">
+    <label class="l">Uporabniško ime</label><input id="u-un" value="${esc(u ? u.username : '')}" autocapitalize="off" autocomplete="off">
+    <label class="l">E-poštni naslov (${DOMAIN})</label><input id="u-em" value="${esc(u ? u.email : '')}" autocapitalize="off" autocomplete="off" placeholder="ime${DOMAIN}">
+    <label class="l">${u ? 'Novo geslo (pusti prazno, če ga ne spreminjaš)' : 'Geslo'}</label><input id="u-pw" type="text" autocomplete="off" placeholder="${u ? '••••••' : 'vsaj 4 znaki'}">
+    <label class="l">Vloga</label><select id="u-role"><option value="user">Uporabnik</option><option value="admin">Administrator</option></select>
+    <label class="l">Podpis (doda se samodejno pod vsako sporočilo)</label><textarea id="u-sig" rows="4" maxlength="400" placeholder="Ime Priimek&#10;Delovno mesto&#10;WII Shop">${esc(u ? u.signature || '' : '')}</textarea>
+    <button class="tgl ${canSend ? 'on' : ''}" id="u-cs"><span>Lahko pošilja pošto</span><span class="sw"></span></button>
+    <button class="tgl ${active ? 'on' : ''}" id="u-ac"><span>Račun je aktiven</span><span class="sw"></span></button>
+    <div class="acts"><button class="btn ghost" id="u-x">Prekliči</button><button class="btn" id="u-ok">Shrani</button></div>`);
+  $('#u-role', ov).value = role;
+  $('#u-role', ov).onchange = e => role = e.target.value;
+  $('#u-cs', ov).onclick = e => { canSend = !canSend; e.currentTarget.classList.toggle('on', canSend); };
+  $('#u-ac', ov).onclick = e => { active = !active; e.currentTarget.classList.toggle('on', active); };
+  if (!u) $('#u-un', ov).addEventListener('input', () => { const em = $('#u-em', ov); if (!em.dataset.t) em.value = $('#u-un', ov).value.trim().toLowerCase().replace(/\s+/g, '.') + DOMAIN; });
+  $('#u-em', ov).addEventListener('input', e => e.target.dataset.t = '1');
+  $('#u-x', ov).onclick = () => ov.remove();
+  $('#u-ok', ov).onclick = async () => {
+    const name = $('#u-name', ov).value.trim(), un = $('#u-un', ov).value.trim(), em = $('#u-em', ov).value.trim().toLowerCase(), pw = $('#u-pw', ov).value;
+    if (!name || !un || !em) return toast('Izpolni ime, uporabniško ime in e-pošto.', 'err');
+    if (!EMAIL_RE.test(em) || !em.endsWith(DOMAIN)) return toast(`E-poštni naslov mora biti oblike ime${DOMAIN}`, 'err');
+    if (Object.values(M.users).some(x => x.id !== id && String(x.username).toLowerCase() === un.toLowerCase())) return toast('Uporabniško ime že obstaja.', 'err');
+    if (emailTaken(em, id, null)) return toast('Ta e-poštni naslov je že zaseden.', 'err');
+    if (!u && pw.length < 4) return toast('Geslo mora imeti vsaj 4 znake.', 'err');
+    if (pw && pw.length < 4) return toast('Geslo mora imeti vsaj 4 znake.', 'err');
+    if (u && u.role === 'admin' && role !== 'admin' && Object.values(M.users).filter(x => x.role === 'admin' && x.active !== false).length <= 1) return toast('Vsaj en administrator mora ostati.', 'err');
+    if (u && id === M.user.id && !active) return toast('Ne moreš onemogočiti samega sebe.', 'err');
+    const uid = id || db.ref(P + '/users').push().key;
+    const rec = Object.assign({}, u || { createdAt: Date.now() }, { id: uid, name, username: un, email: em, role, signature: $('#u-sig', ov).value.trim(), canSend, active });
+    if (pw) rec.pw = await hashPw(un, pw);
+    else if (u && un.toLowerCase() !== String(u.username).toLowerCase()) { toast('Pri spremembi uporabniškega imena nastavi tudi novo geslo.', 'err'); return; }
+    await db.ref(P + '/users/' + uid).set(rec);
+    ov.remove(); toast('Shranjeno ✓', 'ok');
+  };
+}
+function delUser(id) {
+  const u = M.users[id]; if (!u) return;
+  if (id === M.user.id) return toast('Ne moreš izbrisati samega sebe.', 'err');
+  if (u.role === 'admin' && Object.values(M.users).filter(x => x.role === 'admin').length <= 1) return toast('Vsaj en administrator mora ostati.', 'err');
+  if (!confirm(`Izbrišem uporabnika ${u.name} in vso njegovo pošto?`)) return;
+  const up = {}; up['users/' + id] = null; up['boxes/' + id] = null;
+  Object.values(M.groups).forEach(g => { if (arr(g.members).includes(id)) up['groups/' + g.id + '/members'] = arr(g.members).filter(m => m !== id); });
+  db.ref(P).update(up).then(() => toast('Uporabnik izbrisan', 'ok'));
+}
+function editGroup(id) {
+  const g = id ? M.groups[id] : null, members = new Set(g ? arr(g.members) : []);
+  const users = Object.values(M.users).filter(u => u.active !== false).sort((a, b) => a.name.localeCompare(b.name));
+  const ov = openModal(`<h3>${g ? 'Uredi skupino' : 'Nova skupina'}</h3>
+    <label class="l">Ime skupine</label><input id="g-name" value="${esc(g ? g.name : '')}" autocomplete="off">
+    <label class="l">Skupni naslov (${DOMAIN})</label><input id="g-em" value="${esc(g ? g.email : '')}" autocapitalize="off" autocomplete="off" placeholder="vsi${DOMAIN}">
+    <label class="l">Člani</label><div style="max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px 12px">${users.map(u => `<label class="mem"><input type="checkbox" data-m="${u.id}" ${members.has(u.id) ? 'checked' : ''}> ${esc(u.name)} <span class="muted">${esc(u.email)}</span></label>`).join('')}</div>
+    <div class="acts"><button class="btn ghost" id="g-x">Prekliči</button><button class="btn" id="g-ok">Shrani</button></div>`);
+  $('#g-x', ov).onclick = () => ov.remove();
+  $('#g-ok', ov).onclick = async () => {
+    const name = $('#g-name', ov).value.trim(), em = $('#g-em', ov).value.trim().toLowerCase();
+    if (!name || !em) return toast('Izpolni ime in naslov.', 'err');
+    if (!EMAIL_RE.test(em) || !em.endsWith(DOMAIN)) return toast(`Naslov mora biti oblike ime${DOMAIN}`, 'err');
+    if (emailTaken(em, null, id)) return toast('Ta naslov je že zaseden.', 'err');
+    const gid = id || db.ref(P + '/groups').push().key;
+    const mem = $$('[data-m]', ov).filter(c => c.checked).map(c => c.dataset.m);
+    await db.ref(P + '/groups/' + gid).set({ id: gid, name, email: em, members: mem });
+    ov.remove(); toast('Shranjeno ✓', 'ok');
+  };
+}
+function delGroup(id) { const g = M.groups[id]; if (g && confirm(`Izbrišem skupino ${g.name}?`)) db.ref(P + '/groups/' + id).remove().then(() => toast('Skupina izbrisana', 'ok')); }
+
+/* =====================================================================
+   ZAGON
+   ===================================================================== */
+try { const th = localStorage.getItem('wii_mail_theme'); if (th) document.documentElement.dataset.theme = th; else if (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { const m = $('.menu'); if (m) return m.remove(); }
+});
+// samodejna prijava
+(function auto() {
+  let id = null; try { id = localStorage.getItem('wii_mail_uid'); } catch (e) {}
+  if (!id) return;
+  const t = setInterval(() => {
+    if (!M.ready.users) return; clearInterval(t);
+    const u = M.users[id]; if (u && u.active !== false) startSession(u);
+  }, 150);
+})();
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
