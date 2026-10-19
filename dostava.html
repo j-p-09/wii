@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e8590c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WII Pošta">
+<link rel="manifest" href="manifest-posta.webmanifest">
+<link rel="apple-touch-icon" href="icon-posta-180.png">
+<link rel="icon" type="image/png" href="icon-posta-192.png">
+<title>WII Pošta</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+<style>
+
+:root{
+  --bg:#eef2f7; --card:#fff; --primary:#e8590c; --primary-d:#c2410c; --text:#1f2937; --muted:#6b7280;
+  --danger:#dc3545; --success:#198754; --warn:#f59e0b; --border:#dde3ec; --kbh:0px;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);touch-action:manipulation}
+button{font-family:inherit;cursor:pointer;border:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font-family:inherit}
+#root{height:100vh;height:calc(100dvh - var(--kbh));display:flex;flex-direction:column}
+
+/* ---------- LOGIN ---------- */
+#login{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.login-card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:26px 22px;width:100%;max-width:460px}
+.login-card h1{color:var(--primary);font-size:28px;text-align:center}
+.login-card .sub{color:var(--muted);text-align:center;font-size:14px;margin:4px 0 18px}
+.ver{margin-top:18px;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:2px;text-align:center;padding-bottom:20px}
+.inp{width:100%;padding:14px;border:2px solid var(--border);border-radius:10px;font-size:18px;background:#fff;outline:none;margin-bottom:10px}
+.inp.kb-active,.inp:focus{border-color:var(--primary)}
+.inp.big{font-size:30px;text-align:center;font-weight:700}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 4px}
+.btn{padding:15px 18px;border-radius:12px;font-size:17px;font-weight:700;color:#fff;background:var(--primary)}
+.btn.block{width:100%}
+.btn.green{background:var(--success)} .btn.red{background:var(--danger)} .btn.ghost{background:#e5e9f0;color:var(--text)} .btn.warn{background:var(--warn);color:#222}
+.btn.primary{background:var(--primary)} .btn.vio{background:#6f42c1}
+.quick-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:18px 0 8px;text-align:center}
+.quick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.quick button{padding:12px 16px;border-radius:12px;background:#e5e9f0;color:var(--text);font-weight:600;font-size:15px;border:2px solid transparent}
+.quick button.on{background:#d1f2de;border-color:var(--success);color:#0b5a33}
+.quick button.on::after{content:" ●";color:var(--success);font-size:11px}
+.err{color:var(--danger);font-weight:700;text-align:center;font-size:14px;min-height:20px;margin-top:6px}
+
+/* ---------- APP ---------- */
+#app{flex:1;display:none;flex-direction:column;min-height:0}
+#topbar{background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+#topbar .back{background:rgba(255,255,255,.2);color:#fff;padding:9px 14px;border-radius:10px;font-weight:700;font-size:15px}
+#topbar .ttl{font-size:18px;font-weight:700;flex:1}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.2)}
+.pill.on{background:#22c55e;color:#04290f}
+#topbar .uname{font-size:13px;opacity:.95;text-align:right;line-height:1.2}
+#topbar .out{background:rgba(255,255,255,.2);color:#fff;padding:9px 12px;border-radius:10px;font-weight:600;font-size:13px}
+#content{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.page{padding:16px;max-width:900px;margin:0 auto}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tile-menu{background:var(--card);border-radius:16px;padding:26px 14px;text-align:center;font-size:17px;font-weight:700;color:var(--primary);box-shadow:0 3px 10px rgba(0,0,0,.06);border:2px solid transparent;position:relative}
+.tile-menu .ic{font-size:36px;display:block;margin-bottom:8px}
+.tile-menu.locked{opacity:.5;color:var(--muted)}
+.tile-menu.locked::after{content:"🔒";position:absolute;top:8px;right:10px;font-size:16px}
+.tile-menu.adm{border-color:#f8d3bd;background:#fff7f2}
+.sect{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-top:6px}
+.bigbtn{width:100%;padding:22px;font-size:19px;border-radius:14px;color:#fff;font-weight:800;margin-bottom:12px;background:var(--primary)}
+.box{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:14px}
+.box h3{margin-bottom:10px;font-size:16px}
+.muted{color:var(--muted);font-size:14px}
+.row{display:flex;gap:10px;margin-top:12px}
+.row>*{flex:1}
+.list-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
+.list-row:last-child{border-bottom:none}
+.list-row .grow{flex:1;min-width:0}
+.list-row .t{font-weight:700}
+.list-row .s{font-size:13px;color:var(--muted)}
+.mini{padding:8px 12px;border-radius:9px;font-weight:700;font-size:13px;color:#fff;background:var(--primary)}
+.mini.red{background:var(--danger)} .mini.ghost{background:#e5e9f0;color:var(--text)} .mini.green{background:var(--success)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;background:#e5e9f0;border-radius:10px;padding:8px 10px;font-weight:600;font-size:14px}
+.chip.sel{background:var(--primary);color:#fff}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.2)}
+.code-big{font-size:56px;font-weight:800;letter-spacing:8px;text-align:center;color:var(--primary);margin:10px 0;font-variant-numeric:tabular-nums}
+.status{display:inline-block;padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px}
+.status.ok{background:#d1f2de;color:#0b5a33}.status.no{background:#fde2e4;color:#8a1c27}.status.wr{background:#fff0c9;color:#7a5200}
+
+/* ---------- MODAL ---------- */
+#modal-root{position:fixed;inset:0;pointer-events:none;z-index:2000}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;overflow-y:auto;padding:14px;padding-bottom:calc(var(--kbh) + 14px);pointer-events:auto}
+.modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:440px;margin:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal.wide{max-width:560px}
+.modal h3{font-size:20px;margin-bottom:6px}
+.modal .amt{font-size:34px;font-weight:800;color:var(--primary);text-align:center;margin:8px 0 14px}
+.paybtn{display:block;width:100%;padding:20px;border-radius:14px;font-size:19px;font-weight:800;color:#fff;margin-bottom:10px;background:var(--primary)}
+.paybtn.g{background:var(--success)} .paybtn.p{background:#6f42c1} .paybtn.r{background:var(--danger)} .paybtn.o{background:var(--warn);color:#222}
+.paybtn small{display:block;font-size:12px;font-weight:600;opacity:.9;margin-top:3px}
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}
+.qgrid button{padding:12px;border-radius:10px;background:#e5e9f0;font-weight:700;font-size:15px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:15px}
+.kv b{font-variant-numeric:tabular-nums;text-align:right}
+.res{text-align:center;padding:6px 0}
+.res h2{margin:10px 0 4px}
+.seg{display:flex;background:#e5e9f0;border-radius:10px;padding:4px;gap:4px;margin-bottom:10px}
+.seg button{flex:1;padding:10px;border-radius:8px;background:transparent;font-weight:700;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.tgl{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-weight:600;width:100%;background:none;text-align:left}
+.tgl .sw{width:46px;height:26px;border-radius:26px;background:#cbd2dc;position:relative;transition:.2s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on .sw{background:var(--success)} .tgl.on .sw::after{left:23px}
+select.inp{appearance:auto}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.swatches button{width:40px;height:40px;border-radius:10px;border:3px solid transparent;font-weight:800;font-size:16px;color:#555;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.swatches button.on{border-color:#111}
+.hist{max-height:160px;overflow-y:auto;font-size:13px;color:var(--muted);margin-top:6px}
+.hist div{padding:4px 0;border-bottom:1px dashed var(--border)}
+
+/* check / x animation */
+.anim{width:110px;height:110px;display:block;margin:0 auto}
+.anim .c{stroke-dasharray:151;stroke-dashoffset:151;animation:dash .6s ease forwards}
+.anim .p{stroke-dasharray:50;stroke-dashoffset:50;animation:dash .4s .5s ease forwards}
+@keyframes dash{to{stroke-dashoffset:0}}
+.spinner{width:56px;height:56px;border:6px solid #e5e9f0;border-top-color:var(--primary);border-radius:50%;margin:14px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* toast */
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5000;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center;width:90%;max-width:420px}
+.toast{background:#1f2937;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:tin .2s}
+.toast.err{background:var(--danger)} .toast.ok{background:var(--success)} .toast.warn{background:var(--warn);color:#222}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}}
+
+/* ---------- PROGRAMSKA TIPKOVNICA ---------- */
+#vkb{position:fixed;left:0;right:0;bottom:0;background:#d9dee7;padding:8px 6px;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:4000;display:none;user-select:none;-webkit-user-select:none;box-shadow:0 -6px 20px rgba(0,0,0,.15)}
+#vkb.show{display:block}
+#vkb .kr{display:flex;gap:5px;margin-bottom:5px;justify-content:center}
+#vkb button{flex:1;max-width:64px;height:46px;border-radius:8px;background:#fff;font-size:20px;font-weight:600;color:#111;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+#vkb button:active{background:#cfd6e2}
+#vkb button.fn{background:#b9c1cf;max-width:none;flex:1.5;font-size:16px}
+#vkb button.sp{flex:5;max-width:none}
+#vkb button.ok{background:var(--primary);color:#fff;flex:2;max-width:none;font-size:17px}
+#vkb button.on{background:var(--primary);color:#fff}
+#vkb.num{max-width:420px;margin:0 auto;border-radius:16px 16px 0 0}
+#vkb.num button{max-width:none;height:56px;font-size:24px}
+
+
+/* ---------- POŠTA ---------- */
+.tile-menu .badge{position:absolute;top:8px;right:10px;background:var(--danger);color:#fff;border-radius:20px;font-size:13px;padding:2px 9px;font-weight:800}
+.status.bl{background:#dbeafe;color:#1e40af}
+.chip{border:2px solid transparent;font-size:15px;padding:10px 12px}
+.chip.sel{border-color:#111}
+.cnt{display:flex;gap:10px}
+.cnt div{flex:1;background:#fff2e8;border-radius:12px;padding:12px;text-align:center;font-size:13px;color:var(--muted);font-weight:700}
+.cnt b{display:block;font-size:32px;color:var(--primary)}
+.stbtns{display:flex;gap:6px;margin-top:10px}
+.stbtns .btn{flex:1;padding:12px 2px;font-size:14px}
+.pnum{font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
+.pcard .head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:6px}
+.pcard .head .t{font-size:17px;font-weight:800}
+.notice{background:#fff7e0;color:#7a5200;border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
+.code-big.sm{font-size:40px;letter-spacing:4px}
+</style>
+</head>
+<body>
+<div id="root">
+
+  <!-- PRIJAVA -->
+  <div id="login">
+    <div class="login-card">
+      <h1>WII Pošta</h1>
+      <div class="sub">Beleženje in sledenje poštnim pošiljkam</div>
+      <label class="lbl">Uporabniško ime</label>
+      <input id="lg-user" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="Uporabniško ime">
+      <label class="lbl">Geslo</label>
+      <input id="lg-pass" type="password" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="Geslo">
+      <button class="btn block" onclick="login()">Vpiši me</button>
+      <div class="err" id="lg-err"></div>
+      <div class="quick-title">Hitri dostop</div>
+      <div class="quick" id="lg-quick"><span class="muted">Nalaganje…</span></div>
+    </div>
+    <div class="ver">VERZIJA 1.0</div>
+  </div>
+
+  <!-- APLIKACIJA -->
+  <div id="app">
+    <div id="topbar">
+      <button class="back" id="btn-home" onclick="go('menu')">☰ Meni</button>
+      <div class="ttl" id="tb-title">Meni</div>
+      <span class="pill" id="tb-pill">NI NA DELU</span>
+      <div class="uname" id="tb-user"></div>
+      <button class="out" onclick="logout()">Odjava</button>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast"></div>
+<div id="vkb"></div>
+
+<script>
+/* =====================================================================
+   FIREBASE (ista baza kot blagajna – zaposleni in izmene se berejo od tam)
+   ===================================================================== */
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const P = 'wii_db_v3/pos';     // blagajna: zaposleni (employees), izmene (active)
+const PP = 'wii_db_v3/post';   // pošta: pošiljke, števci, statistika
+
+/* =====================================================================
+   POMOŽNE FUNKCIJE
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2 = n => Math.round(((+n || 0) + Number.EPSILON) * 100) / 100;
+const money = n => r2(n).toFixed(2);
+const parseNum = s => parseFloat(String(s).replace(',', '.'));
+const pad = n => String(n).padStart(2, '0');
+const fmtDT = iso => { if (!iso) return '-'; const d = new Date(iso); return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtT = iso => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtDur = ms => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m/60)} h ${pad(m%60)} min`; };
+const sameMonth = iso => { const d = new Date(iso), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); };
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const rk = id => String(id).padStart(6, '0');
+const toInp = iso => fmtDT(iso);
+function fromInp(s) {
+  const m = /^\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})\s*$/.exec(s); if (!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3], h = +m[4], mi = +m[5];
+  const dt = new Date(y, mo - 1, d, h, mi);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d || h > 23 || mi > 59) return null;
+  return dt;
+}
+function cleanText(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[čć]/g, 'c').replace(/[ČĆ]/g, 'C').replace(/š/g, 's').replace(/Š/g, 'S').replace(/ž/g, 'z').replace(/Ž/g, 'Z').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+const methodLabel = m => ({ gotovina: 'GOTOVINA', kartica: 'KARTICA', 'kartica-vezano': 'KARTICA (VEZANO)', bon: 'DARILNI BON' }[m] || String(m || '').toUpperCase());
+const paidAmt = r => (r.paid !== undefined && r.paid !== null) ? r.paid : r.total;
+const isCardMethod = m => String(m || '').startsWith('kartica');
+
+/* ---------- Barve ---------- */
+const PALETTE = ['#0a58ca', '#6f42c1', '#198754', '#dc3545', '#fd7e14', '#e0a800', '#0dcaf0', '#d63384', '#20c997', '#6c757d', '#212529', '#8b5a2b'];
+const safeCol = (c, def) => /^#[0-9a-f]{6}$/i.test(c || '') ? c : def;
+function textOn(c) {
+  const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 170 ? '#111' : '#fff';
+}
+function swatchHtml(cur) {
+  return `<button data-c="" class="${!cur ? 'on' : ''}" style="background:#fff">∅</button>` + PALETTE.map(c => `<button data-c="${c}" class="${cur === c ? 'on' : ''}" style="background:${c}"></button>`).join('');
+}
+
+function toast(msg, type = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+  $('toast').appendChild(t); setTimeout(() => t.remove(), 3600);
+}
+
+/* ---------- Modali ---------- */
+function openModal(html, wide) {
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${html}</div>`;
+  $('modal-root').appendChild(ov);
+  ov.close = () => { ov.remove(); kbHide(); };
+  return ov;
+}
+function confirmBox(msg, yes, cb, danger = true) {
+  const ov = openModal(`<h3>Potrditev</h3><p class="muted" style="margin:8px 0 4px;font-size:16px;color:#1f2937">${msg}</p>
+    <div class="row"><button class="btn ghost" id="c-no">Ne</button><button class="btn ${danger ? 'red' : 'green'}" id="c-yes">${yes}</button></div>`);
+  ov.querySelector('#c-no').onclick = () => ov.close();
+  ov.querySelector('#c-yes').onclick = () => { ov.close(); cb(); };
+}
+
+
+/* =====================================================================
+   PROGRAMSKA TIPKOVNICA (prepreči odpiranje tipkovnice naprave)
+   ===================================================================== */
+const KB = { el: null, target: null, shift: false };
+const KB_TEXT = [
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['q','w','e','r','t','z','u','i','o','p','š'],
+  ['a','s','d','f','g','h','j','k','l','č','ž'],
+  ['SHIFT','y','x','c','v','b','n','m','BS'],
+  ['-','@','.',' ','_',',','OK']
+];
+function kbRender() {
+  const t = KB.target; if (!t) return;
+  const mode = t.dataset.kb || 'text';
+  const el = KB.el; el.className = 'show' + (mode !== 'text' ? ' num' : '');
+  let h = '';
+  if (mode === 'num') {
+    const dec = t.dataset.dec === '1';
+    [['1','2','3'],['4','5','6'],['7','8','9'],[dec ? '.' : 'C','0','BS']].forEach(r => { h += '<div class="kr">' + r.map(k => kbBtn(k)).join('') + '</div>'; });
+    h += '<div class="kr"><button class="ok" data-k="OK">POTRDI</button></div>';
+  } else if (mode === 'dt') {
+    [['1','2','3'],['4','5','6'],['7','8','9'],['.','0',':'],[' ','BS']].forEach(r => { h += '<div class="kr">' + r.map(k => kbBtn(k)).join('') + '</div>'; });
+    h += '<div class="kr"><button class="ok" data-k="OK">POTRDI</button></div>';
+  } else {
+    KB_TEXT.forEach(r => { h += '<div class="kr">' + r.map(k => kbBtn(k)).join('') + '</div>'; });
+  }
+  el.innerHTML = h;
+  document.documentElement.style.setProperty('--kbh', el.offsetHeight + 'px');
+}
+function kbBtn(k) {
+  if (k === 'BS') return '<button class="fn" data-k="BS">⌫</button>';
+  if (k === 'SHIFT') return `<button class="fn ${KB.shift ? 'on' : ''}" data-k="SHIFT">⇧</button>`;
+  if (k === 'OK') return '<button class="ok" data-k="OK">OK</button>';
+  if (k === 'C') return '<button class="fn" data-k="C">C</button>';
+  if (k === ' ') return '<button class="sp" data-k=" ">presledek</button>';
+  const lbl = KB.shift && k.length === 1 ? k.toUpperCase() : k;
+  return `<button data-k="${k}">${lbl}</button>`;
+}
+function kbShow(input) {
+  if (KB.target && KB.target !== input) KB.target.classList.remove('kb-active');
+  KB.target = input; input.classList.add('kb-active');
+  KB.shift = !!input.dataset.cap && input.value.length === 0;
+  kbRender();
+  setTimeout(() => { try { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }, 60);
+}
+function kbHide() {
+  if (KB.target) KB.target.classList.remove('kb-active');
+  KB.target = null; KB.el.className = ''; KB.el.innerHTML = '';
+  document.documentElement.style.setProperty('--kbh', '0px');
+}
+function kbPress(k) {
+  const t = KB.target; if (!t) return;
+  const mode = t.dataset.kb || 'text';
+  const max = parseInt(t.getAttribute('maxlength') || '60', 10);
+  if (k === 'OK') { const tt = t; kbHide(); tt.dispatchEvent(new CustomEvent('kbenter')); return; }
+  if (k === 'SHIFT') { KB.shift = !KB.shift; kbRender(); return; }
+  if (k === 'C') { t.value = ''; }
+  else if (k === 'BS') { t.value = t.value.slice(0, -1); }
+  else {
+    if (mode === 'num') {
+      if (k === '.' && (t.dataset.dec !== '1' || t.value.includes('.'))) return;
+      if (!/^[0-9.]$/.test(k)) return;
+    }
+    if (mode === 'dt' && !/^[0-9.: ]$/.test(k)) return;
+    if (t.value.length >= max) return;
+    t.value += (KB.shift && k.length === 1) ? k.toUpperCase() : k;
+    if (KB.shift) { KB.shift = false; kbRender(); }
+  }
+  if (mode === 'text' && t.dataset.cap && t.value.length === 0 && !KB.shift) { KB.shift = true; kbRender(); }
+  t.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function kbInit() {
+  KB.el = $('vkb');
+  KB.el.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button[data-k]'); if (!b) return;
+    e.preventDefault(); kbPress(b.dataset.k);
+  });
+  document.addEventListener('click', e => {
+    const i = e.target.closest('input.kb');
+    if (i) { kbShow(i); return; }
+    if (!e.target.closest('#vkb')) kbHide();
+  });
+}
+
+
+
+const jsPDF = window.jspdf.jsPDF;
+function drawDashedLine(doc, y) {
+  doc.setLineWidth(0.5); doc.setDrawColor(150, 150, 150);
+  for (let i = 2; i < 56; i += 3) doc.line(i, y, i + 1.5, y);
+  doc.setDrawColor(0, 0, 0);
+}
+function pdfRow(doc, label, value, y, bold) {
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  const lw = doc.getTextWidth(label);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  const vw = doc.getTextWidth(value);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.text(label, 2, y);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  if (lw + vw + 3 > 54) y += 4;
+  doc.text(value, 56, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  return y + 5;
+}
+
+
+/* =====================================================================
+   KONSTANTE
+   ===================================================================== */
+const TYPES = { pismo: 'Pismo', paket: 'Paket' };
+const SIZES = {
+  pismo: { manjse: 'manjše', srednje: 'srednje', vecje: 'večje' },
+  paket: { manjse: 'manjši', srednje: 'srednji', vecje: 'večji' }
+};
+const SZ = ['manjse', 'srednje', 'vecje'];
+const STAT = { pripravljeno: 'Pripravljeno', poslano: 'Poslano', dostavljeno: 'Dostavljeno' };
+const STAT_CLS = { pripravljeno: 'wr', poslano: 'bl', dostavljeno: 'ok' };
+const ST_ORDER = ['pripravljeno', 'poslano', 'dostavljeno'];
+const TITLES = { menu: 'Meni', new: 'Oddaj pošiljko', check: 'Preveri pošiljko', mine: 'Moje pošiljke', archive: 'Arhiv' };
+
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const pNum = p => '#' + rk(p.id);
+const pLabel = p => (TYPES[p.type] || '?') + ' ' + ((SIZES[p.type] || {})[p.size] || '');
+const stBadge = s => `<span class="status ${STAT_CLS[s] || ''}">${esc(STAT[s] || s)}</span>`;
+const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
+
+/* =====================================================================
+   STANJE
+   ===================================================================== */
+const freshForm = () => ({ sender: '', recipient: '', type: 'pismo', size: 'manjse', receipt: '', courier: '', notes: '' });
+const S = {
+  ready: {}, emp: null, employees: {}, active: {}, parcels: {}, stats: {},
+  view: 'menu', form: freshForm(), busy: false,
+  archFilter: 'all', archQ: '', archLimit: 50, checkKey: null, checkP: null, checkMsg: ''
+};
+const isAdmin = () => !!S.emp && S.emp.role === 'admin';
+const onShift = id => !!S.active[id];
+const getShift = () => (S.emp && S.active[S.emp.id]) || null;
+
+/* ---------- Poslušanje baze ---------- */
+function listen(key, path, limit) {
+  let ref = db.ref(path); if (limit) ref = ref.limitToLast(limit);
+  ref.on('value', s => { S[key] = s.val() || {}; S.ready[key] = true; onData(key); },
+    err => { toast('Napaka povezave z bazo: ' + err.message, 'err'); });
+}
+function startListeners() {
+  listen('employees', P + '/employees');
+  listen('active', P + '/active');
+  listen('parcels', PP + '/parcels', 1000);
+  listen('stats', PP + '/stats');
+}
+function onData(key) {
+  if (key === 'employees') {
+    if (S.emp) {
+      const e = S.employees[S.emp.id];
+      if (!e) { toast('Tvoj račun je bil odstranjen.', 'err'); logout(); return; }
+      S.emp = e;
+    }
+    renderLoginQuick();
+  }
+  if (key === 'active') renderLoginQuick();
+  if (S.emp) { refreshTopbar(); refreshView(); }
+}
+
+/* =====================================================================
+   PRIJAVA / ODJAVA
+   ===================================================================== */
+function renderLoginQuick() {
+  const box = $('lg-quick'); if (!box) return;
+  if (!S.ready.employees) { box.innerHTML = '<span class="muted">Nalaganje…</span>'; return; }
+  const list = Object.values(S.employees).sort(byName);
+  box.innerHTML = list.map(e => `<button class="${S.active[e.id] ? 'on' : ''}" onclick="quickUser('${e.id}')">${esc(e.name)}</button>`).join('') || '<span class="muted">Ni uporabnikov</span>';
+}
+function quickUser(id) {
+  const e = S.employees[id]; if (!e) return;
+  $('lg-user').value = e.username; $('lg-pass').value = ''; kbShow($('lg-pass'));
+}
+function login() {
+  const u = $('lg-user').value.trim().toLowerCase(), p = $('lg-pass').value;
+  if (!S.ready.employees) { $('lg-err').textContent = 'Baza se še nalaga…'; return; }
+  const e = Object.values(S.employees).find(x => (x.username || '').toLowerCase() === u && x.password === p);
+  if (!e) { $('lg-err').textContent = 'Napačno uporabniško ime ali geslo!'; $('lg-pass').value = ''; return; }
+  $('lg-err').textContent = '';
+  S.emp = e; try { localStorage.setItem('wii_post_emp', e.id); } catch (x) {}
+  $('lg-user').value = ''; $('lg-pass').value = ''; kbHide();
+  showApp();
+}
+function showApp() {
+  $('login').style.display = 'none'; $('app').style.display = 'flex';
+  go('menu');
+}
+function logout() {
+  S.emp = null; S.form = freshForm();
+  try { localStorage.removeItem('wii_post_emp'); } catch (x) {}
+  $('app').style.display = 'none'; $('login').style.display = 'flex'; kbHide();
+  $('modal-root').innerHTML = ''; renderLoginQuick();
+}
+
+/* =====================================================================
+   NAVIGACIJA
+   ===================================================================== */
+function go(v) {
+  kbHide(); S.view = v;
+  $('tb-title').textContent = TITLES[v];
+  $('btn-home').style.visibility = v === 'menu' ? 'hidden' : 'visible';
+  const c = $('content'); c.innerHTML = '<div class="page" id="page"></div>'; c.scrollTop = 0;
+  refreshTopbar();
+  if (v === 'new') { S.form = freshForm(); viewNew(); }
+  else if (v === 'check') { S.checkKey = null; S.checkP = null; S.checkMsg = ''; viewCheck(); }
+  else if (v === 'archive') { S.archQ = ''; S.archLimit = 50; viewArchive(); }
+  else refreshView();
+}
+function refreshTopbar() {
+  if (!S.emp) return;
+  $('tb-user').innerHTML = esc(S.emp.name) + '<br><span style="opacity:.8">' + (isAdmin() ? 'administrator' : 'uporabnik') + '</span>';
+  const p = $('tb-pill'), on = !!getShift();
+  p.textContent = on ? 'NA DELU' : 'NI NA DELU'; p.className = 'pill' + (on ? ' on' : '');
+}
+// delni osveževalniki – vnosnih polj ne prepišemo, da se tipkanje ne prekine
+function refreshView() {
+  if (!S.emp) return;
+  const f = { menu: viewMenu, mine: viewMine, new: renderCouriers, check: renderCheck, archive: renderArchiveList }[S.view];
+  if (f) f();
+}
+
+/* ---------- MENI ---------- */
+const myOpen = () => Object.values(S.parcels).filter(p => p && p.courierId === S.emp.id && !p.archived);
+function viewMenu() {
+  if (!$('page')) return;
+  const n = myOpen().length;
+  const tiles = [
+    ['new', '📮', 'ODDAJ POŠILJKO', 0], ['check', '🔍', 'PREVERI POŠILJKO', 0],
+    ['mine', '📦', 'MOJE POŠILJKE', n], ['archive', '🗄️', 'ARHIV', 0]
+  ];
+  $('page').innerHTML = '<div class="tiles">' + tiles.map(t => `<button class="tile-menu" onclick="go('${t[0]}')"><span class="ic">${t[1]}</span>${t[2]}${t[3] ? `<span class="badge">${t[3]}</span>` : ''}</button>`).join('') + '</div>';
+}
+
+/* =====================================================================
+   ODDAJ POŠILJKO
+   ===================================================================== */
+function viewNew() {
+  const f = S.form;
+  $('page').innerHTML = `<div class="box">
+    <label class="lbl">Pošiljatelj</label>
+    <input id="f-sender" class="inp kb" data-kb="text" data-cap="1" maxlength="60" readonly inputmode="none" autocomplete="off" placeholder="Ime in priimek / naziv">
+    <label class="lbl">Prejemnik</label>
+    <input id="f-recipient" class="inp kb" data-kb="text" data-cap="1" maxlength="60" readonly inputmode="none" autocomplete="off" placeholder="Ime in priimek / naziv">
+    <label class="lbl">Vrsta pošiljke</label>
+    <div class="seg" id="f-type"></div>
+    <label class="lbl">Velikost pošiljke</label>
+    <div class="seg" id="f-size"></div>
+    <div class="muted" id="f-sum" style="margin-bottom:6px"></div>
+    <label class="lbl">Številka računa</label>
+    <input id="f-receipt" class="inp kb" data-kb="num" data-dec="0" maxlength="12" readonly inputmode="none" autocomplete="off" placeholder="Številka računa, kjer je bilo plačano">
+    <label class="lbl">Poštar</label>
+    <div class="chips" id="f-couriers" style="margin-bottom:6px"></div>
+    <div class="muted" id="f-chint" style="margin-bottom:10px"></div>
+    <label class="lbl">Opombe</label>
+    <input id="f-notes" class="inp kb" data-kb="text" maxlength="200" readonly inputmode="none" autocomplete="off" placeholder="Neobvezno">
+    <button class="btn green block" id="f-submit" onclick="submitNew()">ODDAJ POŠILJKO</button>
+  </div>`;
+  [['f-sender', 'sender'], ['f-recipient', 'recipient'], ['f-receipt', 'receipt'], ['f-notes', 'notes']].forEach(([id, k]) => {
+    const el = $(id); el.value = f[k];
+    el.addEventListener('input', () => { S.form[k] = el.value; });
+  });
+  $('f-sender').addEventListener('kbenter', () => kbShow($('f-recipient')));
+  $('f-recipient').addEventListener('kbenter', () => kbShow($('f-receipt')));
+  renderTypeSize(); renderCouriers();
+}
+function renderTypeSize() {
+  if (!$('f-type')) return;
+  const f = S.form;
+  $('f-type').innerHTML = Object.keys(TYPES).map(t => `<button class="${f.type === t ? 'on' : ''}" onclick="setType('${t}')">${TYPES[t]}</button>`).join('');
+  $('f-size').innerHTML = SZ.map(z => `<button class="${f.size === z ? 'on' : ''}" onclick="setSize('${z}')">${cap(SIZES[f.type][z])}</button>`).join('');
+  $('f-sum').innerHTML = `Na dokumentu: <b>${esc(pLabel(f))}</b>`;
+}
+function setType(t) { S.form.type = t; renderTypeSize(); }
+function setSize(z) { S.form.size = z; renderTypeSize(); }
+function renderCouriers() {
+  const box = $('f-couriers'); if (!box) return;
+  const all = Object.values(S.employees).sort(byName);
+  const list = isAdmin() ? all : all.filter(e => onShift(e.id));
+  if (S.form.courier && !list.find(e => e.id === S.form.courier)) S.form.courier = '';
+  if (!S.form.courier && list.length === 1) S.form.courier = list[0].id;
+  box.innerHTML = list.length ? list.map(e => `<button class="chip ${S.form.courier === e.id ? 'sel' : ''}" onclick="pickCourier('${e.id}')"><span class="dot" style="background:${onShift(e.id) ? '#22c55e' : '#cbd2dc'}"></span>${esc(e.name)}</button>`).join('')
+    : '<span class="notice">Nihče ni na izmeni – poštarja ni mogoče določiti.</span>';
+  $('f-chint').textContent = isAdmin() ? 'Zelena pika = na izmeni. Kot administrator lahko izbereš tudi poštarja, ki ni na izmeni.' : 'Na voljo so samo zaposleni, ki so trenutno na izmeni.';
+}
+function pickCourier(id) { S.form.courier = id; renderCouriers(); }
+const nextParcelId = () => new Promise((res, rej) => db.ref(PP + '/counters/parcel').transaction(c => (c || 0) + 1, (e, ok, snap) => (e || !ok) ? rej(e || new Error('counter')) : res(snap.val())));
+const histEntry = (status, note) => ({ date: new Date().toISOString(), status, by: S.emp.name, note: note || '' });
+const adjStat = (empId, day, d) => db.ref(PP + '/stats/' + empId + '/' + day).transaction(c => { const n = (c || 0) + d; return n > 0 ? n : null; });
+
+async function submitNew() {
+  if (S.busy) return;
+  const f = S.form;
+  const sender = f.sender.trim(), recipient = f.recipient.trim(), receipt = f.receipt.trim();
+  if (!sender) return toast('Vpiši pošiljatelja.', 'err');
+  if (!recipient) return toast('Vpiši prejemnika.', 'err');
+  if (!receipt) return toast('Vpiši številko računa.', 'err');
+  const cour = S.employees[f.courier];
+  if (!cour) return toast('Izberi poštarja.', 'err');
+  if (!isAdmin() && !onShift(cour.id)) return toast('Izbrani poštar ni na izmeni.', 'err');
+  S.busy = true; $('f-submit').disabled = true;
+  try {
+    const id = await nextParcelId(), key = rk(id), now = new Date().toISOString();
+    const hk = db.ref(PP).push().key;
+    const parcel = {
+      id, key, sender, recipient, type: f.type, size: f.size, receiptNo: receipt,
+      courierId: cour.id, courierName: cour.name, notes: f.notes.trim(),
+      status: 'pripravljeno', archived: false, created: now, createdBy: S.emp.id, createdByName: S.emp.name,
+      history: { [hk]: { date: now, status: 'pripravljeno', by: S.emp.name, note: 'Pošiljka oddana' } }
+    };
+    await db.ref(PP + '/parcels/' + key).set(parcel);
+    S.form = freshForm(); S.busy = false;
+    showSubmitted(parcel);
+    if (S.view === 'new') viewNew();
+  } catch (e) {
+    S.busy = false; if ($('f-submit')) $('f-submit').disabled = false;
+    toast('Napaka pri shranjevanju: ' + (e.message || e), 'err');
+  }
+}
+function showSubmitted(p) {
+  const ov = openModal(`<div class="res"><svg class="anim" viewBox="0 0 52 52"><circle class="c" cx="26" cy="26" r="24" fill="none" stroke="#198754" stroke-width="3"/><path class="p" d="M14 27l8 8 16-17" fill="none" stroke="#198754" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2>Pošiljka oddana</h2><div class="code-big sm">${esc(pNum(p))}</div>
+    <div style="font-weight:700;font-size:18px">${esc(pLabel(p))}</div>
+    <div class="muted" style="margin-top:6px">Poštar: <b>${esc(p.courierName)}</b></div></div>
+    <button class="btn green block" id="s-print" style="margin-top:12px">NATISNI POTRDILO</button>
+    <button class="btn ghost block" id="s-close" style="margin-top:8px">Zapri</button>`);
+  ov.querySelector('#s-print').onclick = () => generateSlipPDF(p);
+  ov.querySelector('#s-close').onclick = () => ov.close();
+}
+
+/* =====================================================================
+   MOJE POŠILJKE
+   ===================================================================== */
+function viewMine() {
+  if (!$('page')) return;
+  const me = S.emp.id;
+  const list = myOpen().sort((a, b) => b.id - a.id);
+  const st = S.stats[me] || {}, tk = dayKey(new Date()), mk = tk.slice(0, 7);
+  const today = st[tk] || 0;
+  const month = Object.keys(st).filter(k => k.startsWith(mk)).reduce((s, k) => s + (st[k] || 0), 0);
+  const cards = list.map(p => `<div class="box pcard">
+    <div class="head"><span class="t"><span class="pnum">${esc(pNum(p))}</span> · ${esc(pLabel(p))}</span>${stBadge(p.status)}</div>
+    <div class="kv"><span>Pošiljatelj</span><b>${esc(p.sender)}</b></div>
+    <div class="kv"><span>Prejemnik</span><b>${esc(p.recipient)}</b></div>
+    <div class="kv"><span>Št. računa</span><b>${esc(p.receiptNo)}</b></div>
+    <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
+    ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
+    <div class="stbtns">${ST_ORDER.map(s => `<button class="btn ${s === p.status ? (s === 'dostavljeno' ? 'green' : 'primary') : 'ghost'}" ${s === p.status ? 'disabled' : ''} onclick="setStatus('${p.key}','${s}')">${STAT[s]}</button>`).join('')}</div>
+  </div>`).join('');
+  $('page').innerHTML = `<div class="box"><div class="cnt"><div><b>${today}</b>Danes dostavljeno</div><div><b>${month}</b>V tem mesecu</div></div></div>
+    ${cards || '<div class="box"><span class="muted">Trenutno nimaš pošiljk za dostavo.</span></div>'}`;
+}
+function setStatus(key, st) {
+  const p = S.parcels[key]; if (!p) return;
+  if (!(isAdmin() || p.courierId === S.emp.id)) return toast('Te pošiljke ne moreš urejati.', 'err');
+  if (p.status === st) return;
+  if (st === 'dostavljeno') return confirmBox(`Pošiljko ${esc(pNum(p))} označim kot dostavljeno? Arhivirana bo, dostava pa se ti prišteje.`, 'Dostavljeno', () => doDeliver(p), false);
+  const hk = db.ref(PP).push().key;
+  db.ref(PP + '/parcels/' + key).update({ status: st, ['history/' + hk]: histEntry(st) })
+    .then(() => toast('Status: ' + STAT[st], 'ok')).catch(e => toast('Napaka: ' + e.message, 'err'));
+}
+function doDeliver(p) {
+  const ref = db.ref(PP + '/parcels/' + p.key);
+  ref.child('status').transaction(cur => cur === 'dostavljeno' ? undefined : 'dostavljeno', async (e, ok) => {
+    if (e) return toast('Napaka: ' + e.message, 'err');
+    if (!ok) return toast('Pošiljka je že dostavljena.', 'warn');
+    try {
+      const now = new Date().toISOString(), hk = db.ref(PP).push().key;
+      await ref.update({ archived: true, deliveredAt: now, ['history/' + hk]: histEntry('dostavljeno', 'Dostavljeno in arhivirano') });
+      await adjStat(p.courierId, dayKey(now), 1);
+      toast('Pošiljka dostavljena in arhivirana.', 'ok');
+    } catch (err) { toast('Napaka: ' + (err.message || err), 'err'); }
+  });
+}
+
+/* =====================================================================
+   PODROBNOSTI POŠILJKE (skupno za Preveri in Arhiv)
+   ===================================================================== */
+function detailHtml(p) {
+  const h = Object.values(p.history || {}).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  return `<div class="pcard"><div class="head"><span class="t"><span class="pnum">${esc(pNum(p))}</span> · ${esc(pLabel(p))}</span>${stBadge(p.status)}</div>
+    <div class="kv"><span>Pošiljatelj</span><b>${esc(p.sender)}</b></div>
+    <div class="kv"><span>Prejemnik</span><b>${esc(p.recipient)}</b></div>
+    <div class="kv"><span>Št. računa</span><b>${esc(p.receiptNo)}</b></div>
+    <div class="kv"><span>Poštar</span><b>${esc(p.courierName)}</b></div>
+    <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
+    <div class="kv"><span>Oddal(a)</span><b>${esc(p.createdByName)}</b></div>
+    ${p.deliveredAt ? `<div class="kv"><span>Dostavljeno</span><b>${fmtDT(p.deliveredAt)}</b></div>` : ''}
+    ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
+    <div class="lbl" style="margin-top:12px">Zgodovina</div>
+    <div class="hist" style="max-height:200px">${h.map(x => `<div>${fmtDT(x.date)} · <b>${esc(STAT[x.status] || x.status)}</b> · ${esc(x.by)}${x.note ? ' – ' + esc(x.note) : ''}</div>`).join('') || '<div>Ni zapisov.</div>'}</div></div>`;
+}
+function showParcel(key) {
+  const p = S.parcels[key]; if (!p) return;
+  const ov = openModal(detailHtml(p) + `<button class="btn green block" id="d-print" style="margin-top:12px">NATISNI POTRDILO</button>
+    ${isAdmin() ? `<div class="row"><button class="btn primary" id="d-edit">Uredi</button><button class="btn red" id="d-del">Izbriši</button></div>` : ''}
+    <button class="btn ghost block" id="d-close" style="margin-top:8px">Zapri</button>`, true);
+  ov.querySelector('#d-print').onclick = () => generateSlipPDF(p);
+  ov.querySelector('#d-close').onclick = () => ov.close();
+  if (isAdmin()) {
+    ov.querySelector('#d-edit').onclick = () => { ov.close(); editParcel(key); };
+    ov.querySelector('#d-del').onclick = () => { ov.close(); delParcel(key); };
+  }
+}
+
+/* =====================================================================
+   PREVERI POŠILJKO
+   ===================================================================== */
+function viewCheck() {
+  $('page').innerHTML = `<div class="box"><label class="lbl">Številka pošiljke</label>
+    <input id="c-n" class="inp big kb" data-kb="num" data-dec="0" maxlength="8" readonly inputmode="none" autocomplete="off" placeholder="npr. 123">
+    <button class="btn block" onclick="doCheck()">PREVERI</button></div><div id="c-res"></div>`;
+  $('c-n').addEventListener('kbenter', doCheck);
+}
+function doCheck() {
+  const n = parseInt($('c-n').value, 10);
+  if (!n || n < 1) return toast('Vpiši številko pošiljke.', 'err');
+  const key = rk(n); S.checkKey = key; S.checkP = null; S.checkMsg = '';
+  if (S.parcels[key]) return renderCheck();
+  S.checkMsg = 'Iščem…'; renderCheck();
+  db.ref(PP + '/parcels/' + key).once('value').then(s => {
+    if (S.checkKey !== key) return;
+    S.checkP = s.val(); S.checkMsg = s.val() ? '' : 'Pošiljka s številko ' + esc('#' + key) + ' ne obstaja.'; renderCheck();
+  }).catch(e => { S.checkMsg = 'Napaka: ' + esc(e.message); renderCheck(); });
+}
+function renderCheck() {
+  const box = $('c-res'); if (!box) return;
+  if (!S.checkKey) { box.innerHTML = ''; return; }
+  const p = S.parcels[S.checkKey] || S.checkP;
+  if (p) box.innerHTML = `<div class="box">${detailHtml(p)}<button class="btn green block" style="margin-top:12px" onclick="generateSlipPDF(${S.parcels[p.key] ? `S.parcels['${p.key}']` : 'S.checkP'})">NATISNI POTRDILO</button></div>`;
+  else box.innerHTML = `<div class="box"><span class="muted">${S.checkMsg}</span></div>`;
+}
+
+/* =====================================================================
+   ARHIV
+   ===================================================================== */
+function viewArchive() {
+  $('page').innerHTML = `<div class="seg" id="a-seg"></div>
+    <input id="a-q" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="🔍 Išči (številka, ime, račun, poštar…)">
+    <div class="box" id="a-list"></div>`;
+  $('a-q').addEventListener('input', () => { S.archQ = $('a-q').value; S.archLimit = 50; renderArchiveList(); });
+  $('a-q').addEventListener('kbenter', () => {});
+  renderArchiveList();
+}
+function renderArchiveList() {
+  const box = $('a-list'); if (!box) return;
+  $('a-seg').innerHTML = [['all', 'Vse'], ['arch', 'Arhivirane'], ['open', 'V teku']].map(([k, l]) => `<button class="${S.archFilter === k ? 'on' : ''}" onclick="S.archFilter='${k}';S.archLimit=50;renderArchiveList()">${l}</button>`).join('');
+  const q = norm(S.archQ.trim());
+  let list = Object.values(S.parcels).filter(Boolean).sort((a, b) => b.id - a.id);
+  if (S.archFilter === 'arch') list = list.filter(p => p.archived);
+  if (S.archFilter === 'open') list = list.filter(p => !p.archived);
+  if (q) list = list.filter(p => norm([rk(p.id), p.id, p.sender, p.recipient, p.receiptNo, p.courierName, pLabel(p), STAT[p.status]].join(' ')).includes(q));
+  const shown = list.slice(0, S.archLimit);
+  box.innerHTML = (shown.map(p => `<div class="list-row" style="cursor:pointer" onclick="showParcel('${p.key}')">
+    <div class="grow"><div class="t"><span class="pnum">${esc(pNum(p))}</span> · ${esc(pLabel(p))}</div>
+    <div class="s">${esc(p.sender)} → ${esc(p.recipient)}</div>
+    <div class="s">${fmtDT(p.created)} · ${esc(p.courierName)}</div></div>
+    ${stBadge(p.status)}
+    ${isAdmin() ? `<button class="mini" onclick="event.stopPropagation();editParcel('${p.key}')">Uredi</button><button class="mini red" onclick="event.stopPropagation();delParcel('${p.key}')">✕</button>` : ''}
+  </div>`).join('') || '<span class="muted">Ni pošiljk.</span>')
+    + (list.length > shown.length ? `<button class="btn ghost block" style="margin-top:10px" onclick="S.archLimit+=50;renderArchiveList()">Prikaži več (${list.length - shown.length})</button>` : '');
+}
+
+/* ---------- Administrator: urejanje in brisanje ---------- */
+function editParcel(key) {
+  const p = S.parcels[key]; if (!p || !isAdmin()) return;
+  let type = p.type, size = p.size;
+  const emps = Object.values(S.employees).sort(byName);
+  const copts = emps.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')
+    + (S.employees[p.courierId] ? '' : `<option value="${esc(p.courierId)}">${esc(p.courierName)} (odstranjen)</option>`);
+  const ov = openModal(`<h3>Uredi pošiljko ${esc(pNum(p))}</h3>
+    <label class="lbl">Pošiljatelj</label><input id="e-s" class="inp kb" data-kb="text" data-cap="1" maxlength="60" readonly inputmode="none" autocomplete="off">
+    <label class="lbl">Prejemnik</label><input id="e-r" class="inp kb" data-kb="text" data-cap="1" maxlength="60" readonly inputmode="none" autocomplete="off">
+    <label class="lbl">Vrsta</label><div class="seg" id="e-type"></div>
+    <label class="lbl">Velikost</label><div class="seg" id="e-size"></div>
+    <label class="lbl">Številka računa</label><input id="e-rc" class="inp kb" data-kb="num" data-dec="0" maxlength="12" readonly inputmode="none" autocomplete="off">
+    <label class="lbl">Poštar</label><select id="e-c" class="inp">${copts}</select>
+    <label class="lbl">Status</label><select id="e-st" class="inp">${ST_ORDER.map(s => `<option value="${s}">${STAT[s]}</option>`).join('')}</select>
+    <label class="lbl">Opombe</label><input id="e-n" class="inp kb" data-kb="text" maxlength="200" readonly inputmode="none" autocomplete="off">
+    <div class="row"><button class="btn ghost" id="e-x">Prekliči</button><button class="btn primary" id="e-ok">Shrani</button></div>`, true);
+  const g = id => ov.querySelector(id);
+  g('#e-s').value = p.sender; g('#e-r').value = p.recipient; g('#e-rc').value = p.receiptNo || ''; g('#e-n').value = p.notes || '';
+  g('#e-c').value = p.courierId; g('#e-st').value = p.status;
+  const rs = () => {
+    g('#e-type').innerHTML = Object.keys(TYPES).map(t => `<button data-t="${t}" class="${type === t ? 'on' : ''}">${TYPES[t]}</button>`).join('');
+    g('#e-size').innerHTML = SZ.map(z => `<button data-z="${z}" class="${size === z ? 'on' : ''}">${cap(SIZES[type][z])}</button>`).join('');
+  };
+  rs();
+  ov.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.t) { type = b.dataset.t; rs(); } else if (b.dataset.z) { size = b.dataset.z; rs(); }
+  });
+  g('#e-x').onclick = () => ov.close();
+  g('#e-ok').onclick = async () => {
+    const sender = g('#e-s').value.trim(), recipient = g('#e-r').value.trim(), rc = g('#e-rc').value.trim();
+    if (!sender || !recipient) return toast('Pošiljatelj in prejemnik sta obvezna.', 'err');
+    if (!rc) return toast('Vpiši številko računa.', 'err');
+    const nc = g('#e-c').value, ne = S.employees[nc], ns = g('#e-st').value;
+    const wasDel = p.status === 'dostavljeno', nowDel = ns === 'dostavljeno';
+    const delAt = nowDel ? ((wasDel && p.deliveredAt) ? p.deliveredAt : new Date().toISOString()) : null;
+    const up = { sender, recipient, type, size, receiptNo: rc, courierId: nc, courierName: ne ? ne.name : p.courierName, notes: g('#e-n').value.trim(), status: ns, archived: nowDel, deliveredAt: delAt };
+    up['history/' + db.ref(PP).push().key] = histEntry(ns, 'Urejeno (administrator)');
+    try {
+      await db.ref(PP + '/parcels/' + p.key).update(up);
+      const before = wasDel ? [p.courierId, dayKey(p.deliveredAt || p.created)] : null, after = nowDel ? [nc, dayKey(delAt)] : null;
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        if (before) await adjStat(before[0], before[1], -1);
+        if (after) await adjStat(after[0], after[1], 1);
+      }
+      ov.close(); toast('Shranjeno', 'ok');
+    } catch (err) { toast('Napaka: ' + (err.message || err), 'err'); }
+  };
+}
+function delParcel(key) {
+  const p = S.parcels[key]; if (!p || !isAdmin()) return;
+  confirmBox(`Izbrišem pošiljko ${esc(pNum(p))} (${esc(pLabel(p))})?`, 'Izbriši', async () => {
+    try {
+      await db.ref(PP + '/parcels/' + p.key).remove();
+      if (p.status === 'dostavljeno') await adjStat(p.courierId, dayKey(p.deliveredAt || p.created), -1);
+      toast('Pošiljka izbrisana', 'ok');
+    } catch (e) { toast('Napaka: ' + e.message, 'err'); }
+  });
+}
+
+/* =====================================================================
+   POTRDILO (PDF, 58 mm)
+   ===================================================================== */
+function slipRow(doc, label, val, y) {
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100); doc.text(label, 2, y); y += 3.5;
+  doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+  doc.splitTextToSize(cleanText(val) || '-', 54).forEach(l => { doc.text(l, 2, y); y += 3.8; });
+  return y + 1.5;
+}
+function drawSlip(doc, p) {
+  let y = 9;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text('WII Shop', 29, y, { align: 'center' }); y += 6;
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('POSTNA POSILJKA', 29, y, { align: 'center' }); y += 8;
+  doc.setFontSize(20); doc.text(pNum(p), 29, y, { align: 'center' }); y += 7;
+  doc.setFontSize(10); doc.text(cleanText(pLabel(p)), 29, y, { align: 'center' }); y += 5;
+  drawDashedLine(doc, y); y += 5;
+  y = slipRow(doc, 'Datum oddaje:', fmtDT(p.created), y);
+  y = slipRow(doc, 'Posiljatelj:', p.sender, y);
+  y = slipRow(doc, 'Prejemnik:', p.recipient, y);
+  y = slipRow(doc, 'Stevilka racuna:', p.receiptNo, y);
+  y = slipRow(doc, 'Postar:', p.courierName, y);
+  if (p.notes) y = slipRow(doc, 'Opombe:', p.notes, y);
+  drawDashedLine(doc, y); y += 5;
+  const qr = new QRious({ value: `WII-POSTA-${p.id}`, size: 150 });
+  doc.addImage(qr.toDataURL(), 'PNG', 19, y, 20, 20); y += 25;
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text('Stevilka posiljke: ' + pNum(p), 29, y, { align: 'center' }); y += 4;
+  return y;
+}
+function generateSlipPDF(p) {
+  if (!p) return;
+  const probe = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 3000] });
+  const endY = drawSlip(probe, p);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, Math.ceil(endY + 4)] });
+  drawSlip(doc, p);
+  doc.save(`Posiljka_${rk(p.id)}.pdf`);
+}
+
+/* =====================================================================
+   ZAGON
+   ===================================================================== */
+kbInit();
+$('lg-user').addEventListener('kbenter', () => kbShow($('lg-pass')));
+$('lg-pass').addEventListener('kbenter', login);
+startListeners();
+
+// samodejna ponovna prijava po osvežitvi
+(function autoLogin() {
+  let id = null; try { id = localStorage.getItem('wii_post_emp'); } catch (e) {}
+  if (!id) return;
+  const t = setInterval(() => {
+    if (!S.ready.employees) return;
+    clearInterval(t);
+    if (S.employees[id]) { S.emp = S.employees[id]; showApp(); }
+  }, 150);
+})();
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
