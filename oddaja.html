@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e8590c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WII Oddaja">
+<link rel="manifest" href="manifest-oddaja.webmanifest">
+<link rel="apple-touch-icon" href="icon-oddaja-180.png">
+<link rel="icon" type="image/png" href="icon-oddaja-192.png">
+<title>ODDAJNI ELEKTRONČEK</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+
+<style>
+
+:root{
+  --bg:#eef2f7; --card:#fff; --primary:#e8590c; --primary-d:#c2410c; --text:#1f2937; --muted:#6b7280;
+  --danger:#dc3545; --success:#198754; --warn:#f59e0b; --border:#dde3ec; --kbh:0px;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);touch-action:manipulation}
+button{font-family:inherit;cursor:pointer;border:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font-family:inherit}
+#root{height:100vh;height:calc(100dvh - var(--kbh));display:flex;flex-direction:column}
+
+/* ---------- LOGIN ---------- */
+#login{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.login-card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:26px 22px;width:100%;max-width:460px}
+.login-card h1{color:var(--primary);font-size:28px;text-align:center}
+.login-card .sub{color:var(--muted);text-align:center;font-size:14px;margin:4px 0 18px}
+.ver{margin-top:18px;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:2px;text-align:center;padding-bottom:20px}
+.inp{width:100%;padding:14px;border:2px solid var(--border);border-radius:10px;font-size:18px;background:#fff;outline:none;margin-bottom:10px}
+.inp.kb-active,.inp:focus{border-color:var(--primary)}
+.inp.big{font-size:30px;text-align:center;font-weight:700}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 4px}
+.btn{padding:15px 18px;border-radius:12px;font-size:17px;font-weight:700;color:#fff;background:var(--primary)}
+.btn.block{width:100%}
+.btn.green{background:var(--success)} .btn.red{background:var(--danger)} .btn.ghost{background:#e5e9f0;color:var(--text)} .btn.warn{background:var(--warn);color:#222}
+.btn.primary{background:var(--primary)} .btn.vio{background:#6f42c1}
+.quick-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:18px 0 8px;text-align:center}
+.quick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.quick button{padding:12px 16px;border-radius:12px;background:#e5e9f0;color:var(--text);font-weight:600;font-size:15px;border:2px solid transparent}
+.quick button.on{background:#d1f2de;border-color:var(--success);color:#0b5a33}
+.quick button.on::after{content:" ●";color:var(--success);font-size:11px}
+.err{color:var(--danger);font-weight:700;text-align:center;font-size:14px;min-height:20px;margin-top:6px}
+
+/* ---------- APP ---------- */
+#app{flex:1;display:none;flex-direction:column;min-height:0}
+#topbar{background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+#topbar .back{background:rgba(255,255,255,.2);color:#fff;padding:9px 14px;border-radius:10px;font-weight:700;font-size:15px}
+#topbar .ttl{font-size:18px;font-weight:700;flex:1}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.2)}
+.pill.on{background:#22c55e;color:#04290f}
+#topbar .uname{font-size:13px;opacity:.95;text-align:right;line-height:1.2}
+#topbar .out{background:rgba(255,255,255,.2);color:#fff;padding:9px 12px;border-radius:10px;font-weight:600;font-size:13px}
+#content{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.page{padding:16px;max-width:900px;margin:0 auto}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tile-menu{background:var(--card);border-radius:16px;padding:26px 14px;text-align:center;font-size:17px;font-weight:700;color:var(--primary);box-shadow:0 3px 10px rgba(0,0,0,.06);border:2px solid transparent;position:relative}
+.tile-menu .ic{font-size:36px;display:block;margin-bottom:8px}
+.tile-menu.locked{opacity:.5;color:var(--muted)}
+.tile-menu.locked::after{content:"🔒";position:absolute;top:8px;right:10px;font-size:16px}
+.tile-menu.adm{border-color:#f8d3bd;background:#fff7f2}
+.sect{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-top:6px}
+.bigbtn{width:100%;padding:22px;font-size:19px;border-radius:14px;color:#fff;font-weight:800;margin-bottom:12px;background:var(--primary)}
+.box{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:14px}
+.box h3{margin-bottom:10px;font-size:16px}
+.muted{color:var(--muted);font-size:14px}
+.row{display:flex;gap:10px;margin-top:12px}
+.row>*{flex:1}
+.list-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
+.list-row:last-child{border-bottom:none}
+.list-row .grow{flex:1;min-width:0}
+.list-row .t{font-weight:700}
+.list-row .s{font-size:13px;color:var(--muted)}
+.mini{padding:8px 12px;border-radius:9px;font-weight:700;font-size:13px;color:#fff;background:var(--primary)}
+.mini.red{background:var(--danger)} .mini.ghost{background:#e5e9f0;color:var(--text)} .mini.green{background:var(--success)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;background:#e5e9f0;border-radius:10px;padding:8px 10px;font-weight:600;font-size:14px}
+.chip.sel{background:var(--primary);color:#fff}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.2)}
+.code-big{font-size:56px;font-weight:800;letter-spacing:8px;text-align:center;color:var(--primary);margin:10px 0;font-variant-numeric:tabular-nums}
+.status{display:inline-block;padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px}
+.status.ok{background:#d1f2de;color:#0b5a33}.status.no{background:#fde2e4;color:#8a1c27}.status.wr{background:#fff0c9;color:#7a5200}
+
+/* ---------- MODAL ---------- */
+#modal-root{position:fixed;inset:0;pointer-events:none;z-index:2000}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;overflow-y:auto;padding:14px;padding-bottom:calc(var(--kbh) + 14px);pointer-events:auto}
+.modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:440px;margin:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal.wide{max-width:560px}
+.modal h3{font-size:20px;margin-bottom:6px}
+.modal .amt{font-size:34px;font-weight:800;color:var(--primary);text-align:center;margin:8px 0 14px}
+.paybtn{display:block;width:100%;padding:20px;border-radius:14px;font-size:19px;font-weight:800;color:#fff;margin-bottom:10px;background:var(--primary)}
+.paybtn.g{background:var(--success)} .paybtn.p{background:#6f42c1} .paybtn.r{background:var(--danger)} .paybtn.o{background:var(--warn);color:#222}
+.paybtn small{display:block;font-size:12px;font-weight:600;opacity:.9;margin-top:3px}
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}
+.qgrid button{padding:12px;border-radius:10px;background:#e5e9f0;font-weight:700;font-size:15px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:15px}
+.kv b{font-variant-numeric:tabular-nums;text-align:right}
+.res{text-align:center;padding:6px 0}
+.res h2{margin:10px 0 4px}
+.seg{display:flex;background:#e5e9f0;border-radius:10px;padding:4px;gap:4px;margin-bottom:10px}
+.seg button{flex:1;padding:10px;border-radius:8px;background:transparent;font-weight:700;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.tgl{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-weight:600;width:100%;background:none;text-align:left}
+.tgl .sw{width:46px;height:26px;border-radius:26px;background:#cbd2dc;position:relative;transition:.2s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on .sw{background:var(--success)} .tgl.on .sw::after{left:23px}
+select.inp{appearance:auto}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.swatches button{width:40px;height:40px;border-radius:10px;border:3px solid transparent;font-weight:800;font-size:16px;color:#555;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.swatches button.on{border-color:#111}
+.hist{max-height:160px;overflow-y:auto;font-size:13px;color:var(--muted);margin-top:6px}
+.hist div{padding:4px 0;border-bottom:1px dashed var(--border)}
+
+/* check / x animation */
+.anim{width:110px;height:110px;display:block;margin:0 auto}
+.anim .c{stroke-dasharray:151;stroke-dashoffset:151;animation:dash .6s ease forwards}
+.anim .p{stroke-dasharray:50;stroke-dashoffset:50;animation:dash .4s .5s ease forwards}
+@keyframes dash{to{stroke-dashoffset:0}}
+.spinner{width:56px;height:56px;border:6px solid #e5e9f0;border-top-color:var(--primary);border-radius:50%;margin:14px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* toast */
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5000;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center;width:90%;max-width:420px}
+.toast{background:#1f2937;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:tin .2s}
+.toast.err{background:var(--danger)} .toast.ok{background:var(--success)} .toast.warn{background:var(--warn);color:#222}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}}
+
+/* ---------- PROGRAMSKA TIPKOVNICA ---------- */
+#vkb{position:fixed;left:0;right:0;bottom:0;background:#d9dee7;padding:8px 6px;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:4000;display:none;user-select:none;-webkit-user-select:none;box-shadow:0 -6px 20px rgba(0,0,0,.15)}
+#vkb.show{display:block}
+#vkb .kr{display:flex;gap:5px;margin-bottom:5px;justify-content:center}
+#vkb button{flex:1;max-width:64px;height:46px;border-radius:8px;background:#fff;font-size:20px;font-weight:600;color:#111;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+#vkb button:active{background:#cfd6e2}
+#vkb button.fn{background:#b9c1cf;max-width:none;flex:1.5;font-size:16px}
+#vkb button.sp{flex:5;max-width:none}
+#vkb button.ok{background:var(--primary);color:#fff;flex:2;max-width:none;font-size:17px}
+#vkb button.on{background:var(--primary);color:#fff}
+#vkb.num{max-width:420px;margin:0 auto;border-radius:16px 16px 0 0}
+#vkb.num button{max-width:none;height:56px;font-size:24px}
+
+
+/* ---------- ODDAJNI ELEKTRONČEK ---------- */
+#app{display:flex}
+#content{overflow:hidden;display:flex;flex-direction:column}
+#v-scan{flex:1;display:flex;flex-direction:column;min-height:0}
+#cam-wrap{position:relative;flex:1;background:#111;overflow:hidden;min-height:0}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame{position:absolute;left:50%;top:46%;width:min(68vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none}
+.frame i{position:absolute;width:38px;height:38px;border:6px solid #fff;border-radius:8px;filter:drop-shadow(0 0 4px rgba(0,0,0,.5))}
+.frame .tl{top:0;left:0;border-right:0;border-bottom:0}.frame .tr{top:0;right:0;border-left:0;border-bottom:0}
+.frame .bl{bottom:0;left:0;border-right:0;border-top:0}.frame .br{bottom:0;right:0;border-left:0;border-top:0}
+.frame .line{position:absolute;left:8%;right:8%;height:3px;background:var(--primary);box-shadow:0 0 12px var(--primary);border-radius:3px;animation:scan 2.2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:8%}50%{top:88%}}
+.cam-hint{position:absolute;left:0;right:0;bottom:0;padding:44px 18px calc(18px + env(safe-area-inset-bottom));text-align:center;color:#fff;font-weight:700;font-size:17px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.cam-hint small{display:block;font-weight:500;opacity:.85;font-size:13px;margin-top:4px}
+#cam-err{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;color:#fff;background:rgba(17,17,17,.92);font-weight:600}
+#cam-err .btn{max-width:320px;width:100%}
+#v-sign{display:none;flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+#pad-wrap{position:relative;background:#fff;border:2px dashed #cdbba9;border-radius:14px;height:230px;overflow:hidden}
+#pad{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#pad-ph{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#b8a898;font-weight:700;pointer-events:none;font-size:18px}
+#pad-line{position:absolute;left:6%;right:6%;bottom:48px;border-bottom:1.5px solid #e6dccf;pointer-events:none}
+.pcard .head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:6px}
+.pcard .head .t{font-size:18px;font-weight:800}
+.pnum{font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums}
+.code-big.sm{font-size:40px;letter-spacing:4px}
+.done-ov{position:fixed;inset:0;z-index:3000;background:rgba(25,135,84,.97);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.done-ov h2{font-size:30px;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="app">
+    <div id="topbar">
+      <div class="ttl">📮 ODDAJNI ELEKTRONČEK</div>
+      <button class="out" onclick="manualCode()">⌨ Šifra</button>
+    </div>
+    <div id="content">
+
+      <!-- KAMERA -->
+      <div id="v-scan">
+        <div id="cam-wrap">
+          <video id="cam" playsinline muted autoplay></video>
+          <div class="frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i><div class="line"></div></div>
+          <div class="cam-hint">Usmeri kamero na QR kodo na nalepki<small>Šifra paketa se prebere samodejno</small></div>
+          <div id="cam-err"><div style="font-size:46px">📷</div><div id="cam-err-msg"></div><button class="btn primary" onclick="startCamera()">Zaženi kamero</button></div>
+        </div>
+      </div>
+
+      <!-- PODPIS -->
+      <div id="v-sign"><div class="page" id="sign-page"></div></div>
+
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   FIREBASE (ista baza kot sistem Pošta – brez prijave)
+   ===================================================================== */
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const PP = 'wii_db_v3/post';   // pošta: pošiljke, šifre (codes), podpisi (signatures), statistika
+
+/* =====================================================================
+   POMOŽNE FUNKCIJE
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2 = n => Math.round(((+n || 0) + Number.EPSILON) * 100) / 100;
+const money = n => r2(n).toFixed(2);
+const parseNum = s => parseFloat(String(s).replace(',', '.'));
+const pad = n => String(n).padStart(2, '0');
+const fmtDT = iso => { if (!iso) return '-'; const d = new Date(iso); return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtT = iso => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtDur = ms => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m/60)} h ${pad(m%60)} min`; };
+const sameMonth = iso => { const d = new Date(iso), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); };
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const rk = id => String(id).padStart(6, '0');
+const toInp = iso => fmtDT(iso);
+function fromInp(s) {
+  const m = /^\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})\s*$/.exec(s); if (!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3], h = +m[4], mi = +m[5];
+  const dt = new Date(y, mo - 1, d, h, mi);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d || h > 23 || mi > 59) return null;
+  return dt;
+}
+function cleanText(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[čć]/g, 'c').replace(/[ČĆ]/g, 'C').replace(/š/g, 's').replace(/Š/g, 'S').replace(/ž/g, 'z').replace(/Ž/g, 'Z').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+const methodLabel = m => ({ gotovina: 'GOTOVINA', kartica: 'KARTICA', 'kartica-vezano': 'KARTICA (VEZANO)', bon: 'DARILNI BON' }[m] || String(m || '').toUpperCase());
+const paidAmt = r => (r.paid !== undefined && r.paid !== null) ? r.paid : r.total;
+const isCardMethod = m => String(m || '').startsWith('kartica');
+
+/* ---------- Barve ---------- */
+const PALETTE = ['#0a58ca', '#6f42c1', '#198754', '#dc3545', '#fd7e14', '#e0a800', '#0dcaf0', '#d63384', '#20c997', '#6c757d', '#212529', '#8b5a2b'];
+const safeCol = (c, def) => /^#[0-9a-f]{6}$/i.test(c || '') ? c : def;
+function textOn(c) {
+  const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 170 ? '#111' : '#fff';
+}
+function swatchHtml(cur) {
+  return `<button data-c="" class="${!cur ? 'on' : ''}" style="background:#fff">∅</button>` + PALETTE.map(c => `<button data-c="${c}" class="${cur === c ? 'on' : ''}" style="background:${c}"></button>`).join('');
+}
+
+function toast(msg, type = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+  $('toast').appendChild(t); setTimeout(() => t.remove(), 3600);
+}
+
+/* ---------- Modali ---------- */
+function openModal(html, wide) {
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${html}</div>`;
+  $('modal-root').appendChild(ov);
+  ov.close = () => { ov.remove(); kbHide(); };
+  return ov;
+}
+function confirmBox(msg, yes, cb, danger = true) {
+  const ov = openModal(`<h3>Potrditev</h3><p class="muted" style="margin:8px 0 4px;font-size:16px;color:#1f2937">${msg}</p>
+    <div class="row"><button class="btn ghost" id="c-no">Ne</button><button class="btn ${danger ? 'red' : 'green'}" id="c-yes">${yes}</button></div>`);
+  ov.querySelector('#c-no').onclick = () => ov.close();
+  ov.querySelector('#c-yes').onclick = () => { ov.close(); cb(); };
+}
+
+
+const TYPES = { pismo: 'Pismo', paket: 'Paket' };
+const SIZES = {
+  pismo: { manjse: 'manjše', srednje: 'srednje', vecje: 'večje' },
+  paket: { manjse: 'manjši', srednje: 'srednji', vecje: 'večji' }
+};
+const pNum = p => '#' + rk(p.id);
+const pLabel = p => (TYPES[p.type] || '?') + ' ' + ((SIZES[p.type] || {})[p.size] || '');
+const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const adjStat = (empId, day, d) => db.ref(PP + '/stats/' + empId + '/' + day).transaction(c => { const n = (c || 0) + d; return n > 0 ? n : null; });
+
+const S = { mode: 'scan', stream: null, raf: 0, last: 0, busy: false, scanning: false, cool: 0, det: null, parcel: null, pad: null };
+const cvs = document.createElement('canvas');
+
+/* =====================================================================
+   KAMERA + BRANJE KODE
+   ===================================================================== */
+function showCamErr(msg) { $('cam-err-msg').textContent = msg; $('cam-err').style.display = 'flex'; }
+async function startCamera() {
+  stopCamera(); $('cam-err').style.display = 'none';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return showCamErr('Kamera ni na voljo. Aplikacijo odpri prek varne povezave (https).');
+  try {
+    S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    const v = $('cam'); v.srcObject = S.stream; await v.play();
+    if (S.det === null) { try { S.det = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'code_39'] }) : false; } catch (e) { S.det = false; } }
+    loop();
+  } catch (e) {
+    showCamErr((e && e.name === 'NotAllowedError') ? 'Dostop do kamere je zavrnjen. Dovoli kamero v nastavitvah brskalnika/aplikacije in poskusi znova.' : 'Kamere ni mogoče zagnati: ' + (e.message || e));
+  }
+}
+function stopCamera() {
+  cancelAnimationFrame(S.raf);
+  if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+}
+function loop() {
+  cancelAnimationFrame(S.raf);
+  const tick = ts => {
+    if (!S.stream) return;
+    if (S.mode === 'scan' && !S.busy && !S.scanning && ts - S.last > 130) { S.last = ts; detect(); }
+    S.raf = requestAnimationFrame(tick);
+  };
+  S.raf = requestAnimationFrame(tick);
+}
+async function detect() {
+  const v = $('cam'); if (!v.videoWidth || v.readyState < 2) return;
+  S.scanning = true;
+  try {
+    let txt = null;
+    if (S.det) { const r = await S.det.detect(v); if (r && r.length) txt = r[0].rawValue; }
+    if (!txt && window.jsQR) {
+      const sc = Math.min(1, 640 / v.videoWidth); cvs.width = Math.round(v.videoWidth * sc); cvs.height = Math.round(v.videoHeight * sc);
+      const cx = cvs.getContext('2d', { willReadFrequently: true }); cx.drawImage(v, 0, 0, cvs.width, cvs.height);
+      const img = cx.getImageData(0, 0, cvs.width, cvs.height);
+      const q = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (q) txt = q.data;
+    }
+    if (txt) onCode(String(txt).trim());
+  } catch (e) {}
+  S.scanning = false;
+}
+function onCode(txt) {
+  if (S.mode !== 'scan' || S.busy) return;
+  if (!/^\d{6}$/.test(txt)) return;
+  if (Date.now() < S.cool) return;
+  lookup(txt);
+}
+function manualCode() {
+  if (S.mode !== 'scan') return;
+  const ov = openModal(`<h3>Ročni vnos šifre</h3><div class="muted">Vpiši 6-mestno šifro paketa z nalepke.</div>
+    <input id="m-code" class="inp big" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="000000" style="margin-top:12px">
+    <div class="row"><button class="btn ghost" id="m-x">Prekliči</button><button class="btn primary" id="m-ok">Poišči</button></div>`);
+  const inp = ov.querySelector('#m-code');
+  const go = () => { const c = inp.value.trim(); if (!/^\d{6}$/.test(c)) return toast('Šifra ima 6 števk.', 'err'); ov.close(); lookup(c); };
+  ov.querySelector('#m-x').onclick = () => ov.close();
+  ov.querySelector('#m-ok').onclick = go;
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  setTimeout(() => inp.focus(), 80);
+}
+async function lookup(code) {
+  S.busy = true;
+  try {
+    const k = (await db.ref(PP + '/codes/' + code).once('value')).val();
+    const p = k ? (await db.ref(PP + '/parcels/' + k).once('value')).val() : null;
+    if (!p) { toast('Neznana šifra paketa: ' + code, 'err'); S.cool = Date.now() + 2500; S.busy = false; return; }
+    if (navigator.vibrate) navigator.vibrate(60);
+    showSign(p);
+  } catch (e) { toast('Napaka povezave: ' + (e.message || e), 'err'); S.cool = Date.now() + 2500; S.busy = false; }
+}
+
+/* =====================================================================
+   PODPIS
+   ===================================================================== */
+function showSign(p) {
+  S.mode = 'sign'; S.parcel = p;
+  const already = p.status === 'dostavljeno';
+  try { $('cam').pause(); } catch (e) {}
+  $('sign-page').innerHTML = `<div class="box pcard">
+      <div class="head"><span class="t"><span class="pnum">${esc(pNum(p))}</span> · ${esc(pLabel(p))}</span>${already ? '<span class="status ok">Dostavljeno</span>' : ''}</div>
+      <div class="kv"><span>Pošiljatelj</span><b>${esc(p.sender)}</b></div>
+      <div class="kv"><span>Prejemnik</span><b>${esc(p.recipient)}</b></div>
+      <div class="kv"><span>Št. računa</span><b>${esc(p.receiptNo)}</b></div>
+      <div class="kv"><span>Poštar</span><b>${esc(p.courierName)}</b></div>
+      <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
+      ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
+    </div>
+    ${already ? `<div class="box"><b>Ta pošiljka je že dostavljena${p.deliveredAt ? ' (' + fmtDT(p.deliveredAt) + ')' : ''}.</b></div>
+      <button class="btn ghost block" onclick="backToScan()">Nazaj na kamero</button>`
+    : `<div class="box"><div class="lbl" style="margin-top:0">Podpis prejemnika</div>
+      <div id="pad-wrap"><canvas id="pad"></canvas><div id="pad-line"></div><div id="pad-ph">Podpiši se s prstom</div></div>
+      <div class="row"><button class="btn ghost" onclick="clearPad()">Počisti</button><button class="btn ghost" onclick="backToScan()">Prekliči</button></div>
+      <button class="btn green block" id="sv" style="margin-top:12px;padding:20px;font-size:19px" onclick="saveSign()">SHRANI IN ODDAJ</button></div>`}`;
+  $('v-scan').style.display = 'none'; $('v-sign').style.display = 'block'; $('v-sign').scrollTop = 0;
+  if (!already) initPad();
+}
+function initPad() {
+  const c = $('pad'), r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  c.width = Math.round(r.width * d); c.height = Math.round(r.height * d);
+  const x = c.getContext('2d'); x.scale(d, d); x.lineWidth = 2.8; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#111';
+  const st = S.pad = { c, x, down: false, pts: 0, last: null };
+  const pos = e => { const b = c.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+  c.addEventListener('pointerdown', e => {
+    e.preventDefault(); c.setPointerCapture(e.pointerId); st.down = true; st.last = pos(e);
+    x.beginPath(); x.arc(st.last.x, st.last.y, 1.2, 0, 7); x.fillStyle = '#111'; x.fill();
+    const ph = $('pad-ph'); if (ph) ph.style.display = 'none';
+  });
+  c.addEventListener('pointermove', e => {
+    if (!st.down) return; e.preventDefault();
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    (evs.length ? evs : [e]).forEach(ev => { const p = pos(ev); x.beginPath(); x.moveTo(st.last.x, st.last.y); x.lineTo(p.x, p.y); x.stroke(); st.last = p; st.pts++; });
+  });
+  const up = e => { st.down = false; };
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+}
+function clearPad() {
+  const st = S.pad; if (!st) return;
+  st.x.clearRect(0, 0, st.c.width, st.c.height); st.pts = 0;
+  const ph = $('pad-ph'); if (ph) ph.style.display = 'block';
+}
+function backToScan() {
+  S.mode = 'scan'; S.parcel = null; S.pad = null; S.busy = false; S.cool = Date.now() + 1800;
+  $('v-sign').style.display = 'none'; $('v-scan').style.display = 'flex';
+  if (S.stream) { try { $('cam').play(); } catch (e) {} loop(); } else startCamera();
+}
+async function saveSign() {
+  const st = S.pad, p = S.parcel; if (!st || !p) return;
+  if (st.pts < 8) return toast('Prejemnik se mora podpisati.', 'err');
+  const btn = $('sv'); btn.disabled = true; btn.textContent = 'Shranjujem…';
+  const out = document.createElement('canvas'), W = 600, H = Math.round(W * st.c.height / st.c.width);
+  out.width = W; out.height = H; const ox = out.getContext('2d'); ox.fillStyle = '#fff'; ox.fillRect(0, 0, W, H); ox.drawImage(st.c, 0, 0, W, H);
+  const data = out.toDataURL('image/png');
+  const pref = db.ref(PP + '/parcels/' + p.key), sref = db.ref(PP + '/signatures/' + p.key);
+  try {
+    const fresh = (await pref.once('value')).val();
+    if (!fresh) throw new Error('Pošiljka ne obstaja več.');
+    if (fresh.status === 'dostavljeno') { toast('Pošiljka je že dostavljena.', 'warn'); return backToScan(); }
+    const now = new Date().toISOString();
+    await sref.set({ data, w: W, h: H, date: now });
+    const tr = await pref.child('status').transaction(cur => cur === 'dostavljeno' ? undefined : 'dostavljeno');
+    if (!tr.committed) { await sref.remove(); toast('Pošiljka je že dostavljena.', 'warn'); return backToScan(); }
+    const hk = db.ref(PP).push().key;
+    await pref.update({ archived: true, deliveredAt: now, signed: true, signedAt: now,
+      ['history/' + hk]: { date: now, status: 'dostavljeno', by: 'Prejemnik (podpis)', note: 'Dostavljeno s podpisom, arhivirano' } });
+    await adjStat(fresh.courierId, dayKey(now), 1);
+    showDone(p);
+  } catch (e) {
+    toast('Napaka pri shranjevanju: ' + (e.message || e), 'err');
+    btn.disabled = false; btn.textContent = 'SHRANI IN ODDAJ';
+  }
+}
+function showDone(p) {
+  const d = document.createElement('div'); d.className = 'done-ov';
+  d.innerHTML = `<svg class="anim" viewBox="0 0 52 52" style="width:120px;height:120px"><circle class="c" cx="26" cy="26" r="24" fill="none" stroke="#fff" stroke-width="3"/><path class="p" d="M14 27l8 8 16-17" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2>Pošiljka oddana</h2><div style="font-size:20px;font-weight:700;margin-top:6px">${esc(pNum(p))} · ${esc(pLabel(p))}</div><div style="opacity:.9;margin-top:4px">${esc(p.recipient)}</div>`;
+  document.body.appendChild(d);
+  setTimeout(() => { d.remove(); backToScan(); }, 1900);
+}
+
+/* =====================================================================
+   ZAGON
+   ===================================================================== */
+startCamera();
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.mode === 'scan' && (!S.stream || !S.stream.active)) startCamera(); });
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>

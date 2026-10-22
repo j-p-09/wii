@@ -1,0 +1,27 @@
+{
+  "id": "./posta.html",
+  "name": "WII Pošta",
+  "short_name": "WII Pošta",
+  "description": "Beleženje in sledenje poštnim pošiljkam",
+  "start_url": "./posta.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8590c",
+  "theme_color": "#e8590c",
+  "lang": "sl",
+  "icons": [
+    {
+      "src": "icon-posta-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-posta-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

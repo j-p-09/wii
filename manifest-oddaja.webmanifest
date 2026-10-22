@@ -1,0 +1,27 @@
+{
+  "id": "./oddaja.html",
+  "name": "WII Oddajni elektrončEK",
+  "short_name": "WII Oddaja",
+  "description": "Oddaja pošiljk s skeniranjem kode in podpisom prejemnika",
+  "start_url": "./oddaja.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e8590c",
+  "theme_color": "#e8590c",
+  "lang": "sl",
+  "icons": [
+    {
+      "src": "icon-oddaja-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-oddaja-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
