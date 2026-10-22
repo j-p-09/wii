@@ -628,6 +628,7 @@ function viewMine() {
     <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
     ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
     <div class="stbtns">${ST_ORDER.map(s => `<button class="btn ${s === p.status ? (s === 'dostavljeno' ? 'green' : 'primary') : 'ghost'}" ${s === p.status ? 'disabled' : ''} onclick="setStatus('${p.key}','${s}')">${STAT[s]}</button>`).join('')}</div>
+    <div class="stbtns" style="margin-top:6px"><button class="btn vio" onclick="generateSlipPDF(S.parcels['${p.key}'])">🧾 Natisni listek</button><button class="btn warn" onclick="generateLabelPDF(S.parcels['${p.key}'])">🏷️ Natisni nalepko</button></div>
   </div>`).join('');
   $('page').innerHTML = `<div class="box"><div class="cnt"><div><b>${today}</b>Danes dostavljeno</div><div><b>${month}</b>V tem mesecu</div></div></div>
     ${cards || '<div class="box"><span class="muted">Trenutno nimaš pošiljk za dostavo.</span></div>'}`;
@@ -668,6 +669,7 @@ function detailHtml(p) {
     <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
     <div class="kv"><span>Oddal(a)</span><b>${esc(p.createdByName)}</b></div>
     ${p.deliveredAt ? `<div class="kv"><span>Dostavljeno</span><b>${fmtDT(p.deliveredAt)}</b></div>` : ''}
+    ${p.signed ? '<div class="kv"><span>Podpis prejemnika</span><b>da</b></div>' : ''}
     ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
     <div class="lbl" style="margin-top:12px">Zgodovina</div>
     <div class="hist" style="max-height:200px">${h.map(x => `<div>${fmtDT(x.date)} · <b>${esc(STAT[x.status] || x.status)}</b> · ${esc(x.by)}${x.note ? ' – ' + esc(x.note) : ''}</div>`).join('') || '<div>Ni zapisov.</div>'}</div></div>`;
@@ -675,9 +677,11 @@ function detailHtml(p) {
 function showParcel(key) {
   const p = S.parcels[key]; if (!p) return;
   const ov = openModal(detailHtml(p) + `<button class="btn green block" id="d-print" style="margin-top:12px">NATISNI POTRDILO</button>
+    ${p.signed ? '<button class="btn vio block" id="d-printsig" style="margin-top:8px">NATISNI POTRDILO S PODPISOM</button>' : ''}
     ${isAdmin() ? `<div class="row"><button class="btn primary" id="d-edit">Uredi</button><button class="btn red" id="d-del">Izbriši</button></div>` : ''}
     <button class="btn ghost block" id="d-close" style="margin-top:8px">Zapri</button>`, true);
   ov.querySelector('#d-print').onclick = () => generateSlipPDF(p);
+  if (p.signed) ov.querySelector('#d-printsig').onclick = () => generateSlipPDF(p, true);
   ov.querySelector('#d-close').onclick = () => ov.close();
   if (isAdmin()) {
     ov.querySelector('#d-edit').onclick = () => { ov.close(); editParcel(key); };
@@ -709,7 +713,10 @@ function renderCheck() {
   const box = $('c-res'); if (!box) return;
   if (!S.checkKey) { box.innerHTML = ''; return; }
   const p = S.parcels[S.checkKey] || S.checkP;
-  if (p) box.innerHTML = `<div class="box">${detailHtml(p)}<button class="btn green block" style="margin-top:12px" onclick="generateSlipPDF(${S.parcels[p.key] ? `S.parcels['${p.key}']` : 'S.checkP'})">NATISNI POTRDILO</button></div>`;
+  if (p) {
+    const ref = S.parcels[p.key] ? `S.parcels['${p.key}']` : 'S.checkP';
+    box.innerHTML = `<div class="box">${detailHtml(p)}<button class="btn green block" style="margin-top:12px" onclick="generateSlipPDF(${ref})">NATISNI POTRDILO</button>${p.signed ? `<button class="btn vio block" style="margin-top:8px" onclick="generateSlipPDF(${ref}, true)">NATISNI POTRDILO S PODPISOM</button>` : ''}</div>`;
+  }
   else box.innerHTML = `<div class="box"><span class="muted">${S.checkMsg}</span></div>`;
 }
 
@@ -798,6 +805,8 @@ function delParcel(key) {
   confirmBox(`Izbrišem pošiljko ${esc(pNum(p))} (${esc(pLabel(p))})?`, 'Izbriši', async () => {
     try {
       await db.ref(PP + '/parcels/' + p.key).remove();
+      db.ref(PP + '/signatures/' + p.key).remove().catch(() => {});
+      if (p.code) db.ref(PP + '/codes/' + p.code).remove().catch(() => {});
       if (p.status === 'dostavljeno') await adjStat(p.courierId, dayKey(p.deliveredAt || p.created), -1);
       toast('Pošiljka izbrisana', 'ok');
     } catch (e) { toast('Napaka: ' + e.message, 'err'); }
@@ -813,7 +822,7 @@ function slipRow(doc, label, val, y) {
   doc.splitTextToSize(cleanText(val) || '-', 54).forEach(l => { doc.text(l, 2, y); y += 3.8; });
   return y + 1.5;
 }
-function drawSlip(doc, p) {
+function drawSlip(doc, p, sig) {
   let y = 9;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text('WII Shop', 29, y, { align: 'center' }); y += 6;
   doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('POSTNA POSILJKA', 29, y, { align: 'center' }); y += 8;
@@ -826,19 +835,74 @@ function drawSlip(doc, p) {
   y = slipRow(doc, 'Stevilka racuna:', p.receiptNo, y);
   y = slipRow(doc, 'Postar:', p.courierName, y);
   if (p.notes) y = slipRow(doc, 'Opombe:', p.notes, y);
+  if (sig) {
+    y = slipRow(doc, 'Prevzeto:', fmtDT(p.signedAt || sig.date), y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100); doc.text('Podpis prejemnika:', 2, y); doc.setTextColor(0); y += 2;
+    const w = 54, h = w * ((sig.h || 300) / (sig.w || 600));
+    doc.setDrawColor(150); doc.setLineWidth(0.2); doc.rect(2, y, w, h);
+    doc.addImage(sig.data, 'PNG', 2, y, w, h); doc.setDrawColor(0); y += h + 3;
+  }
   drawDashedLine(doc, y); y += 5;
   const qr = new QRious({ value: `WII-POSTA-${p.id}`, size: 150 });
   doc.addImage(qr.toDataURL(), 'PNG', 19, y, 20, 20); y += 25;
   doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text('Stevilka posiljke: ' + pNum(p), 29, y, { align: 'center' }); y += 4;
   return y;
 }
-function generateSlipPDF(p) {
+async function generateSlipPDF(p, withSig) {
   if (!p) return;
+  let sig = null;
+  if (withSig) {
+    try { sig = (await db.ref(PP + '/signatures/' + p.key).once('value')).val(); } catch (e) {}
+    if (!sig || !sig.data) return toast('Podpis te pošiljke ni na voljo.', 'err');
+  }
   const probe = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 3000] });
-  const endY = drawSlip(probe, p);
+  const endY = drawSlip(probe, p, sig);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, Math.ceil(endY + 4)] });
-  drawSlip(doc, p);
-  doc.save(`Posiljka_${rk(p.id)}.pdf`);
+  drawSlip(doc, p, sig);
+  doc.save(`Posiljka_${rk(p.id)}${sig ? '_podpis' : ''}.pdf`);
+}
+
+/* ---------- Nalepka (58 mm): tabela + QR s 6-mestno šifro paketa ---------- */
+async function ensureCode(p) {
+  if (p.code) return p.code;
+  const ref = db.ref(PP + '/parcels/' + p.key + '/code');
+  const cur = (await ref.once('value')).val(); if (cur) return cur;
+  for (let i = 0; i < 30; i++) {
+    const c = String(Math.floor(100000 + Math.random() * 900000));
+    const r = await db.ref(PP + '/codes/' + c).transaction(v => v === null ? p.key : undefined);
+    if (r.committed) { const t = await ref.transaction(v => v || c); return t.snapshot.val(); }
+  }
+  throw new Error('Šifre ni mogoče ustvariti');
+}
+function drawLabel(doc, p, code) {
+  let y = 3;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('WII POSTA', 29, y + 3, { align: 'center' }); y += 7;
+  const rows = [['St. narocila', pNum(p)], ['Prejemnik', p.recipient], ['St. racuna', p.receiptNo]];
+  rows.forEach(([l, v]) => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    const lines = doc.splitTextToSize(cleanText(v) || '-', 30);
+    const h = Math.max(8, lines.length * 4 + 3.5);
+    doc.setLineWidth(0.3); doc.rect(2, y, 54, h); doc.line(23, y, 23, y + h);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.text(doc.splitTextToSize(l, 19), 3.2, y + 4);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    lines.forEach((ln, i) => doc.text(ln, 24.5, y + 4.6 + i * 4));
+    y += h;
+  });
+  y += 4;
+  const qr = new QRious({ value: code, size: 300, level: 'M' });
+  doc.addImage(qr.toDataURL(), 'PNG', 12, y, 34, 34); y += 38;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text(code, 29, y, { align: 'center', charSpace: 1.5 }); y += 5;
+  return y;
+}
+async function generateLabelPDF(p) {
+  if (!p) return;
+  let code;
+  try { code = await ensureCode(p); } catch (e) { return toast('Napaka: ' + (e.message || e), 'err'); }
+  const probe = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 3000] });
+  const endY = drawLabel(probe, p, code);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, Math.ceil(endY + 3)] });
+  drawLabel(doc, p, code);
+  doc.save(`Nalepka_${rk(p.id)}.pdf`);
 }
 
 /* =====================================================================
