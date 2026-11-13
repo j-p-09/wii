@@ -382,12 +382,8 @@ const fmtShort = k => { const d = fromKey(k); return `${DOW3[d.getDay()].charAt(
 const relDay = k => k === today() ? 'Danes' : k === addDays(today(), 1) ? 'Jutri' : k === addDays(today(), -1) ? 'Včeraj' : '';
 const fmtDT = iso => { if (!iso) return '-'; const d = new Date(iso); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} ob ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const mondayOf = k => { const d = fromKey(k), w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return dk(d); };
-const mins = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
-const range = sh => { const a = mins(sh.start); let b = mins(sh.end); if (b <= a) b += 1440; return [a, b]; };
-const overlap = (x, y) => { const [a1, b1] = range(x), [a2, b2] = range(y); return a1 < b2 && a2 < b1; };
-const durTxt = m => `${Math.floor(m / 60)} h${m % 60 ? ' ' + pad(m % 60) + ' min' : ''}`;
-const shiftIcon = sh => { const h = Math.floor(mins(sh.start) / 60); return h >= 4 && h < 12 ? 'sun' : h >= 12 && h < 19 ? 'sunset' : 'moon'; };
-const tRange = sh => `${esc(sh.start || '--:--')} – ${esc(sh.end || '--:--')}`;
+const shiftIcon = sh => { const n = (sh.name || '').toLowerCase(); return /noč|noc/.test(n) ? 'moon' : /popold|večer|vecer/.test(n) ? 'sunset' : /jutr|dopold/.test(n) ? 'sun' : 'layers'; };
+const nIzmen = n => n + ' ' + (n === 1 ? 'izmena' : n === 2 ? 'izmeni' : n < 5 ? 'izmene' : 'izmen');
 function stable(o) { // stabilen JSON (urejeni ključi) za primerjavo osnutka in objave
   if (o === null || typeof o !== 'object') return JSON.stringify(o ?? null);
   if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
@@ -433,7 +429,7 @@ const fn = id => S.functions[id] || { id, name: 'Neznana funkcija', color: '#6c7
 const funcOrder = (a, b) => ((fn(a).order ?? 99) - (fn(b).order ?? 99)) || fn(a).name.localeCompare(fn(b).name);
 const funcsSorted = () => Object.values(S.functions).filter(Boolean).sort((a, b) => funcOrder(a.id, b.id));
 const fBadge = (fid, extra = '') => { const f = fn(fid); return `<span class="fb" style="background:${f.color}1f;color:${f.color}">${ic(f.icon || 'briefcase', 'sm')}${esc(f.name)}${extra}</span>`; };
-const shiftsOf = obj => Object.values((obj && obj.shifts) || {}).filter(Boolean).sort((a, b) => mins(a.start) - mins(b.start) || (a.order || 0) - (b.order || 0));
+const shiftsOf = obj => Object.values((obj && obj.shifts) || {}).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0) || (a.name || '').localeCompare(b.name || ''));
 const needTotal = sh => Object.values(sh.needs || {}).reduce((s, n) => s + (+n || 0), 0);
 function slotsOf(sh) {
   const out = [];
@@ -604,10 +600,10 @@ function refreshView() {
 function setDate(k) { S.date = k; viewUrnik(); }
 function viewUrnik() {
   const k = S.date, pub = pubOf(k), plan = planOf(k), mon = mondayOf(k), id = me();
-  let weekMin = 0;
+  let weekCnt = 0;
   const week = [...Array(7)].map((_, i) => {
     const d = addDays(mon, i), mine = myAssignments(d, id);
-    mine.forEach(m => { const [a, b] = range(m.sh); weekMin += b - a; });
+    weekCnt += mine.length;
     return `<button class="${d === k ? 'on' : ''} ${d === today() ? 'today' : ''}" onclick="setDate('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}</b><i class="${mine.length ? 'y' : ''}"></i></button>`;
   }).join('');
   let h = `<div class="datebar">
@@ -628,9 +624,9 @@ function viewUrnik() {
     if (S.mode === 'mine') {
       const mine = myAssignments(k, id);
       h += mine.length ? mine.map(({ sh, sk, a }) => {
-        const [x, y] = range(sh), others = Object.values((pub.assign || {})[sh.id] || {}).filter(o => o && o.empId !== id);
-        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('hourglass', 'sm')}${durTxt(y - x)}</div></div>${fBadge(a.fid)}</div>
-          <div class="shift-b"><div class="myshift" style="padding:10px 0">${ic('clock', 'lg')}<div class="time">${tRange(sh)}</div></div>
+        const others = Object.values((pub.assign || {})[sh.id] || {}).filter(o => o && o.empId !== id);
+        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t" style="font-size:20px">${esc(sh.name || 'Izmena')}</div></div>${fBadge(a.fid)}</div>
+          <div class="shift-b" style="padding-top:12px">
           ${a.note ? `<div class="notice" style="margin:4px 0 10px">${ic('note')}<div>${esc(a.note)}</div></div>` : ''}
           <div class="lbl">Sodelavci na izmeni</div>
           ${others.length ? others.map(o => `<div class="slot"><div class="who">${esc(empName(o.empId))}</div>${fBadge(o.fid)}</div>`).join('') : '<div class="muted" style="padding:6px 0">Na tej izmeni si sam/a.</div>'}</div></div>`;
@@ -638,14 +634,14 @@ function viewUrnik() {
       // prihajajoče izmene
       const up = Object.keys(S.days).filter(d => d >= today()).sort().flatMap(d => myAssignments(d, id).map(m => Object.assign({ d }, m))).slice(0, 12);
       h += `<div class="box"><h3>${ic('calendarDays')}Moje prihajajoče izmene</h3>
-        ${weekMin ? `<div class="kv"><span>Ta teden skupaj</span><b>${durTxt(weekMin)}</b></div>` : ''}
-        ${up.map(m => `<button class="list-row" onclick="setDate('${m.d}')"><div class="si" style="color:var(--primary)">${ic(shiftIcon(m.sh))}</div><div class="grow"><div class="t">${fmtShort(m.d)} ${relDay(m.d) ? '· ' + relDay(m.d) : ''}</div><div class="s">${tRange(m.sh)} · ${esc(m.sh.name || 'Izmena')}</div></div>${fBadge(m.a.fid)}</button>`).join('') || '<div class="muted">Ni objavljenih prihajajočih izmen.</div>'}</div>`;
+        ${weekCnt ? `<div class="kv"><span>Ta teden</span><b>${nIzmen(weekCnt)}</b></div>` : ''}
+        ${up.map(m => `<button class="list-row" onclick="setDate('${m.d}')"><div class="si" style="color:var(--primary)">${ic(shiftIcon(m.sh))}</div><div class="grow"><div class="t">${fmtShort(m.d)} ${relDay(m.d) ? '· ' + relDay(m.d) : ''}</div><div class="s">${esc(m.sh.name || 'Izmena')}</div></div>${fBadge(m.a.fid)}</button>`).join('') || '<div class="muted">Ni objavljenih prihajajočih izmen.</div>'}</div>`;
     } else {
       const shifts = shiftsOf(pub);
       h += shifts.map(sh => {
         const as = (pub.assign || {})[sh.id] || {}, sl = slotsOf(sh);
         const filled = sl.filter(s => as[s.key]).length;
-        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
+        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
           <div class="shift-b">${sl.map(s => {
             const a = as[s.key];
             if (!a) return `<div class="slot">${fBadge(s.fid)}<div class="who free">prosto mesto</div></div>`;
@@ -669,7 +665,7 @@ function viewAvail() {
     const a = availOf(k, me()), pub = pubOf(k), sh = shiftsOf(planOf(k));
     const st = pub ? `<span class="status bl">${ic('eye', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
     return `<button class="list-row" onclick="openAvail('${k}')"><div class="si" style="width:44px;text-align:center"><b style="font-size:20px;display:block;line-height:1">${fromKey(k).getDate()}</b><small class="muted" style="font-size:11px;font-weight:700">${DOW3[fromKey(k).getDay()]}</small></div>
-      <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${sh.length} ${sh.length === 1 ? 'izmena' : sh.length === 2 ? 'izmeni' : sh.length < 5 ? 'izmene' : 'izmen'} · ${sh.map(s => tRange(s)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
+      <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${nIzmen(sh.length)} · ${sh.map(s => esc(s.name)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
   }).join('') || `<div class="empty">${ic('calendarDays', 'xl')}<b>Ni načrtovanih dni</b>Ko vodja načrtuje nove dni, se bodo pojavili tukaj.</div>`}</div>`;
   $('page').innerHTML = h;
 }
@@ -689,7 +685,7 @@ function viewAvailDay() {
   if (pubOf(k)) h += `<div class="notice">${ic('alert')}<div>Urnik za ta dan je že objavljen. Spremembo bo vodja videl, urnik pa bo spremenil le, če bo to potrebno.</div></div>`;
   h += shiftsOf(plan).map(sh => {
     const v = D.shifts[sh.id] || {}, off = !!v.off, fids = Object.keys(sh.needs || {}).filter(f => +sh.needs[f] > 0).sort(funcOrder);
-    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div>
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div>
       ${off ? `<span class="status no">${ic('ban', 'sm')}Ne morem</span>` : Object.keys(v.funcs || {}).length ? `<span class="status ok">${ic('check', 'sm')}Lahko</span>` : `<span class="status gr">${ic('help', 'sm')}Ni izbrano</span>`}</div>
       <div class="shift-b"><div class="lbl">Na izmeni potrebujemo</div>
       <div class="needs">${fids.map(f => fBadge(f, ` × ${sh.needs[f]}`)).join('')}</div>
@@ -729,7 +725,7 @@ function avSave() {
     const funcs = {}; Object.keys(v.funcs || {}).forEach(f => { if ((sh.needs || {})[f]) funcs[f] = true; });
     if (v.off) out[sh.id] = { off: true };
     else if (Object.keys(funcs).length) out[sh.id] = { funcs };
-    else return toast(`Izberi funkcije ali »Ne morem delati« za izmeno ${sh.name || ''} (${sh.start}–${sh.end}).`, 'err');
+    else return toast(`Izberi funkcije ali »Ne morem delati« za izmeno »${sh.name || ''}«.`, 'err');
   }
   db.ref(`${U}/avail/${k}/${me()}`).set({ at: new Date().toISOString(), empName: S.emp.name, note: (D.note || '').trim(), shifts: out })
     .then(() => { toast('Razpoložljivost je shranjena in poslana vodji.', 'ok'); go('avail'); })
@@ -780,14 +776,10 @@ function viewPlan() {
 
   h += shifts.map(sh => {
     const fids = Object.keys(sh.needs || {}).sort(funcOrder), free = funcsSorted().filter(f => !(sh.needs || {})[f.id]);
-    const [a, b] = range(sh);
     return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div>
         <div class="grow"><input class="inp sm" style="font-weight:700" maxlength="40" value="${esc(sh.name || '')}" placeholder="Ime izmene" oninput="plSet('${sh.id}','name',this.value)"></div>
         <button class="iconbtn red" title="Izbriši izmeno" onclick="plDel('${sh.id}')">${ic('trash')}</button></div>
       <div class="shift-b">
-        <div class="times" style="margin-top:8px"><div><label class="lbl">${ic('clock', 'sm')} Začetek</label><input type="time" class="inp sm" value="${esc(sh.start)}" onchange="plSet('${sh.id}','start',this.value,1)"></div>
-        <div><label class="lbl">Konec</label><input type="time" class="inp sm" value="${esc(sh.end)}" onchange="plSet('${sh.id}','end',this.value,1)"></div></div>
-        <div class="muted" style="margin:6px 0 4px;font-size:13px">${ic('hourglass', 'sm')} ${durTxt(b - a)}${mins(sh.end) <= mins(sh.start) ? ' · konča se naslednji dan' : ''}</div>
         <div class="lbl" style="margin-top:10px">Funkcije na izmeni · skupaj ${needTotal(sh)} ${needTotal(sh) === 1 ? 'oseba' : needTotal(sh) === 2 ? 'osebi' : needTotal(sh) < 5 ? 'osebe' : 'oseb'}</div>
         ${fids.map(f => `<div class="prow"><div class="grow">${fBadge(f)}</div><div class="step"><button onclick="plNeed('${sh.id}','${f}',-1)">${ic('minus')}</button><b>${sh.needs[f]}</b><button onclick="plNeed('${sh.id}','${f}',1)">${ic('plus')}</button></div></div>`).join('') || '<div class="muted" style="padding:6px 0">Dodaj vsaj eno funkcijo.</div>'}
         ${free.length ? `<div class="addf">${free.map(f => `<button onclick="plNeed('${sh.id}','${f.id}',1)">${ic('plus', 'sm')}${ic(f.icon || 'briefcase', 'sm')}${esc(f.name)}</button>`).join('')}</div>` : ''}
@@ -813,36 +805,36 @@ function plNeed(sid, f, d) {
 }
 function plDel(sid) {
   const sh = S.planDraft.shifts[sid]; if (!sh) return;
-  confirmBox(`Izbrišem izmeno <b>${esc(sh.name || 'Izmena')}</b> (${tRange(sh)})?`, 'Izbriši', () => { delete S.planDraft.shifts[sid]; plDirty(); keepScroll(viewPlan); });
+  confirmBox(`Izbrišem izmeno <b>${esc(sh.name || 'Izmena')}</b>?`, 'Izbriši', () => { delete S.planDraft.shifts[sid]; plDirty(); keepScroll(viewPlan); });
 }
-const PRESETS = [['Jutranja izmena', '07:00', '15:00'], ['Dopoldanska izmena', '08:00', '14:00'], ['Popoldanska izmena', '15:00', '23:00'], ['Nočna izmena', '23:00', '07:00']];
+const PRESETS = ['Jutranja izmena', 'Dopoldanska izmena', 'Popoldanska izmena', 'Nočna izmena'];
 function addShiftDlg() {
   const ov = openModal(`<h3>${ic('plus')}Nova izmena</h3><div class="muted">Izberi predlogo ali vpiši po meri.</div>
-    <div style="margin-top:12px">${PRESETS.map((p, i) => `<button class="list-row" data-p="${i}"><span class="si" style="color:var(--primary)">${ic(shiftIcon({ start: p[1] }))}</span><span class="grow"><span class="t" style="display:block">${p[0]}</span><span class="s">${p[1]} – ${p[2]}</span></span>${ic('chevR')}</button>`).join('')}</div>
+    <div style="margin-top:12px">${PRESETS.map((p, i) => `<button class="list-row" data-p="${i}"><span class="si" style="color:var(--primary)">${ic(shiftIcon({ name: p }))}</span><span class="grow"><span class="t" style="display:block">${p}</span></span>${ic('chevR')}</button>`).join('')}</div>
     <div class="grp">${ic('edit', 'sm')}Po meri</div>
     <input id="ns-name" class="inp" maxlength="40" placeholder="Ime izmene (npr. Vikend)">
-    <div class="times"><input id="ns-s" type="time" class="inp" value="09:00"><input id="ns-e" type="time" class="inp" value="17:00"></div>
     <div class="row"><button class="btn ghost" id="ns-x">Prekliči</button><button class="btn green" id="ns-ok">${ic('plus')}Dodaj</button></div>`);
-  const add = (name, s, e) => {
-    if (!s || !e) return toast('Vpiši začetek in konec izmene.', 'err');
+  const add = name => {
+    if (!name) return toast('Vpiši ime izmene.', 'err');
+    if (shiftsOf(S.planDraft).some(x => (x.name || '').toLowerCase() === name.toLowerCase())) return toast('Izmena s tem imenom ta dan že obstaja.', 'err');
     const id = db.ref(U).push().key;
-    S.planDraft.shifts[id] = { id, name: name || 'Izmena', start: s, end: e, needs: {}, order: Date.now() };
+    S.planDraft.shifts[id] = { id, name, needs: {}, order: Date.now() };
     plDirty(); ov.close(); viewPlan();
     setTimeout(() => { const c = $('content'); c.scrollTop = c.scrollHeight; }, 30);
   };
-  ov.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const p = PRESETS[+b.dataset.p]; add(p[0], p[1], p[2]); });
+  ov.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { add(PRESETS[+b.dataset.p]); });
   ov.querySelector('#ns-x').onclick = () => ov.close();
-  ov.querySelector('#ns-ok').onclick = () => add(ov.querySelector('#ns-name').value.trim(), ov.querySelector('#ns-s').value, ov.querySelector('#ns-e').value);
+  ov.querySelector('#ns-ok').onclick = () => add(ov.querySelector('#ns-name').value.trim());
 }
 function copyPlanDlg() {
   const src = Object.keys(S.days).filter(d => planOf(d) && d !== S.planDate).sort().reverse().slice(0, 30);
   const ov = openModal(`<h3>${ic('copy')}Kopiraj načrt</h3><div class="muted">Izmene in funkcije izbranega dne se prenesejo na ${fmtDay(S.planDate)}. Trenutne izmene tega dne se zamenjajo.</div>
-    <div style="margin-top:10px;max-height:50vh;overflow-y:auto">${src.map(d => `<button class="list-row" data-d="${d}"><span class="grow"><span class="t" style="display:block">${fmtDay(d)}</span><span class="s">${shiftsOf(planOf(d)).map(s => esc(s.name) + ' ' + tRange(s)).join(' · ')}</span></span>${ic('chevR')}</button>`).join('') || '<div class="muted">Ni drugih načrtovanih dni.</div>'}</div>
+    <div style="margin-top:10px;max-height:50vh;overflow-y:auto">${src.map(d => `<button class="list-row" data-d="${d}"><span class="grow"><span class="t" style="display:block">${fmtDay(d)}</span><span class="s">${shiftsOf(planOf(d)).map(s => esc(s.name)).join(' · ')}</span></span>${ic('chevR')}</button>`).join('') || '<div class="muted">Ni drugih načrtovanih dni.</div>'}</div>
     <button class="btn ghost block" style="margin-top:12px" id="cp-x">Zapri</button>`);
   ov.querySelector('#cp-x').onclick = () => ov.close();
   ov.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
     const shifts = {};
-    shiftsOf(planOf(b.dataset.d)).forEach((sh, i) => { const id = db.ref(U).push().key; shifts[id] = Object.assign(clone(sh), { id, order: i }); });
+    shiftsOf(planOf(b.dataset.d)).forEach((sh, i) => { const id = db.ref(U).push().key; shifts[id] = Object.assign(clone(sh), { id, order: i, start: null, end: null }); });
     S.planDraft = { shifts }; plDirty(); ov.close(); viewPlan(); toast('Načrt prekopiran – ne pozabi shraniti.', 'ok');
   });
 }
@@ -850,11 +842,11 @@ function savePlan() {
   const k = S.planDate, shifts = shiftsOf(S.planDraft);
   if (!shifts.length) return toast('Dodaj vsaj eno izmeno.', 'err');
   for (const sh of shifts) {
-    if (!sh.start || !sh.end) return toast(`Izmena »${sh.name}« nima vpisanega časa.`, 'err');
+    if (!(sh.name || '').trim()) return toast('Vsaka izmena mora imeti ime.', 'err');
     if (!needTotal(sh)) return toast(`Izmena »${sh.name}« nima nobene funkcije.`, 'err');
   }
   const out = {};
-  shifts.forEach((sh, i) => { out[sh.id] = { id: sh.id, name: (sh.name || 'Izmena').trim() || 'Izmena', start: sh.start, end: sh.end, needs: sh.needs, order: i }; });
+  shifts.forEach((sh, i) => { out[sh.id] = { id: sh.id, name: (sh.name || 'Izmena').trim() || 'Izmena', needs: sh.needs, order: i }; });
   db.ref(`${U}/days/${k}/plan`).set({ shifts: out, by: S.emp.name, at: new Date().toISOString() })
     .then(() => { S.planDirty = false; toast('Načrt dneva shranjen. Zaposleni lahko oddajo razpoložljivost.', 'ok'); loadPlan(k); viewPlan(); renderChrome(); })
     .catch(e => toast('Napaka: ' + e.message, 'err'));
@@ -941,7 +933,7 @@ function viewEdit() {
 
   // razpoložljivost – tabela
   h += `<div class="box"><button class="list-row" style="padding:0;border:none" onclick="S.showMtx=!S.showMtx;keepScroll(viewEdit)"><span class="grow"><span class="t" style="display:flex;align-items:center;gap:8px">${ic('users')}Razpoložljivost zaposlenih</span><span class="s">Oddalo ${nSent} od ${emps.length}</span></span><span class="status ${nSent >= emps.length ? 'ok' : 'wr'}">${nSent}/${emps.length}</span>${ic(S.showMtx ? 'chevU' : 'chevD')}</button>
-    ${S.showMtx ? `<div class="mtxw" style="margin-top:12px"><table class="mtx"><thead><tr><th>Zaposleni</th>${shifts.map(sh => `<th>${esc(sh.name)}<br>${tRange(sh)}</th>`).join('')}</tr></thead><tbody>
+    ${S.showMtx ? `<div class="mtxw" style="margin-top:12px"><table class="mtx"><thead><tr><th>Zaposleni</th>${shifts.map(sh => `<th>${esc(sh.name)}</th>`).join('')}</tr></thead><tbody>
       ${emps.map(e => { const a = availOf(k, e.id); return `<tr><td><b>${esc(e.name)}</b>${a && a.note ? `<div class="muted" style="font-size:12px">${ic('note', 'sm')} ${esc(a.note)}</div>` : ''}</td>${shifts.map(sh => {
         const v = availFor(k, e.id, sh.id);
         if (!v) return `<td title="Ni oddal"><span style="color:#b8c0cc">${ic('help', 'sm')}</span></td>`;
@@ -954,7 +946,7 @@ function viewEdit() {
   // izmene in mesta
   h += shifts.map(sh => {
     const as = (draft.assign || {})[sh.id] || {}, sl = slotsOf(sh), filled = sl.filter(s => as[s.key] && S.employees[as[s.key].empId]).length;
-    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name)}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
       <div class="shift-b">${sl.map(s => {
         const a = as[s.key], e = a && S.employees[a.empId];
         let dotc = '';
@@ -976,10 +968,11 @@ function pickEmp(sid, sk) {
   const fid = sk.slice(0, sk.lastIndexOf('_')), draft = dayOf(k).draft || {}, cur = ((draft.assign || {})[sid] || {})[sk];
   const shifts = shiftsOf(plan);
   // kje je kdo že razporejen
-  const busy = {};
+  const busy = {}, also = {};
   shifts.forEach(x => Object.entries((draft.assign || {})[x.id] || {}).forEach(([key, a]) => {
     if (!a || !a.empId || (x.id === sid && key === sk)) return;
-    if (x.id === sid || overlap(x, sh)) (busy[a.empId] = busy[a.empId] || []).push(x.id === sid ? 'že na tej izmeni (' + fn(a.fid).name + ')' : 'prekriva se: ' + x.name + ' ' + x.start + '–' + x.end);
+    if (x.id === sid) (busy[a.empId] = busy[a.empId] || []).push('že na tej izmeni (' + fn(a.fid).name + ')');
+    else (also[a.empId] = also[a.empId] || []).push(x.name);
   }));
   const groups = { yes: [], other: [], none: [], off: [] };
   Object.values(S.employees).filter(Boolean).sort(byName).forEach(e => {
@@ -989,11 +982,11 @@ function pickEmp(sid, sk) {
   });
   const row = (e, col, sub) => {
     const b = busy[e.id], sel = cur && cur.empId === e.id;
-    return `<button class="list-row" data-e="${e.id}" ${b ? 'disabled' : ''} style="${sel ? 'background:var(--primary-l);border-radius:10px' : ''}"><span class="avl" style="background:${col}"></span><span class="grow"><span class="t" style="display:block">${esc(e.name)}</span>${sub ? `<span class="s">${sub}</span>` : ''}${b ? `<span class="s" style="color:var(--danger)">${esc(b.join(', '))}</span>` : ''}</span>${sel ? ic('check') : ''}</button>`;
+    return `<button class="list-row" data-e="${e.id}" ${b ? 'disabled' : ''} style="${sel ? 'background:var(--primary-l);border-radius:10px' : ''}"><span class="avl" style="background:${col}"></span><span class="grow"><span class="t" style="display:block">${esc(e.name)}</span>${sub ? `<span class="s">${sub}</span>` : ''}${!b && also[e.id] ? `<span class="s" style="color:#b7791f">ta dan tudi: ${esc(also[e.id].join(', '))}</span>` : ''}${b ? `<span class="s" style="color:var(--danger)">${esc(b.join(', '))}</span>` : ''}</span>${sel ? ic('check') : ''}</button>`;
   };
   const other = e => { const v = availFor(k, e.id, sh.id); return 'lahko: ' + Object.keys(v.funcs || {}).sort(funcOrder).map(f => esc(fn(f).name)).join(', '); };
   const note = e => { const a = availOf(k, e.id); return a && a.note ? ic('note', 'sm') + ' ' + esc(a.note) : ''; };
-  const ov = openModal(`<h3>${ic(fn(fid).icon || 'briefcase')}${esc(fn(fid).name)}</h3><div class="muted">${esc(sh.name)} · ${tRange(sh)}</div>
+  const ov = openModal(`<h3>${ic(fn(fid).icon || 'briefcase')}${esc(fn(fid).name)}</h3><div class="muted">${esc(sh.name)}</div>
     <div style="max-height:60vh;overflow-y:auto;margin-top:6px">
     ${groups.yes.length ? `<div class="grp" style="color:var(--success)">${ic('checkCircle', 'sm')}Na voljo za to funkcijo</div>${groups.yes.map(e => row(e, 'var(--success)', note(e))).join('')}` : ''}
     ${groups.other.length ? `<div class="grp" style="color:#b7791f">${ic('info', 'sm')}Na voljo, a za drugo funkcijo</div>${groups.other.map(e => row(e, 'var(--warn)', other(e))).join('')}` : ''}
