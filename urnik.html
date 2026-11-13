@@ -141,6 +141,11 @@ button.list-row:hover{background:#fafbfd}
 .week button i{width:6px;height:6px;border-radius:50%;background:transparent}
 .week button i.y{background:var(--primary)}
 .week button.on i.y{background:#fff}
+.week button i.x{background:#9ca3af}
+.closedbox b{color:var(--danger);font-size:24px;letter-spacing:2px}
+.zap{background:#e5e7eb;color:#374151}
+.shift.closed{opacity:.85}
+.shift.closed .si{background:#e5e7eb;color:#6b7280}
 .strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;scrollbar-width:thin}
 .strip button{flex:none;min-width:62px;background:#fff;border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 1px 4px rgba(0,0,0,.05);border:2px solid transparent}
 .strip button small{font-size:11px;font-weight:700;color:var(--muted)}
@@ -297,6 +302,7 @@ const ICONS = {
   calendarDays: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
   calendarPlus: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 13v6M9 16h6"/>',
   calendarEdit: '<path d="M21 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M19.4 14.6a1.9 1.9 0 0 1 2.7 2.7L17 22.4l-3.5.9.9-3.5Z"/>',
+  calendarCheck: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>',
   calendarX: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',
   clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
@@ -417,7 +423,7 @@ function confirmBox(msg, yes, cb, danger = true) {
    ===================================================================== */
 const S = {
   ready: {}, emp: null, employees: {}, functions: {}, managers: {}, days: {}, avail: {},
-  view: 'urnik', date: today(), mode: 'mine',
+  view: 'urnik', date: today(), mode: 'all',
   availDate: null, availDraft: null,
   planDate: null, planDraft: null, planDirty: false,
   editDate: null, showMtx: false
@@ -434,12 +440,16 @@ const shiftsOf = obj => Object.values((obj && obj.shifts) || {}).filter(Boolean)
 const needTotal = sh => Object.values(sh.needs || {}).reduce((s, n) => s + (+n || 0), 0);
 function slotsOf(sh) {
   const out = [];
+  if (sh.closed) return out;
   Object.keys(sh.needs || {}).sort(funcOrder).forEach(fid => { for (let i = 0; i < (+sh.needs[fid] || 0); i++) out.push({ key: fid + '_' + i, fid, i }); });
   return out;
 }
 const dayOf = k => S.days[k] || {};
 const planOf = k => dayOf(k).plan || null;
 const pubOf = k => dayOf(k).pub || null;
+const isClosedDay = k => !!(planOf(k) && planOf(k).closed);
+const openShifts = obj => shiftsOf(obj).filter(s => !s.closed);
+const zapBadge = () => `<span class="status zap">${ic('lock', 'sm')}ZAPRTO</span>`;
 const availOf = (k, id) => ((S.avail[k] || {})[id]) || null;
 function myAssignments(k, id) { // [{sh, slot, a}]
   const pub = pubOf(k); if (!pub) return [];
@@ -459,12 +469,16 @@ function buildPub(k) {
     slotsOf(sh).forEach(sl => { const a = src[sl.key]; if (a && a.empId && S.employees[a.empId]) dst[sl.key] = { empId: a.empId, fid: sl.fid, note: a.note || '' }; });
     if (Object.keys(dst).length) assign[sh.id] = dst;
   });
-  return { shifts: plan.shifts || {}, assign, note: draft.note || '' };
+  const shiftNotes = {}, empNotes = {};
+  shiftsOf(plan).forEach(sh => { const n = String((draft.shiftNotes || {})[sh.id] || '').trim(); if (n) shiftNotes[sh.id] = n; });
+  Object.entries(draft.empNotes || {}).forEach(([id, n]) => { n = String(n || '').trim(); if (n && S.employees[id]) empNotes[id] = n; });
+  return { shifts: plan.shifts || {}, assign, note: draft.note || '',
+    shiftNotes: Object.keys(shiftNotes).length ? shiftNotes : undefined, empNotes: Object.keys(empNotes).length ? empNotes : undefined };
 }
 function pubState(k) { // 'none' | 'pub' | 'changed'
   const pub = pubOf(k); if (!pub) return 'none';
   const cand = buildPub(k); if (!cand) return 'pub';
-  return stable(cand) === stable({ shifts: pub.shifts, assign: pub.assign, note: pub.note }) ? 'pub' : 'changed';
+  return stable(cand) === stable({ shifts: pub.shifts, assign: pub.assign, note: pub.note, shiftNotes: pub.shiftNotes, empNotes: pub.empNotes }) ? 'pub' : 'changed';
 }
 
 /* ---------- Poslušanje baze ---------- */
@@ -533,7 +547,7 @@ function login() {
 }
 function showApp() {
   $('login').style.display = 'none'; $('app').style.display = 'flex';
-  S.date = today(); S.mode = 'mine'; go('urnik');
+  S.date = today(); S.mode = 'all'; go('urnik');
 }
 function logout() {
   const doIt = () => {
@@ -551,10 +565,10 @@ function logout() {
    ===================================================================== */
 const TITLES = { urnik: ['calendarDays', 'Urnik'], avail: ['clipboard', 'Razpoložljivost'], availDay: ['clipboard', 'Razpoložljivost'], plan: ['calendarPlus', 'Načrtuj dan'], edit: ['calendarEdit', 'Uredi urnik'], settings: ['settings', 'Nastavitve'] };
 function badgeAvail() { // načrtovani prihodnji dnevi brez moje razpoložljivosti
-  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && shiftsOf(planOf(k)).length && !pubOf(k) && !availOf(k, me())).length;
+  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && !isClosedDay(k) && openShifts(planOf(k)).length && !pubOf(k) && !availOf(k, me())).length;
 }
 function badgeEdit() {
-  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && pubState(k) !== 'pub').length;
+  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && !isClosedDay(k) && pubState(k) !== 'pub').length;
 }
 function navItems() {
   const it = [['urnik', 'calendarDays', 'Urnik', 0], ['avail', 'clipboard', 'Razpoložljivost', badgeAvail(), 'wide']];
@@ -605,7 +619,7 @@ function viewUrnik() {
   const week = [...Array(7)].map((_, i) => {
     const d = addDays(mon, i), mine = myAssignments(d, id);
     weekCnt += mine.length;
-    return `<button class="${d === k ? 'on' : ''} ${d === today() ? 'today' : ''}" onclick="setDate('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}</b><i class="${mine.length ? 'y' : ''}"></i></button>`;
+    return `<button class="${d === k ? 'on' : ''} ${d === today() ? 'today' : ''}" onclick="setDate('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}</b><i class="${mine.length ? 'y' : isClosedDay(d) ? 'x' : ''}"></i></button>`;
   }).join('');
   let h = `<div class="datebar">
       <button class="iconbtn" onclick="setDate('${addDays(k, -7)}')" title="Prejšnji teden">${ic('chevL')}</button>
@@ -616,19 +630,25 @@ function viewUrnik() {
     <div class="seg"><button class="${S.mode === 'mine' ? 'on' : ''}" onclick="S.mode='mine';viewUrnik()">${ic('user')}Moje izmene</button><button class="${S.mode === 'all' ? 'on' : ''}" onclick="S.mode='all';viewUrnik()">${ic('users')}Celoten urnik</button></div>`;
   if (k !== today()) h = h.replace('<div class="week">', `<div style="text-align:center;margin:-4px 0 10px"><button class="btn sm ghost" onclick="setDate(today())">${ic('calendar', 'sm')}Danes</button></div><div class="week">`);
 
-  if (!pub) {
+  if (plan && plan.closed) {
+    h += `<div class="box empty closedbox">${ic('lock', 'xl')}<b>ZAPRTO</b>${plan.closedNote ? esc(plan.closedNote) : 'Ta dan je zaprto.'}
+      ${isMgr() ? `<div style="margin-top:12px"><button class="btn out" onclick="S.planDraft=null;S.planDirty=false;S.planDate='${k}';go('plan')">${ic('calendarPlus')}Uredi v Načrtuj dan</button></div>` : ''}</div>`;
+  } else if (!pub) {
     h += `<div class="box empty">${ic('calendarX', 'xl')}<b>Urnik za ta dan še ni objavljen</b>
       ${plan && !availOf(k, id) && k >= today() ? `<div style="margin:8px 0 12px">Vodja že načrtuje ta dan – oddaj svojo razpoložljivost.</div><button class="btn" onclick="openAvail('${k}')">${ic('clipboard')}Oddaj razpoložljivost</button>` : ''}
       ${plan && isMgr() ? `<div style="margin-top:12px"><button class="btn out" onclick="S.editDate='${k}';go('edit')">${ic('calendarEdit')}Uredi urnik</button></div>` : ''}</div>`;
   } else {
-    if (pub.note) h += `<div class="notice info">${ic('note')}<div>${esc(pub.note)}</div></div>`;
+    if (pub.note) h += `<div class="notice info">${ic('users')}<div><b>Opomba za vse:</b> ${esc(pub.note)}</div></div>`;
+    const myNote = (pub.empNotes || {})[id];
+    if (myNote) h += `<div class="notice">${ic('user')}<div><b>Osebna opomba zate:</b> ${esc(myNote)}</div></div>`;
+    const shNote = sh => (pub.shiftNotes || {})[sh.id] ? `<div class="notice info" style="margin:8px 0 6px">${ic('note')}<div><b>Opomba za izmeno:</b> ${esc(pub.shiftNotes[sh.id])}</div></div>` : '';
     if (S.mode === 'mine') {
       const mine = myAssignments(k, id);
       h += mine.length ? mine.map(({ sh, sk, a }) => {
         const others = Object.values((pub.assign || {})[sh.id] || {}).filter(o => o && o.empId !== id);
         return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t" style="font-size:20px">${esc(sh.name || 'Izmena')}</div></div>${fBadge(a.fid)}</div>
-          <div class="shift-b" style="padding-top:12px">
-          ${a.note ? `<div class="notice" style="margin:4px 0 10px">${ic('note')}<div>${esc(a.note)}</div></div>` : ''}
+          <div class="shift-b" style="padding-top:12px">${shNote(sh)}
+          ${a.note ? `<div class="notice" style="margin:4px 0 10px">${ic('user')}<div><b>Osebna opomba zate:</b> ${esc(a.note)}</div></div>` : ''}
           <div class="lbl">Sodelavci na izmeni</div>
           ${others.length ? others.map(o => `<div class="slot"><div class="who">${esc(empName(o.empId))}</div>${fBadge(o.fid)}</div>`).join('') : '<div class="muted" style="padding:6px 0">Na tej izmeni si sam/a.</div>'}</div></div>`;
       }).join('') : `<div class="box empty">${ic('coffee', 'xl')}<b>Ta dan nisi razporejen/a</b>Prost dan.</div>`;
@@ -642,12 +662,13 @@ function viewUrnik() {
       h += shifts.map(sh => {
         const as = (pub.assign || {})[sh.id] || {}, sl = slotsOf(sh);
         const filled = sl.filter(s => as[s.key]).length;
+        if (sh.closed) return `<div class="shift closed"><div class="shift-h"><div class="si">${ic('lock')}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div>${zapBadge()}</div><div class="shift-b">${shNote(sh)}<div class="muted" style="padding:8px 0">Izmena je zaprta.</div></div></div>`;
         return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
-          <div class="shift-b">${sl.map(s => {
+          <div class="shift-b">${shNote(sh)}${sl.map(s => {
             const a = as[s.key];
             if (!a) return `<div class="slot">${fBadge(s.fid)}<div class="who free">prosto mesto</div></div>`;
             const mine = a.empId === me();
-            return `<div class="slot ${mine ? 'me' : ''}">${fBadge(s.fid)}<div class="who">${esc(empName(a.empId))}${mine ? ' <span class="status bl">Ti</span>' : ''}${a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}</div></div>`;
+            return `<div class="slot ${mine ? 'me' : ''}">${fBadge(s.fid)}<div class="who">${esc(empName(a.empId))}${mine ? ' <span class="status bl">Ti</span>' : ''}${a.note && (mine || isMgr()) ? `<small>${ic('user', 'sm')} ${esc(a.note)}</small>` : ''}</div></div>`;
           }).join('') || '<div class="muted" style="padding:8px 0">Ni zasedenih mest.</div>'}</div></div>`;
       }).join('') || `<div class="box empty">${ic('calendarX', 'xl')}<b>Ni izmen</b></div>`;
     }
@@ -660,13 +681,13 @@ function viewUrnik() {
    RAZPOLOŽLJIVOST (vsi)
    ===================================================================== */
 function viewAvail() {
-  const days = Object.keys(S.days).filter(k => k >= today() && planOf(k) && shiftsOf(planOf(k)).length).sort();
+  const days = Object.keys(S.days).filter(k => k >= today() && planOf(k) && (isClosedDay(k) || openShifts(planOf(k)).length)).sort();
   let h = `<div class="notice info">${ic('info')}<div>Vodja za vsak dan določi, koliko izmen potrebujemo in katere funkcije. Za vsako izmeno označi, kaj lahko opravljaš – ali pa da ne moreš delati.</div></div>`;
   h += `<div class="box">${days.map(k => {
-    const a = availOf(k, me()), pub = pubOf(k), sh = shiftsOf(planOf(k));
-    const st = pub ? `<span class="status gr">${ic('lock', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
+    const a = availOf(k, me()), pub = pubOf(k), sh = openShifts(planOf(k)), cl = isClosedDay(k);
+    const st = cl ? zapBadge() : pub ? `<span class="status gr">${ic('lock', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
     return `<button class="list-row" onclick="openAvail('${k}')"><div class="si" style="width:44px;text-align:center"><b style="font-size:20px;display:block;line-height:1">${fromKey(k).getDate()}</b><small class="muted" style="font-size:11px;font-weight:700">${DOW3[fromKey(k).getDay()]}</small></div>
-      <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${nIzmen(sh.length)} · ${sh.map(s => esc(s.name)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
+      <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${cl ? esc(planOf(k).closedNote || 'Dan je zaprt') : nIzmen(sh.length) + ' · ' + sh.map(s => esc(s.name)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
   }).join('') || `<div class="empty">${ic('calendarDays', 'xl')}<b>Ni načrtovanih dni</b>Ko vodja načrtuje nove dni, se bodo pojavili tukaj.</div>`}</div>`;
   $('page').innerHTML = h;
 }
@@ -679,6 +700,7 @@ function openAvail(k) {
 function viewAvailDay() {
   const k = S.availDate, plan = planOf(k);
   if (!plan) { $('page').innerHTML = `<div class="box empty">${ic('calendarX', 'xl')}<b>Načrt tega dne ne obstaja več</b><button class="btn" style="margin-top:12px" onclick="go('avail')">Nazaj</button></div>`; return; }
+  if (plan.closed) { $('page').innerHTML = `<button class="btn sm ghost" style="margin-bottom:12px" onclick="go('avail')">${ic('arrowL', 'sm')}Nazaj na seznam</button><div class="box empty closedbox">${ic('lock', 'xl')}<b>ZAPRTO</b>${esc(plan.closedNote || 'Ta dan je zaprto.')}<div style="margin-top:6px">Razpoložljivosti ni treba oddati.</div></div>`; return; }
   const sent = availOf(k, me()), locked = !!pubOf(k);
   const D = locked ? (sent ? { shifts: sent.shifts || {}, note: sent.note || '' } : { shifts: {}, note: '' }) : S.availDraft;
   const dis = locked ? 'disabled' : '';
@@ -687,6 +709,7 @@ function viewAvailDay() {
     ${sent ? `<div style="margin-top:8px"><span class="status ok">${ic('check', 'sm')}Oddano ${fmtDT(sent.at)}</span></div>` : ''}</div>`;
   if (locked) h += `<div class="notice">${ic('lock')}<div>Urnik za ta dan je že objavljen, zato razpoložljivosti ni več mogoče oddati ali spremeniti. Če vodja objavo umakne, jo boš lahko spet urejal/a.${sent ? '' : '<br>Za ta dan razpoložljivosti nisi oddal/a.'}</div></div>`;
   h += shiftsOf(plan).map(sh => {
+    if (sh.closed) return `<div class="shift closed"><div class="shift-h"><div class="si">${ic('lock')}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div>${zapBadge()}</div><div class="shift-b"><div class="muted" style="padding:8px 0">Izmena je zaprta – razpoložljivost ni potrebna.</div></div></div>`;
     const v = D.shifts[sh.id] || {}, off = !!v.off, fids = Object.keys(sh.needs || {}).filter(f => +sh.needs[f] > 0).sort(funcOrder);
     return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div>
       ${off ? `<span class="status no">${ic('ban', 'sm')}Ne morem</span>` : Object.keys(v.funcs || {}).length ? `<span class="status ok">${ic('check', 'sm')}Lahko</span>` : `<span class="status gr">${ic('help', 'sm')}Ni izbrano</span>`}</div>
@@ -725,9 +748,10 @@ function avOff(sid) {
 function keepScroll(fnc) { const c = $('content'), y = c.scrollTop; fnc(); c.scrollTop = y; }
 function avSave() {
   const k = S.availDate, plan = planOf(k); if (!plan) return;
+  if (plan.closed) return toast('Ta dan je zaprt.', 'err');
   if (pubOf(k)) { toast('Urnik za ta dan je že objavljen – razpoložljivosti ni več mogoče spremeniti.', 'err'); return keepScroll(viewAvailDay); }
   const D = S.availDraft, out = {};
-  for (const sh of shiftsOf(plan)) {
+  for (const sh of openShifts(plan)) {
     const v = D.shifts[sh.id] || {};
     const funcs = {}; Object.keys(v.funcs || {}).forEach(f => { if ((sh.needs || {})[f]) funcs[f] = true; });
     if (v.off) out[sh.id] = { off: true };
@@ -749,7 +773,7 @@ function defaultPlanDate() {
 function loadPlan(k) {
   S.planDate = k;
   const p = planOf(k);
-  S.planDraft = p ? clone({ shifts: p.shifts || {} }) : { shifts: {} };
+  S.planDraft = p ? clone({ shifts: p.shifts || {}, closed: !!p.closed, closedNote: p.closedNote || '' }) : { shifts: {}, closed: false, closedNote: '' };
   S.planDirty = false;
 }
 function planPick(k) {
@@ -761,7 +785,7 @@ function planPick(k) {
 function dayStrip(cur, onPick, from, n) {
   return `<div class="strip">${[...Array(n)].map((_, i) => {
     const d = addDays(from, i), p = planOf(d), ps = p ? pubState(d) : '';
-    const dots = (p ? `<em style="background:var(--primary)"></em>` : '') + (ps === 'pub' ? `<em style="background:var(--success)"></em>` : ps === 'changed' ? `<em style="background:var(--warn)"></em>` : '');
+    const dots = (p && p.closed ? `<em style="background:#9ca3af"></em>` : p ? `<em style="background:var(--primary)"></em>` : '') + (ps === 'pub' ? `<em style="background:var(--success)"></em>` : ps === 'changed' ? `<em style="background:var(--warn)"></em>` : '');
     return `<button class="${d === cur ? 'on' : ''}" onclick="${onPick}('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}.${fromKey(d).getMonth() + 1}.</b><i>${dots}</i></button>`;
   }).join('')}</div>`;
 }
@@ -775,17 +799,23 @@ function viewPlan() {
       <button class="btn sm ghost" onclick="manageFunctions()">${ic('briefcase', 'sm')}Funkcije</button>
       <button class="btn sm ghost" onclick="copyPlanDlg()">${ic('copy', 'sm')}Kopiraj iz dne…</button></div>
       <div style="margin-top:12px">${dayStrip(k, 'planPick', today(), 21)}</div>
-      <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> načrtovano</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span></div></div>
+      <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> načrtovano</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span><span><span class="dot" style="background:#9ca3af"></span> zaprto</span></div></div>
     <h2 style="font-size:19px;margin:4px 2px 10px">${fmtDay(k)} ${relDay(k) ? `<span class="status bl">${relDay(k)}</span>` : ''} ${saved ? `<span class="status ok">${ic('check', 'sm')}shranjeno</span>` : '<span class="status gr">nov načrt</span>'} ${S.planDirty ? `<span class="status wr">${ic('edit', 'sm')}neshranjene spremembe</span>` : ''}</h2>`;
   if (k < today()) h += `<div class="notice">${ic('alert')}<div>Ta dan je že minil.</div></div>`;
   if (pubOf(k)) h += `<div class="notice">${ic('info')}<div>Urnik za ta dan je že objavljen. Po spremembi načrta ga v UREDI URNIK ponovno objavi.</div></div>`;
   if (nAvail) h += `<div class="notice info">${ic('users')}<div>Razpoložljivost je oddalo že ${nAvail} zaposlenih. Če izmeno izbrišeš, se izgubijo njihovi odgovori za to izmeno.</div></div>`;
 
-  h += shifts.map(sh => {
+  h += `<div class="box"><button class="tgl ${D.closed ? 'on' : ''}" style="padding:0;border:none" onclick="plClosedDay()"><span style="display:flex;gap:10px;align-items:center">${ic('lock')}<span>Dan je ZAPRT<br><span class="muted" style="font-weight:400">npr. praznik ali inventura – zaposleni ne oddajajo razpoložljivosti</span></span></span><span class="sw"></span></button>
+    ${D.closed ? `<input class="inp" style="margin:12px 0 0" maxlength="120" placeholder="Razlog (neobvezno), npr. Praznik" value="${esc(D.closedNote || '')}" oninput="S.planDraft.closedNote=this.value;plDirty()">` : ''}</div>`;
+  if (D.closed) h += shifts.length ? `<div class="notice info">${ic('info')}<div>Izmene tega dne (${shifts.map(s => esc(s.name)).join(', ')}) ostanejo shranjene in se vrnejo, ko dan spet odpreš.</div></div>` : '';
+  else h += shifts.map(sh => {
     const fids = Object.keys(sh.needs || {}).sort(funcOrder), free = funcsSorted().filter(f => !(sh.needs || {})[f.id]);
+    if (sh.closed) return `<div class="shift closed"><div class="shift-h"><div class="si">${ic('lock')}</div><div class="grow"><input class="inp sm" style="font-weight:700" maxlength="40" value="${esc(sh.name || '')}" placeholder="Ime izmene" oninput="plSet('${sh.id}','name',this.value)"></div>
+        <button class="iconbtn on" title="Odpri izmeno" onclick="plClosedShift('${sh.id}')">${ic('lock')}</button><button class="iconbtn red" title="Izbriši izmeno" onclick="plDel('${sh.id}')">${ic('trash')}</button></div>
+      <div class="shift-b"><div style="padding:10px 0;display:flex;gap:10px;align-items:center">${zapBadge()}<span class="muted">Izmena je zaprta – nihče ne dela, razpoložljivost ni potrebna.</span></div></div></div>`;
     return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div>
         <div class="grow"><input class="inp sm" style="font-weight:700" maxlength="40" value="${esc(sh.name || '')}" placeholder="Ime izmene" oninput="plSet('${sh.id}','name',this.value)"></div>
-        <button class="iconbtn red" title="Izbriši izmeno" onclick="plDel('${sh.id}')">${ic('trash')}</button></div>
+        <button class="iconbtn" title="Zapri izmeno" onclick="plClosedShift('${sh.id}')">${ic('lock')}</button><button class="iconbtn red" title="Izbriši izmeno" onclick="plDel('${sh.id}')">${ic('trash')}</button></div>
       <div class="shift-b">
         <div class="lbl" style="margin-top:10px">Funkcije na izmeni · skupaj ${needTotal(sh)} ${needTotal(sh) === 1 ? 'oseba' : needTotal(sh) === 2 ? 'osebi' : needTotal(sh) < 5 ? 'osebe' : 'oseb'}</div>
         ${fids.map(f => `<div class="prow"><div class="grow">${fBadge(f)}</div><div class="step"><button onclick="plNeed('${sh.id}','${f}',-1)">${ic('minus')}</button><b>${sh.needs[f]}</b><button onclick="plNeed('${sh.id}','${f}',1)">${ic('plus')}</button></div></div>`).join('') || '<div class="muted" style="padding:6px 0">Dodaj vsaj eno funkcijo.</div>'}
@@ -793,11 +823,13 @@ function viewPlan() {
       </div></div>`;
   }).join('') || `<div class="box empty">${ic('calendarPlus', 'xl')}<b>Ta dan še nima izmen</b>Dodaj prvo izmeno spodaj.</div>`;
 
-  h += `<button class="btn out block" style="margin-bottom:14px" onclick="addShiftDlg()">${ic('plus')}Dodaj izmeno</button>
+  h += `${D.closed ? '' : `<button class="btn out block" style="margin-bottom:14px" onclick="addShiftDlg()">${ic('plus')}Dodaj izmeno</button>`}
     <div class="sticky"><button class="btn green" onclick="savePlan()">${ic('save')}Shrani načrt</button>${saved ? `<button class="btn red" style="flex:0 0 auto" onclick="delPlan()" title="Izbriši načrt dneva">${ic('trash')}</button>` : ''}</div>`;
   $('page').innerHTML = h;
 }
 function plDirty() { S.planDirty = true; }
+function plClosedDay() { S.planDraft.closed = !S.planDraft.closed; plDirty(); keepScroll(viewPlan); }
+function plClosedShift(sid) { const sh = S.planDraft.shifts[sid]; if (!sh) return; sh.closed = !sh.closed; plDirty(); keepScroll(viewPlan); }
 function plSet(sid, key, val, rerender) {
   const sh = S.planDraft.shifts[sid]; if (!sh) return;
   sh[key] = val; plDirty();
@@ -846,16 +878,18 @@ function copyPlanDlg() {
   });
 }
 function savePlan() {
-  const k = S.planDate, shifts = shiftsOf(S.planDraft);
-  if (!shifts.length) return toast('Dodaj vsaj eno izmeno.', 'err');
-  for (const sh of shifts) {
-    if (!(sh.name || '').trim()) return toast('Vsaka izmena mora imeti ime.', 'err');
-    if (!needTotal(sh)) return toast(`Izmena »${sh.name}« nima nobene funkcije.`, 'err');
+  const k = S.planDate, D = S.planDraft, shifts = shiftsOf(D);
+  if (!D.closed) {
+    if (!shifts.length) return toast('Dodaj vsaj eno izmeno ali označi dan kot zaprt.', 'err');
+    for (const sh of shifts) {
+      if (!(sh.name || '').trim()) return toast('Vsaka izmena mora imeti ime.', 'err');
+      if (!sh.closed && !needTotal(sh)) return toast(`Izmena »${sh.name}« nima nobene funkcije.`, 'err');
+    }
   }
   const out = {};
-  shifts.forEach((sh, i) => { out[sh.id] = { id: sh.id, name: (sh.name || 'Izmena').trim() || 'Izmena', needs: sh.needs, order: i }; });
-  db.ref(`${U}/days/${k}/plan`).set({ shifts: out, by: S.emp.name, at: new Date().toISOString() })
-    .then(() => { S.planDirty = false; toast('Načrt dneva shranjen. Zaposleni lahko oddajo razpoložljivost.', 'ok'); loadPlan(k); viewPlan(); renderChrome(); })
+  shifts.forEach((sh, i) => { out[sh.id] = { id: sh.id, name: (sh.name || 'Izmena').trim() || 'Izmena', needs: sh.needs || null, closed: sh.closed ? true : null, order: i }; });
+  db.ref(`${U}/days/${k}/plan`).set({ shifts: out, closed: D.closed ? true : null, closedNote: D.closed ? (D.closedNote || '').trim() || null : null, by: S.emp.name, at: new Date().toISOString() })
+    .then(() => { S.planDirty = false; toast(D.closed ? 'Dan je označen kot ZAPRT.' : 'Načrt dneva shranjen. Zaposleni lahko oddajo razpoložljivost.', 'ok'); loadPlan(k); viewPlan(); renderChrome(); })
     .catch(e => toast('Napaka: ' + e.message, 'err'));
 }
 function delPlan() {
@@ -914,7 +948,7 @@ function editFunction(id, after) {
    UREDI URNIK (vodja)
    ===================================================================== */
 function defaultEditDate() {
-  const fut = Object.keys(S.days).filter(k => k >= today() && planOf(k)).sort();
+  const fut = Object.keys(S.days).filter(k => k >= today() && planOf(k) && !isClosedDay(k)).sort();
   return fut.find(k => pubState(k) !== 'pub') || fut[0] || today();
 }
 function editPick(k) { if (k) { S.editDate = k; viewEdit(); } }
@@ -925,14 +959,19 @@ function viewEdit() {
   const emps = Object.values(S.employees).filter(Boolean).sort(byName);
   const planned = Object.keys(S.days).filter(d => planOf(d) && d >= addDays(today(), -7)).sort();
   let h = `<div class="box"><div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><div style="flex:1;min-width:200px"><label class="lbl">Dan</label><input type="date" class="inp sm" value="${k}" onchange="editPick(this.value)"></div></div>
-    ${planned.length ? `<div style="margin-top:12px" class="strip">${planned.map(d => { const ps = pubState(d); return `<button class="${d === k ? 'on' : ''}" onclick="editPick('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}.${fromKey(d).getMonth() + 1}.</b><i><em style="background:${ps === 'pub' ? 'var(--success)' : ps === 'changed' ? 'var(--warn)' : 'var(--primary)'}"></em></i></button>`; }).join('')}</div>
-    <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> ni objavljeno</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span></div>` : ''}</div>
-    <h2 style="font-size:19px;margin:4px 2px 10px">${fmtDay(k)} ${relDay(k) ? `<span class="status bl">${relDay(k)}</span>` : ''}</h2>`;
+    ${planned.length ? `<div style="margin-top:12px" class="strip">${planned.map(d => { const ps = pubState(d); return `<button class="${d === k ? 'on' : ''}" onclick="editPick('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}.${fromKey(d).getMonth() + 1}.</b><i><em style="background:${isClosedDay(d) ? '#9ca3af' : ps === 'pub' ? 'var(--success)' : ps === 'changed' ? 'var(--warn)' : 'var(--primary)'}"></em></i></button>`; }).join('')}</div>
+    <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> ni objavljeno</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span><span><span class="dot" style="background:#9ca3af"></span> zaprto</span></div>` : ''}</div>
+    <h2 style="font-size:19px;margin:4px 2px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${fmtDay(k)} ${relDay(k) ? `<span class="status bl">${relDay(k)}</span>` : ''}${plan && !plan.closed ? `<button class="btn sm ghost" style="margin-left:auto" onclick="edCloseDay(true)">${ic('lock', 'sm')}Zapri dan</button>` : ''}</h2>`;
   if (!plan) {
     h += `<div class="box empty">${ic('calendarX', 'xl')}<b>Za ta dan še ni načrta</b>Najprej določi izmene in funkcije.<div style="margin-top:12px"><button class="btn" onclick="S.planDraft=null;S.planDirty=false;S.planDate='${k}';go('plan')">${ic('calendarPlus')}Načrtuj dan</button></div></div>`;
     $('page').innerHTML = h; return;
   }
-  const ps = pubState(k), pub = pubOf(k), shifts = shiftsOf(plan);
+  if (plan.closed) {
+    h += `<div class="box empty closedbox">${ic('lock', 'xl')}<b>ZAPRTO</b>${esc(plan.closedNote || 'Ta dan je zaprt.')}<div style="margin-top:6px">Zaposleni vidijo, da je dan zaprt. Urnika ni treba objavljati.</div>
+      <div style="margin-top:12px"><button class="btn out" onclick="edCloseDay(false)">${ic('calendarCheck')}Odpri dan</button></div></div>`;
+    $('page').innerHTML = h; return;
+  }
+  const ps = pubState(k), pub = pubOf(k), shifts = shiftsOf(plan), mshifts = openShifts(plan);
   const nSent = emps.filter(e => availOf(k, e.id)).length;
   h += ps === 'pub' ? `<div class="notice ok">${ic('checkCircle')}<div>Urnik je objavljen (${fmtDT(pub.at)}). Zaposleni ga vidijo.</div></div>`
     : ps === 'changed' ? `<div class="notice">${ic('alert')}<div>Imaš neobjavljene spremembe – zaposleni vidijo staro različico (objavljeno ${fmtDT(pub.at)}).</div></div>`
@@ -940,8 +979,8 @@ function viewEdit() {
 
   // razpoložljivost – tabela
   h += `<div class="box"><button class="list-row" style="padding:0;border:none" onclick="S.showMtx=!S.showMtx;keepScroll(viewEdit)"><span class="grow"><span class="t" style="display:flex;align-items:center;gap:8px">${ic('users')}Razpoložljivost zaposlenih</span><span class="s">Oddalo ${nSent} od ${emps.length}</span></span><span class="status ${nSent >= emps.length ? 'ok' : 'wr'}">${nSent}/${emps.length}</span>${ic(S.showMtx ? 'chevU' : 'chevD')}</button>
-    ${S.showMtx ? `<div class="mtxw" style="margin-top:12px"><table class="mtx"><thead><tr><th>Zaposleni</th>${shifts.map(sh => `<th>${esc(sh.name)}</th>`).join('')}</tr></thead><tbody>
-      ${emps.map(e => { const a = availOf(k, e.id); return `<tr><td><b>${esc(e.name)}</b>${a && a.note ? `<div class="muted" style="font-size:12px">${ic('note', 'sm')} ${esc(a.note)}</div>` : ''}</td>${shifts.map(sh => {
+    ${S.showMtx ? `<div class="mtxw" style="margin-top:12px"><table class="mtx"><thead><tr><th>Zaposleni</th>${mshifts.map(sh => `<th>${esc(sh.name)}</th>`).join('')}</tr></thead><tbody>
+      ${emps.map(e => { const a = availOf(k, e.id); return `<tr><td><b>${esc(e.name)}</b>${a && a.note ? `<div class="muted" style="font-size:12px">${ic('note', 'sm')} ${esc(a.note)}</div>` : ''}</td>${mshifts.map(sh => {
         const v = availFor(k, e.id, sh.id);
         if (!v) return `<td title="Ni oddal"><span style="color:#b8c0cc">${ic('help', 'sm')}</span></td>`;
         if (v.off) return `<td title="Ne more"><span style="color:var(--danger)">${ic('ban', 'sm')}</span></td>`;
@@ -953,18 +992,26 @@ function viewEdit() {
   // izmene in mesta
   h += shifts.map(sh => {
     const as = (draft.assign || {})[sh.id] || {}, sl = slotsOf(sh), filled = sl.filter(s => as[s.key] && S.employees[as[s.key].empId]).length;
-    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
-      <div class="shift-b">${sl.map(s => {
+    const sn = (draft.shiftNotes || {})[sh.id];
+    const btns = `<button class="iconbtn ${sn ? 'on' : ''}" title="Skupinska opomba za izmeno" onclick="shiftNote('${sh.id}')">${ic('note')}</button><button class="iconbtn ${sh.closed ? 'on' : ''}" title="${sh.closed ? 'Odpri izmeno' : 'Zapri izmeno'}" onclick="edCloseShift('${sh.id}')">${ic('lock')}</button>`;
+    const snBox = sn ? `<div class="notice info" style="margin:8px 0 6px">${ic('users')}<div><b>Opomba za izmeno:</b> ${esc(sn)}</div></div>` : '';
+    if (sh.closed) return `<div class="shift closed"><div class="shift-h"><div class="si">${ic('lock')}</div><div class="grow"><div class="t">${esc(sh.name)}</div></div>${zapBadge()}${btns}</div><div class="shift-b">${snBox}<div class="muted" style="padding:8px 0">Izmena je zaprta – nihče ne dela.</div></div></div>`;
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span>${btns}</div>
+      <div class="shift-b">${snBox}${sl.map(s => {
         const a = as[s.key], e = a && S.employees[a.empId];
         let dotc = '';
         if (e) { const v = availFor(k, e.id, sh.id); dotc = !v ? '#b8c0cc' : v.off ? 'var(--danger)' : (v.funcs || {})[s.fid] ? 'var(--success)' : 'var(--warn)'; }
         return `<div class="slot">${fBadge(s.fid)}
           <button class="pick ${e ? 'set' : ''}" onclick="pickEmp('${sh.id}','${s.key}')">${e ? `<span class="avl" style="background:${dotc}"></span>` : ic('plus', 'sm')}<span class="grow">${e ? esc(e.name) : 'Izberi osebo'}${e && a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}</span>${ic('chevD', 'sm')}</button>
-          ${e ? `<button class="iconbtn ${a.note ? 'on' : ''}" title="Opomba" onclick="slotNote('${sh.id}','${s.key}')">${ic('note')}</button>` : ''}</div>`;
+          ${e ? `<button class="iconbtn ${a.note ? 'on' : ''}" title="Osebna opomba" onclick="slotNote('${sh.id}','${s.key}')">${ic('note')}</button>` : ''}</div>`;
       }).join('')}</div></div>`;
   }).join('');
 
-  h += `<div class="box"><label class="lbl">${ic('note', 'sm')} Opomba za celoten dan (vidijo jo vsi)</label><textarea id="ed-note" class="inp" maxlength="400" placeholder="npr. ob 10:00 dostava blaga"></textarea></div>
+  const en = draft.empNotes || {}, enIds = Object.keys(en).filter(id => en[id] && S.employees[id]).sort((a, b) => empName(a).localeCompare(empName(b)));
+  h += `<div class="box"><h3>${ic('user')}Osebne opombe za cel dan</h3><div class="muted" style="margin:-4px 0 6px">Vsako opombo vidi samo izbrani zaposleni.</div>
+    ${enIds.map(id => `<div class="list-row"><div class="grow"><div class="t">${esc(empName(id))}</div><div class="s">${esc(en[id])}</div></div><button class="iconbtn" title="Uredi" onclick="empNote('${id}')">${ic('edit')}</button><button class="iconbtn red" title="Izbriši" onclick="empNoteDel('${id}')">${ic('trash')}</button></div>`).join('') || '<div class="muted" style="padding:4px 0">Ni osebnih opomb.</div>'}
+    <button class="btn out block sm" style="margin-top:10px" onclick="empNote()">${ic('plus', 'sm')}Dodaj osebno opombo</button></div>`;
+  h += `<div class="box"><label class="lbl">${ic('users', 'sm')} Skupinska opomba za cel dan (vidijo jo vsi)</label><textarea id="ed-note" class="inp" maxlength="400" placeholder="npr. ob 10:00 dostava blaga"></textarea></div>
     <div class="sticky"><button class="btn green" onclick="publish()" ${ps === 'pub' ? 'disabled' : ''}>${ic('send')}${ps === 'none' ? 'Objavi urnik' : 'Objavi spremembe'}</button>${pub ? `<button class="btn ghost" style="flex:0 0 auto" title="Umakni objavo" onclick="unpublish()">${ic('eyeOff')}</button>` : ''}</div>`;
   $('page').innerHTML = h;
   const n = $('ed-note'); n.value = draft.note || '';
@@ -1012,9 +1059,42 @@ function pickEmp(sid, sk) {
   ov.querySelector('#pe-x').onclick = () => ov.close();
   const rm = ov.querySelector('#pe-rm'); if (rm) rm.onclick = () => ref.remove().then(() => ov.close());
 }
+function noteDlg(title, sub, val, ph, onSave, empSelect) {
+  const opts = empSelect ? Object.values(S.employees).filter(Boolean).sort(byName).map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('') : '';
+  const ov = openModal(`<h3>${ic('note')}${title}</h3><div class="muted">${sub}</div>
+    ${empSelect ? `<label class="lbl" style="margin-top:12px">Zaposleni</label><select id="nd-e" class="inp">${opts}</select>` : ''}
+    <textarea id="nd-t" class="inp" style="margin-top:10px" maxlength="300" placeholder="${esc(ph)}"></textarea>
+    <div class="row"><button class="btn ghost" id="nd-x">Prekliči</button><button class="btn green" id="nd-ok">${ic('save')}Shrani</button></div>`);
+  const t = ov.querySelector('#nd-t'); t.value = val || ''; setTimeout(() => t.focus(), 50);
+  ov.querySelector('#nd-x').onclick = () => ov.close();
+  ov.querySelector('#nd-ok').onclick = () => { const e = ov.querySelector('#nd-e'); Promise.resolve(onSave(t.value.trim(), e ? e.value : null)).then(() => ov.close()).catch(er => toast('Napaka: ' + er.message, 'err')); };
+}
+function shiftNote(sid) {
+  const k = S.editDate, sh = (planOf(k).shifts || {})[sid]; if (!sh) return;
+  noteDlg('Opomba za izmeno', `${esc(sh.name)} · vidijo jo vsi zaposleni`, ((dayOf(k).draft || {}).shiftNotes || {})[sid], 'npr. ob 12:00 sestanek ekipe',
+    v => db.ref(`${U}/days/${k}/draft/shiftNotes/${sid}`).set(v || null));
+}
+function empNote(id) {
+  const k = S.editDate, en = (dayOf(k).draft || {}).empNotes || {};
+  noteDlg('Osebna opomba', id ? `${esc(empName(id))} · vidi jo samo ta zaposleni` : 'Vidi jo samo izbrani zaposleni', id ? en[id] : '', 'npr. prinesi ključe skladišča',
+    (v, sel) => { const who = id || sel; if (!who) return; return db.ref(`${U}/days/${k}/draft/empNotes/${who}`).set(v || null); }, !id);
+}
+function empNoteDel(id) { confirmBox(`Izbrišem osebno opombo za <b>${esc(empName(id))}</b>?`, 'Izbriši', () => db.ref(`${U}/days/${S.editDate}/draft/empNotes/${id}`).remove()); }
+function edCloseShift(sid) {
+  const k = S.editDate, sh = (planOf(k).shifts || {})[sid]; if (!sh) return;
+  const ref = db.ref(`${U}/days/${k}/plan/shifts/${sid}/closed`);
+  if (sh.closed) return ref.set(null).then(() => toast('Izmena je spet odprta.', 'ok'));
+  confirmBox(`Označim izmeno <b>${esc(sh.name)}</b> kot ZAPRTO? Razporejeni zaposleni na tej izmeni po objavi ne bodo več prikazani.`, 'Zapri izmeno', () => ref.set(true).then(() => toast('Izmena je zaprta. Ne pozabi objaviti sprememb.', 'warn')), false);
+}
+function edCloseDay(close) {
+  const k = S.editDate, ref = db.ref(`${U}/days/${k}/plan`);
+  if (!close) return ref.update({ closed: null, closedNote: null }).then(() => toast('Dan je spet odprt.', 'ok'));
+  noteDlg('Zapri dan', `${fmtDay(k)} – zaposleni bodo videli ZAPRTO`, '', 'Razlog (neobvezno), npr. Praznik',
+    v => ref.update({ closed: true, closedNote: v || null }).then(() => toast('Dan je označen kot ZAPRT.', 'ok')));
+}
 function slotNote(sid, sk) {
   const k = S.editDate, cur = ((((dayOf(k).draft || {}).assign || {})[sid]) || {})[sk]; if (!cur) return;
-  const ov = openModal(`<h3>${ic('note')}Opomba</h3><div class="muted">${esc(empName(cur.empId))} · ${esc(fn(cur.fid).name)}</div>
+  const ov = openModal(`<h3>${ic('note')}Osebna opomba</h3><div class="muted">${esc(empName(cur.empId))} · ${esc(fn(cur.fid).name)} · vidi jo samo ta zaposleni</div>
     <textarea id="sn-t" class="inp" style="margin-top:10px" maxlength="200" placeholder="npr. odpre blagajno 2"></textarea>
     <div class="row"><button class="btn ghost" id="sn-x">Prekliči</button><button class="btn green" id="sn-ok">${ic('save')}Shrani</button></div>`);
   const t = ov.querySelector('#sn-t'); t.value = cur.note || ''; setTimeout(() => t.focus(), 50);
@@ -1029,7 +1109,7 @@ function publish() {
   const doIt = () => {
     const up = {};
     up[`days/${k}/draft/note`] = cand.note || null;
-    up[`days/${k}/pub`] = Object.assign(cand, { at: new Date().toISOString(), by: S.emp.name });
+    up[`days/${k}/pub`] = JSON.parse(JSON.stringify(Object.assign(cand, { at: new Date().toISOString(), by: S.emp.name })));
     db.ref(U).update(up).then(() => toast('Urnik je objavljen zaposlenim.', 'ok')).catch(e => toast('Napaka: ' + e.message, 'err'));
   };
   if (filled < total) return confirmBox(`Zasedenih je ${filled} od ${total} mest. Vseeno objavim urnik?`, 'Objavi', doIt, false);
