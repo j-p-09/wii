@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2255c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WII Urnik">
+<link rel="manifest" href="manifest-urnik.webmanifest">
+<link rel="apple-touch-icon" href="icon-urnik-180.png">
+<link rel="icon" type="image/png" href="icon-urnik-192.png">
+<title>WII Urnik</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{
+  --bg:#eef2f7; --card:#fff; --primary:#c2255c; --primary-d:#8e1a46; --primary-l:#fde7ef; --text:#1f2937; --muted:#6b7280;
+  --danger:#dc3545; --success:#198754; --warn:#f59e0b; --border:#dde3ec; --nav:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font-family:inherit}
+#root{height:100vh;height:100dvh;display:flex;flex-direction:column}
+
+/* ---------- IKONE ---------- */
+.ico{width:1.2em;height:1.2em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.25em}
+.ico.sm{width:1em;height:1em;vertical-align:-.15em}
+.ico.lg{width:28px;height:28px}
+.ico.xl{width:46px;height:46px;stroke-width:1.6}
+
+/* ---------- PRIJAVA ---------- */
+#login{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.login-card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:26px 22px;width:100%;max-width:460px}
+.logo{width:64px;height:64px;border-radius:16px;margin:0 auto 10px;background:linear-gradient(180deg,#d6336c,#8a1842);color:#fff;display:flex;align-items:center;justify-content:center}
+.login-card h1{color:var(--primary);font-size:28px;text-align:center}
+.login-card .sub{color:var(--muted);text-align:center;font-size:14px;margin:4px 0 18px}
+.ver{margin-top:18px;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:2px;text-align:center;padding-bottom:20px}
+.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:10px;font-size:17px;background:#fff;outline:none;margin-bottom:10px;color:var(--text)}
+.inp:focus{border-color:var(--primary)}
+textarea.inp{resize:vertical;min-height:70px;font-size:15px}
+.inp.sm{padding:9px 10px;font-size:15px;margin:0}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 18px;border-radius:12px;font-size:16px;font-weight:700;color:#fff;background:var(--primary)}
+.btn.block{width:100%}
+.btn.green{background:var(--success)} .btn.red{background:var(--danger)} .btn.ghost{background:#e5e9f0;color:var(--text)} .btn.warn{background:var(--warn);color:#222}
+.btn.out{background:#fff;color:var(--primary);border:2px solid var(--primary)}
+.btn.sm{padding:9px 12px;font-size:14px;border-radius:10px}
+.quick-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:18px 0 8px;text-align:center}
+.quick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.quick button{padding:11px 15px;border-radius:12px;background:#e5e9f0;color:var(--text);font-weight:600;font-size:15px}
+.err{color:var(--danger);font-weight:700;text-align:center;font-size:14px;min-height:20px;margin-top:6px}
+
+/* ---------- APLIKACIJA ---------- */
+#app{flex:1;display:none;min-height:0}
+#side{display:none}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+#topbar{background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+#topbar .ttl{font-size:18px;font-weight:700;flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+#topbar .ttl span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topbar .uname{font-size:13px;opacity:.95;text-align:right;line-height:1.2}
+#topbar .tbtn{background:rgba(255,255,255,.2);color:#fff;width:40px;height:40px;border-radius:10px;display:none;align-items:center;justify-content:center}
+#content{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.page{padding:16px;padding-bottom:calc(var(--nav) + 30px + env(safe-area-inset-bottom));max-width:920px;margin:0 auto}
+
+/* spodnji meni (telefon) */
+#bnav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
+#bnav button{flex:1;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--muted);position:relative;min-width:0}
+#bnav button .ico{width:24px;height:24px}
+#bnav button.wide{flex:1.45}
+#bnav button.on{color:var(--primary)}
+#bnav button.on::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--primary)}
+#bnav .nav-settings{display:none}
+.nbadge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--danger);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:800;line-height:15px}
+
+/* stranski meni (računalnik) */
+@media (min-width:900px){
+  #app{flex-direction:row}
+  #side{display:flex;flex-direction:column;width:240px;flex:none;background:#fff;border-right:1px solid var(--border);padding:16px 12px}
+  #bnav{display:none}
+  .page{padding-bottom:40px}
+  .side-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;font-weight:800;font-size:18px;color:var(--primary)}
+  .side-brand .logo{width:40px;height:40px;border-radius:11px;margin:0}
+  #snav{display:flex;flex-direction:column;gap:4px;flex:1}
+  #snav button{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;font-weight:700;font-size:15px;color:var(--text);text-align:left;position:relative}
+  #snav button:hover{background:#f3f5f9}
+  #snav button.on{background:var(--primary-l);color:var(--primary)}
+  #snav .nbadge{position:static;margin-left:auto}
+  #snav .sep{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muted);padding:14px 12px 4px}
+  .side-user{border-top:1px solid var(--border);padding:12px 8px 0;font-size:13px;color:var(--muted)}
+  .side-user b{display:block;color:var(--text);font-size:15px}
+}
+@media (max-width:899px){ #topbar .tbtn.adm{display:flex} #topbar .uname{display:none} }
+
+/* ---------- SKUPNI ELEMENTI ---------- */
+.box{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:14px}
+.box h3{margin-bottom:10px;font-size:16px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:14px}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.row>*{flex:1}
+.seg{display:flex;background:#e5e9f0;border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+.seg button{flex:1;padding:10px;border-radius:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;font-size:15px}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.status{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-weight:700;font-size:12.5px;white-space:nowrap}
+.status.ok{background:#d1f2de;color:#0b5a33}.status.no{background:#fde2e4;color:#8a1c27}.status.wr{background:#fff0c9;color:#7a5200}.status.bl{background:#dbeafe;color:#1e40af}.status.gr{background:#e5e9f0;color:#4b5563}
+.empty{text-align:center;padding:34px 16px;color:var(--muted)}
+.empty .ico{color:#c3cad6;margin-bottom:8px}
+.empty b{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
+.notice{display:flex;gap:10px;align-items:flex-start;background:#fff7e0;color:#7a5200;border-radius:12px;padding:11px 13px;font-size:14px;font-weight:600;margin-bottom:14px}
+.notice.info{background:#e8f1ff;color:#1e40af}
+.notice.ok{background:#d1f2de;color:#0b5a33}
+.list-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border);width:100%;text-align:left}
+.list-row:last-child{border-bottom:none}
+button.list-row:hover{background:#fafbfd}
+.list-row .grow{flex:1;min-width:0}
+.list-row .t{font-weight:700}
+.list-row .s{font-size:13px;color:var(--muted);margin-top:2px}
+.fb{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:9px;font-weight:700;font-size:13px;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.iconbtn{width:38px;height:38px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:#eef1f6;color:var(--text);flex:none}
+.iconbtn.red{background:#fde2e4;color:var(--danger)}
+.iconbtn.on{background:var(--primary-l);color:var(--primary)}
+
+/* datum */
+.datebar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.datebar .d{flex:1;text-align:center}
+.datebar .d b{display:block;font-size:18px}
+.datebar .d span{font-size:13px;color:var(--primary);font-weight:700}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
+.week button{background:#fff;border-radius:12px;padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 1px 4px rgba(0,0,0,.05);border:2px solid transparent;position:relative}
+.week button small{font-size:11px;font-weight:700;color:var(--muted)}
+.week button b{font-size:18px}
+.week button.today{border-color:#f3c3d4}
+.week button.on{background:var(--primary);color:#fff}
+.week button.on small{color:#fff;opacity:.85}
+.week button i{width:6px;height:6px;border-radius:50%;background:transparent}
+.week button i.y{background:var(--primary)}
+.week button.on i.y{background:#fff}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;scrollbar-width:thin}
+.strip button{flex:none;min-width:62px;background:#fff;border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 1px 4px rgba(0,0,0,.05);border:2px solid transparent}
+.strip button small{font-size:11px;font-weight:700;color:var(--muted)}
+.strip button b{font-size:17px}
+.strip button i{display:flex;gap:3px;height:6px}
+.strip button i em{width:6px;height:6px;border-radius:50%;display:block}
+.strip button.on{border-color:var(--primary);background:var(--primary-l)}
+
+/* izmena */
+.shift{background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:14px;overflow:hidden}
+.shift-h{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.shift-h .si{width:42px;height:42px;border-radius:12px;background:var(--primary-l);color:var(--primary);display:flex;align-items:center;justify-content:center;flex:none}
+.shift-h .grow{flex:1;min-width:0}
+.shift-h .t{font-weight:800;font-size:16px}
+.shift-h .s{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:2px}
+.shift-b{padding:6px 16px 12px}
+.slot{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border)}
+.slot:last-child{border-bottom:none}
+.slot .who{flex:1;min-width:0;font-weight:700}
+.slot .who small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.slot .who.free{color:var(--muted);font-weight:600;font-style:italic}
+.slot.me{background:var(--primary-l);margin:0 -10px;padding:9px 10px;border-radius:10px;border-bottom-color:transparent}
+.pick{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;border:2px dashed #cbd2dc;color:var(--muted);font-weight:700;text-align:left}
+.pick.set{border-style:solid;border-color:var(--border);color:var(--text);background:#fafbfd}
+.pick .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick small{display:block;font-weight:500;color:var(--muted);font-size:12px;white-space:normal}
+.avl{width:10px;height:10px;border-radius:50%;flex:none}
+.myshift{display:flex;gap:14px;align-items:center}
+.myshift .time{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border);font-size:15px}
+.kv:last-child{border-bottom:none}
+
+/* razpoložljivost */
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.opt{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border-radius:12px;font-weight:700;font-size:15px;background:#eef1f6;color:var(--text);border:2px solid transparent}
+.opt .ck{width:20px;height:20px;border-radius:6px;border:2px solid #b8c0cc;display:flex;align-items:center;justify-content:center;background:#fff}
+.opt .ck .ico{width:14px;height:14px;stroke-width:3;opacity:0}
+.opt.on .ck{border-color:currentColor;background:currentColor}
+.opt.on .ck .ico{opacity:1;color:#fff}
+.opt.off.on{background:#fde2e4;color:var(--danger);border-color:var(--danger)}
+.needs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+
+/* načrtovanje */
+.prow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border)}
+.prow:last-child{border-bottom:none}
+.prow .grow{flex:1;min-width:0}
+.step{display:flex;align-items:center;gap:4px;background:#eef1f6;border-radius:12px;padding:3px}
+.step button{width:36px;height:36px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.step b{min-width:30px;text-align:center;font-size:17px;font-variant-numeric:tabular-nums}
+.times{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.addf{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.addf button{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:9px;background:#f3f5f9;border:1px dashed #b8c0cc;font-weight:600;font-size:13px;color:var(--muted)}
+.sticky{position:sticky;bottom:calc(var(--nav) + 10px + env(safe-area-inset-bottom));z-index:5;display:flex;gap:10px;background:rgba(238,242,247,.92);backdrop-filter:blur(6px);padding:10px;border-radius:14px;margin-top:6px}
+.sticky>*{flex:1}
+@media (min-width:900px){ .sticky{bottom:10px} }
+
+/* tabela razpoložljivosti */
+.mtx{width:100%;border-collapse:collapse;font-size:13.5px}
+.mtx th{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;text-align:center;padding:6px 4px;border-bottom:2px solid var(--border)}
+.mtx th:first-child,.mtx td:first-child{text-align:left}
+.mtx td{padding:8px 4px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle}
+.mtx td .fi{display:inline-flex;width:24px;height:24px;border-radius:7px;align-items:center;justify-content:center;margin:1px}
+.mtx td .fi .ico{width:14px;height:14px}
+.mtxw{overflow-x:auto}
+
+/* nastavitve */
+.tgl{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid var(--border);font-weight:600;width:100%;text-align:left}
+.tgl:last-child{border-bottom:none}
+.tgl .sw{width:46px;height:26px;border-radius:26px;background:#cbd2dc;position:relative;transition:.2s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on .sw{background:var(--success)} .tgl.on .sw::after{left:23px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.swatches button{width:38px;height:38px;border-radius:10px;border:3px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.swatches button.on{border-color:#111}
+.icgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;margin:4px 0 10px}
+.icgrid button{height:46px;border-radius:10px;background:#eef1f6;display:flex;align-items:center;justify-content:center;border:2px solid transparent}
+.icgrid button.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
+
+/* ---------- MODAL ---------- */
+#modal-root{position:fixed;inset:0;pointer-events:none;z-index:2000}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;overflow-y:auto;padding:14px;pointer-events:auto}
+.modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:460px;margin:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal.wide{max-width:600px}
+.modal h3{font-size:19px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.grp{font-size:12px;font-weight:800;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;margin:14px 0 4px;display:flex;align-items:center;gap:6px}
+
+/* toast */
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5000;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center;width:90%;max-width:420px}
+.toast{background:#1f2937;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:tin .2s;display:flex;gap:8px;align-items:center}
+.toast.err{background:var(--danger)} .toast.ok{background:var(--success)} .toast.warn{background:var(--warn);color:#222}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}}
+.spinner{width:44px;height:44px;border:5px solid #e5e9f0;border-top-color:var(--primary);border-radius:50%;margin:30px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<svg id="sprite" width="0" height="0" style="position:absolute" aria-hidden="true"></svg>
+<div id="root">
+
+  <!-- PRIJAVA -->
+  <div id="login">
+    <div class="login-card">
+      <div class="logo"><i data-ic="calendarDays" data-c="lg"></i></div>
+      <h1>WII Urnik</h1>
+      <div class="sub">Urnik dela in razpoložljivost</div>
+      <label class="lbl">Uporabniško ime</label>
+      <input id="lg-user" class="inp" autocomplete="username" autocapitalize="none" placeholder="Uporabniško ime">
+      <label class="lbl">Geslo</label>
+      <input id="lg-pass" type="password" class="inp" autocomplete="current-password" placeholder="Geslo">
+      <button class="btn block" onclick="login()"><i data-ic="login"></i>Vpiši me</button>
+      <div class="err" id="lg-err"></div>
+      <div class="quick-title">Hitri dostop</div>
+      <div class="quick" id="lg-quick"><span class="muted">Nalaganje…</span></div>
+    </div>
+    <div class="ver">VERZIJA 1.0</div>
+  </div>
+
+  <!-- APLIKACIJA -->
+  <div id="app">
+    <aside id="side">
+      <div class="side-brand"><div class="logo"><i data-ic="calendarDays"></i></div>WII Urnik</div>
+      <nav id="snav"></nav>
+      <div class="side-user" id="side-user"></div>
+    </aside>
+    <div id="main">
+      <div id="topbar">
+        <div class="ttl" id="tb-title"></div>
+        <div class="uname" id="tb-user"></div>
+        <button class="tbtn adm" id="tb-set" onclick="go('settings')" title="Nastavitve"><i data-ic="settings"></i></button>
+      </div>
+      <div id="content"></div>
+    </div>
+    <nav id="bnav"></nav>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   FIREBASE (ista baza kot blagajna in pošta – zaposleni se berejo od tam)
+   ===================================================================== */
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const P = 'wii_db_v3/pos';      // blagajna: zaposleni (employees)
+const U = 'wii_db_v3/urnik';    // urnik: funkcije, vodje, dnevi (načrt, osnutek, objava), razpoložljivost
+
+/* =====================================================================
+   IKONE (SVG – brez emojijev)
+   ===================================================================== */
+const ICONS = {
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  calendarDays: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
+  calendarPlus: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 13v6M9 16h6"/>',
+  calendarEdit: '<path d="M21 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M19.4 14.6a1.9 1.9 0 0 1 2.7 2.7L17 22.4l-3.5.9.9-3.5Z"/>',
+  calendarX: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',
+  clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  login: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  users: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  chevL: '<path d="m15 18-6-6 6-6"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>',
+  chevD: '<path d="m6 9 6 6 6-6"/>',
+  chevU: '<path d="m18 15-6-6-6 6"/>',
+  arrowL: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M9.9 4.2A10 10 0 0 1 12 4c6.5 0 10 8 10 8a17 17 0 0 1-2.2 3.2M6.6 6.6A17 17 0 0 0 2 12s3.5 8 10 8a9.7 9.7 0 0 0 5.4-1.6M2 2l20 20M14.1 14.1a3 3 0 0 1-4.2-4.2"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  settings: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
+  note: '<path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6M7 13h10M7 17h6"/>',
+  alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  edit: '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  sunset: '<path d="M12 10V2M4.9 10.9l1.4 1.4M2 18h2M20 18h2M17.7 12.3l1.4-1.4M22 22H2M16 18a4 4 0 0 0-8 0M8 6l4 4 4-4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+  crown: '<path d="M2 18h20M3 7l4 4 5-7 5 7 4-4-2 11H5Z"/>',
+  /* funkcije */
+  register: '<rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V4h10v6M7 14h2M11 14h2M15 14h2M7 17.5h10"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/>',
+  package: '<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>',
+  truck: '<path d="M1 4h14v12H1zM15 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  sparkles: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/>',
+  coffee: '<path d="M17 8h1a4 4 0 0 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+  headset: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2ZM3 15a2 2 0 0 0 2 2h1v-5H5a2 2 0 0 0-2 2Z"/>',
+  tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9Z"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  utensils: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/>'
+};
+const FUNC_ICONS = ['register', 'mail', 'package', 'scan', 'truck', 'sparkles', 'coffee', 'headset', 'tag', 'card', 'briefcase', 'wrench', 'key', 'utensils', 'monitor', 'crown', 'star', 'users', 'shield', 'clipboard'];
+const PALETTE = ['#0a58ca', '#6f42c1', '#198754', '#dc3545', '#fd7e14', '#e0a800', '#0dcaf0', '#d63384', '#20c997', '#6c757d', '#212529', '#8b5a2b'];
+const ic = (n, c = '') => `<svg class="ico ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+function initIcons() {
+  $('sprite').innerHTML = Object.entries(ICONS).map(([k, v]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${v}</symbol>`).join('');
+  document.querySelectorAll('i[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, el.dataset.c || ''); });
+}
+
+/* =====================================================================
+   POMOŽNE FUNKCIJE
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const clone = o => JSON.parse(JSON.stringify(o || {}));
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
+const dk = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return dk(d); };
+const today = () => dk(new Date());
+const DOW = ['nedelja', 'ponedeljek', 'torek', 'sreda', 'četrtek', 'petek', 'sobota'];
+const DOW3 = ['NED', 'PON', 'TOR', 'SRE', 'ČET', 'PET', 'SOB'];
+const MONG = ['januarja', 'februarja', 'marca', 'aprila', 'maja', 'junija', 'julija', 'avgusta', 'septembra', 'oktobra', 'novembra', 'decembra'];
+const fmtDay = k => { const d = fromKey(k); return `${cap(DOW[d.getDay()])}, ${d.getDate()}. ${MONG[d.getMonth()]} ${d.getFullYear()}`; };
+const fmtShort = k => { const d = fromKey(k); return `${DOW3[d.getDay()].charAt(0) + DOW3[d.getDay()].slice(1).toLowerCase()} ${d.getDate()}. ${d.getMonth() + 1}.`; };
+const relDay = k => k === today() ? 'Danes' : k === addDays(today(), 1) ? 'Jutri' : k === addDays(today(), -1) ? 'Včeraj' : '';
+const fmtDT = iso => { if (!iso) return '-'; const d = new Date(iso); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} ob ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const mondayOf = k => { const d = fromKey(k), w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return dk(d); };
+const mins = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : 0; };
+const range = sh => { const a = mins(sh.start); let b = mins(sh.end); if (b <= a) b += 1440; return [a, b]; };
+const overlap = (x, y) => { const [a1, b1] = range(x), [a2, b2] = range(y); return a1 < b2 && a2 < b1; };
+const durTxt = m => `${Math.floor(m / 60)} h${m % 60 ? ' ' + pad(m % 60) + ' min' : ''}`;
+const shiftIcon = sh => { const h = Math.floor(mins(sh.start) / 60); return h >= 4 && h < 12 ? 'sun' : h >= 12 && h < 19 ? 'sunset' : 'moon'; };
+const tRange = sh => `${esc(sh.start || '--:--')} – ${esc(sh.end || '--:--')}`;
+function stable(o) { // stabilen JSON (urejeni ključi) za primerjavo osnutka in objave
+  if (o === null || typeof o !== 'object') return JSON.stringify(o ?? null);
+  if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
+  return '{' + Object.keys(o).filter(k => o[k] !== undefined && o[k] !== null && o[k] !== '').sort().map(k => JSON.stringify(k) + ':' + stable(o[k])).join(',') + '}';
+}
+
+function toast(msg, type = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + type;
+  t.innerHTML = ic(type === 'err' ? 'alert' : type === 'ok' ? 'checkCircle' : 'info') + '<span></span>';
+  t.querySelector('span').textContent = msg;
+  $('toast').appendChild(t); setTimeout(() => t.remove(), 3600);
+}
+function openModal(html, wide) {
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${html}</div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.close(); });
+  $('modal-root').appendChild(ov);
+  ov.close = () => ov.remove();
+  return ov;
+}
+function confirmBox(msg, yes, cb, danger = true) {
+  const ov = openModal(`<h3>${ic(danger ? 'alert' : 'help')}Potrditev</h3><p style="margin:10px 0 4px;font-size:16px">${msg}</p>
+    <div class="row"><button class="btn ghost" id="c-no">Ne</button><button class="btn ${danger ? 'red' : 'green'}" id="c-yes">${yes}</button></div>`);
+  ov.querySelector('#c-no').onclick = () => ov.close();
+  ov.querySelector('#c-yes').onclick = () => { ov.close(); cb(); };
+}
+
+/* =====================================================================
+   STANJE
+   ===================================================================== */
+const S = {
+  ready: {}, emp: null, employees: {}, functions: {}, managers: {}, days: {}, avail: {},
+  view: 'urnik', date: today(), mode: 'mine',
+  availDate: null, availDraft: null,
+  planDate: null, planDraft: null, planDirty: false,
+  editDate: null, showMtx: false
+};
+const isAdmin = () => !!S.emp && S.emp.role === 'admin';
+const isMgr = () => !!S.emp && (isAdmin() || !!S.managers[S.emp.id]);
+const me = () => S.emp ? S.emp.id : null;
+const empName = id => (S.employees[id] || {}).name || 'Neznan zaposleni';
+const fn = id => S.functions[id] || { id, name: 'Neznana funkcija', color: '#6c757d', icon: 'briefcase' };
+const funcOrder = (a, b) => ((fn(a).order ?? 99) - (fn(b).order ?? 99)) || fn(a).name.localeCompare(fn(b).name);
+const funcsSorted = () => Object.values(S.functions).filter(Boolean).sort((a, b) => funcOrder(a.id, b.id));
+const fBadge = (fid, extra = '') => { const f = fn(fid); return `<span class="fb" style="background:${f.color}1f;color:${f.color}">${ic(f.icon || 'briefcase', 'sm')}${esc(f.name)}${extra}</span>`; };
+const shiftsOf = obj => Object.values((obj && obj.shifts) || {}).filter(Boolean).sort((a, b) => mins(a.start) - mins(b.start) || (a.order || 0) - (b.order || 0));
+const needTotal = sh => Object.values(sh.needs || {}).reduce((s, n) => s + (+n || 0), 0);
+function slotsOf(sh) {
+  const out = [];
+  Object.keys(sh.needs || {}).sort(funcOrder).forEach(fid => { for (let i = 0; i < (+sh.needs[fid] || 0); i++) out.push({ key: fid + '_' + i, fid, i }); });
+  return out;
+}
+const dayOf = k => S.days[k] || {};
+const planOf = k => dayOf(k).plan || null;
+const pubOf = k => dayOf(k).pub || null;
+const availOf = (k, id) => ((S.avail[k] || {})[id]) || null;
+function myAssignments(k, id) { // [{sh, slot, a}]
+  const pub = pubOf(k); if (!pub) return [];
+  const out = [];
+  shiftsOf(pub).forEach(sh => {
+    const as = (pub.assign || {})[sh.id] || {};
+    Object.keys(as).forEach(sk => { const a = as[sk]; if (a && a.empId === id) out.push({ sh, sk, a }); });
+  });
+  return out;
+}
+// osnutek, ki bi se objavil (samo veljavna mesta)
+function buildPub(k) {
+  const day = dayOf(k), plan = day.plan; if (!plan) return null;
+  const draft = day.draft || {}, assign = {};
+  shiftsOf(plan).forEach(sh => {
+    const src = (draft.assign || {})[sh.id] || {}, dst = {};
+    slotsOf(sh).forEach(sl => { const a = src[sl.key]; if (a && a.empId && S.employees[a.empId]) dst[sl.key] = { empId: a.empId, fid: sl.fid, note: a.note || '' }; });
+    if (Object.keys(dst).length) assign[sh.id] = dst;
+  });
+  return { shifts: plan.shifts || {}, assign, note: draft.note || '' };
+}
+function pubState(k) { // 'none' | 'pub' | 'changed'
+  const pub = pubOf(k); if (!pub) return 'none';
+  const cand = buildPub(k); if (!cand) return 'pub';
+  return stable(cand) === stable({ shifts: pub.shifts, assign: pub.assign, note: pub.note }) ? 'pub' : 'changed';
+}
+
+/* ---------- Poslušanje baze ---------- */
+function listen(key, ref) {
+  ref.on('value', s => { S[key] = s.val() || {}; S.ready[key] = true; onData(key); },
+    err => toast('Napaka povezave z bazo: ' + err.message, 'err'));
+}
+function startListeners() {
+  const from = addDays(today(), -60);
+  listen('employees', db.ref(P + '/employees'));
+  listen('functions', db.ref(U + '/functions'));
+  listen('managers', db.ref(U + '/managers'));
+  listen('days', db.ref(U + '/days').orderByKey().startAt(from));
+  listen('avail', db.ref(U + '/avail').orderByKey().startAt(addDays(today(), -14)));
+}
+function onData(key) {
+  if (key === 'employees') {
+    if (S.emp) {
+      const e = S.employees[S.emp.id];
+      if (!e) { toast('Tvoj račun je bil odstranjen.', 'err'); logout(); return; }
+      S.emp = e;
+    }
+    renderLoginQuick();
+  }
+  if (key === 'functions') seedFunctions();
+  if (!S.emp) return;
+  if (key === 'managers' && !isMgr() && ['plan', 'edit', 'settings'].includes(S.view)) { S.planDirty = false; go('urnik', true); return; }
+  renderChrome();
+  // med tipkanjem ne prerišemo strani (da se vnos ne prekine)
+  const a = document.activeElement;
+  if (a && $('page') && $('page').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) { S.pendingRefresh = true; return; }
+  refreshView();
+}
+function seedFunctions() {
+  if (!S.ready.functions || Object.keys(S.functions).length) return;
+  db.ref(U + '/meta/seeded').transaction(v => v ? undefined : true, (e, ok) => {
+    if (!ok) return;
+    const up = {};
+    [['Blagajna', '#0a58ca', 'register'], ['Pošta', '#fd7e14', 'mail'], ['Oddaja pošiljk', '#198754', 'scan'], ['Skladišče', '#8b5a2b', 'package'],
+     ['Čiščenje', '#0dcaf0', 'sparkles'], ['Vodja izmene', '#6f42c1', 'crown']].forEach((f, i) => {
+      const id = db.ref(U + '/functions').push().key;
+      up[id] = { id, name: f[0], color: f[1], icon: f[2], order: i };
+    });
+    db.ref(U + '/functions').update(up);
+  });
+}
+
+/* =====================================================================
+   PRIJAVA / ODJAVA
+   ===================================================================== */
+function renderLoginQuick() {
+  const box = $('lg-quick'); if (!box) return;
+  if (!S.ready.employees) { box.innerHTML = '<span class="muted">Nalaganje…</span>'; return; }
+  box.innerHTML = Object.values(S.employees).filter(Boolean).sort(byName).map(e => `<button onclick="quickUser('${e.id}')">${esc(e.name)}</button>`).join('') || '<span class="muted">Ni uporabnikov</span>';
+}
+function quickUser(id) { const e = S.employees[id]; if (!e) return; $('lg-user').value = e.username; $('lg-pass').value = ''; $('lg-pass').focus(); }
+function login() {
+  const u = $('lg-user').value.trim().toLowerCase(), p = $('lg-pass').value;
+  if (!S.ready.employees) { $('lg-err').textContent = 'Baza se še nalaga…'; return; }
+  const e = Object.values(S.employees).find(x => x && (x.username || '').toLowerCase() === u && x.password === p);
+  if (!e) { $('lg-err').textContent = 'Napačno uporabniško ime ali geslo!'; $('lg-pass').value = ''; return; }
+  $('lg-err').textContent = '';
+  S.emp = e; try { localStorage.setItem('wii_urnik_emp', e.id); } catch (x) {}
+  $('lg-user').value = ''; $('lg-pass').value = '';
+  showApp();
+}
+function showApp() {
+  $('login').style.display = 'none'; $('app').style.display = 'flex';
+  S.date = today(); S.mode = 'mine'; go('urnik');
+}
+function logout() {
+  const doIt = () => {
+    S.emp = null; S.planDraft = null; S.planDirty = false; S.availDraft = null;
+    try { localStorage.removeItem('wii_urnik_emp'); } catch (x) {}
+    $('app').style.display = 'none'; $('login').style.display = 'flex';
+    $('modal-root').innerHTML = ''; renderLoginQuick();
+  };
+  if (S.planDirty) return confirmBox('Načrt dneva ni shranjen. Se res želiš odjaviti?', 'Odjava', doIt);
+  doIt();
+}
+
+/* =====================================================================
+   NAVIGACIJA
+   ===================================================================== */
+const TITLES = { urnik: ['calendarDays', 'Urnik'], avail: ['clipboard', 'Razpoložljivost'], availDay: ['clipboard', 'Razpoložljivost'], plan: ['calendarPlus', 'Načrtuj dan'], edit: ['calendarEdit', 'Uredi urnik'], settings: ['settings', 'Nastavitve'] };
+function badgeAvail() { // načrtovani prihodnji dnevi brez moje razpoložljivosti
+  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && shiftsOf(planOf(k)).length && !pubOf(k) && !availOf(k, me())).length;
+}
+function badgeEdit() {
+  return Object.keys(S.days).filter(k => k >= today() && planOf(k) && pubState(k) !== 'pub').length;
+}
+function navItems() {
+  const it = [['urnik', 'calendarDays', 'Urnik', 0], ['avail', 'clipboard', 'Razpoložljivost', badgeAvail(), 'wide']];
+  if (isMgr()) it.push(['sep', '', 'VODJA']), it.push(['plan', 'calendarPlus', 'Načrtuj dan', 0]), it.push(['edit', 'calendarEdit', 'Uredi urnik', badgeEdit()]);
+  if (isAdmin()) it.push(['settings', 'settings', 'Nastavitve', 0, 'nav-settings']);
+  return it;
+}
+function renderChrome() {
+  if (!S.emp) return;
+  const cur = S.view === 'availDay' ? 'avail' : S.view;
+  const items = navItems();
+  const btn = (t, side) => {
+    if (t[0] === 'sep') return side ? `<div class="sep">${t[2]}</div>` : '';
+    return `<button class="${cur === t[0] ? 'on' : ''} ${t[4] || ''}" onclick="go('${t[0]}')">${ic(t[1])}<span>${t[2]}</span>${t[3] ? `<span class="nbadge">${t[3]}</span>` : ''}</button>`;
+  };
+  $('snav').innerHTML = items.map(t => btn(t, true)).join('') + `<button onclick="logout()" style="margin-top:auto">${ic('logout')}<span>Odjava</span></button>`;
+  $('bnav').innerHTML = items.map(t => btn(t, false)).join('') + `<button onclick="logout()">${ic('logout')}<span>Odjava</span></button>`;
+  const role = isAdmin() ? 'administrator' : isMgr() ? 'vodja' : 'zaposleni';
+  $('tb-user').innerHTML = esc(S.emp.name) + '<br><span style="opacity:.8">' + role + '</span>';
+  $('side-user').innerHTML = `<b>${esc(S.emp.name)}</b>${role}`;
+  $('tb-set').style.visibility = isAdmin() ? 'visible' : 'hidden';
+  const t = TITLES[S.view] || TITLES.urnik;
+  $('tb-title').innerHTML = ic(t[0]) + `<span>${t[1]}</span>`;
+}
+function go(v, force) {
+  if (!force && S.view === 'plan' && v !== 'plan' && S.planDirty) return confirmBox('Načrt dneva ni shranjen. Zapustim brez shranjevanja?', 'Zapusti', () => { S.planDirty = false; go(v, true); });
+  if (['plan', 'edit'].includes(v) && !isMgr()) return toast('Ta del je dostopen samo vodjem.', 'err');
+  if (v === 'settings' && !isAdmin()) return toast('Ta del je dostopen samo administratorju.', 'err');
+  S.view = v;
+  const c = $('content'); c.innerHTML = '<div class="page" id="page"></div>'; c.scrollTop = 0;
+  renderChrome(); refreshView();
+}
+function refreshView() {
+  if (!S.emp || !$('page')) return;
+  const ready = S.ready.days && S.ready.functions && S.ready.avail;
+  if (!ready) { $('page').innerHTML = '<div class="spinner"></div>'; return; }
+  const f = { urnik: viewUrnik, avail: viewAvail, availDay: viewAvailDay, plan: viewPlan, edit: viewEdit, settings: viewSettings }[S.view];
+  if (f) f();
+}
+
+/* =====================================================================
+   URNIK (vsi)
+   ===================================================================== */
+function setDate(k) { S.date = k; viewUrnik(); }
+function viewUrnik() {
+  const k = S.date, pub = pubOf(k), plan = planOf(k), mon = mondayOf(k), id = me();
+  let weekMin = 0;
+  const week = [...Array(7)].map((_, i) => {
+    const d = addDays(mon, i), mine = myAssignments(d, id);
+    mine.forEach(m => { const [a, b] = range(m.sh); weekMin += b - a; });
+    return `<button class="${d === k ? 'on' : ''} ${d === today() ? 'today' : ''}" onclick="setDate('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}</b><i class="${mine.length ? 'y' : ''}"></i></button>`;
+  }).join('');
+  let h = `<div class="datebar">
+      <button class="iconbtn" onclick="setDate('${addDays(k, -7)}')" title="Prejšnji teden">${ic('chevL')}</button>
+      <div class="d"><b>${fmtDay(k)}</b><span>${relDay(k) || '&nbsp;'}</span></div>
+      <button class="iconbtn" onclick="setDate('${addDays(k, 7)}')" title="Naslednji teden">${ic('chevR')}</button>
+    </div>
+    <div class="week">${week}</div>
+    <div class="seg"><button class="${S.mode === 'mine' ? 'on' : ''}" onclick="S.mode='mine';viewUrnik()">${ic('user')}Moje izmene</button><button class="${S.mode === 'all' ? 'on' : ''}" onclick="S.mode='all';viewUrnik()">${ic('users')}Celoten urnik</button></div>`;
+  if (k !== today()) h = h.replace('<div class="week">', `<div style="text-align:center;margin:-4px 0 10px"><button class="btn sm ghost" onclick="setDate(today())">${ic('calendar', 'sm')}Danes</button></div><div class="week">`);
+
+  if (!pub) {
+    h += `<div class="box empty">${ic('calendarX', 'xl')}<b>Urnik za ta dan še ni objavljen</b>
+      ${plan && !availOf(k, id) && k >= today() ? `<div style="margin:8px 0 12px">Vodja že načrtuje ta dan – oddaj svojo razpoložljivost.</div><button class="btn" onclick="openAvail('${k}')">${ic('clipboard')}Oddaj razpoložljivost</button>` : ''}
+      ${plan && isMgr() ? `<div style="margin-top:12px"><button class="btn out" onclick="S.editDate='${k}';go('edit')">${ic('calendarEdit')}Uredi urnik</button></div>` : ''}</div>`;
+  } else {
+    if (pub.note) h += `<div class="notice info">${ic('note')}<div>${esc(pub.note)}</div></div>`;
+    if (S.mode === 'mine') {
+      const mine = myAssignments(k, id);
+      h += mine.length ? mine.map(({ sh, sk, a }) => {
+        const [x, y] = range(sh), others = Object.values((pub.assign || {})[sh.id] || {}).filter(o => o && o.empId !== id);
+        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('hourglass', 'sm')}${durTxt(y - x)}</div></div>${fBadge(a.fid)}</div>
+          <div class="shift-b"><div class="myshift" style="padding:10px 0">${ic('clock', 'lg')}<div class="time">${tRange(sh)}</div></div>
+          ${a.note ? `<div class="notice" style="margin:4px 0 10px">${ic('note')}<div>${esc(a.note)}</div></div>` : ''}
+          <div class="lbl">Sodelavci na izmeni</div>
+          ${others.length ? others.map(o => `<div class="slot"><div class="who">${esc(empName(o.empId))}</div>${fBadge(o.fid)}</div>`).join('') : '<div class="muted" style="padding:6px 0">Na tej izmeni si sam/a.</div>'}</div></div>`;
+      }).join('') : `<div class="box empty">${ic('coffee', 'xl')}<b>Ta dan nisi razporejen/a</b>Prost dan.</div>`;
+      // prihajajoče izmene
+      const up = Object.keys(S.days).filter(d => d >= today()).sort().flatMap(d => myAssignments(d, id).map(m => Object.assign({ d }, m))).slice(0, 12);
+      h += `<div class="box"><h3>${ic('calendarDays')}Moje prihajajoče izmene</h3>
+        ${weekMin ? `<div class="kv"><span>Ta teden skupaj</span><b>${durTxt(weekMin)}</b></div>` : ''}
+        ${up.map(m => `<button class="list-row" onclick="setDate('${m.d}')"><div class="si" style="color:var(--primary)">${ic(shiftIcon(m.sh))}</div><div class="grow"><div class="t">${fmtShort(m.d)} ${relDay(m.d) ? '· ' + relDay(m.d) : ''}</div><div class="s">${tRange(m.sh)} · ${esc(m.sh.name || 'Izmena')}</div></div>${fBadge(m.a.fid)}</button>`).join('') || '<div class="muted">Ni objavljenih prihajajočih izmen.</div>'}</div>`;
+    } else {
+      const shifts = shiftsOf(pub);
+      h += shifts.map(sh => {
+        const as = (pub.assign || {})[sh.id] || {}, sl = slotsOf(sh);
+        const filled = sl.filter(s => as[s.key]).length;
+        return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
+          <div class="shift-b">${sl.map(s => {
+            const a = as[s.key];
+            if (!a) return `<div class="slot">${fBadge(s.fid)}<div class="who free">prosto mesto</div></div>`;
+            const mine = a.empId === me();
+            return `<div class="slot ${mine ? 'me' : ''}">${fBadge(s.fid)}<div class="who">${esc(empName(a.empId))}${mine ? ' <span class="status bl">Ti</span>' : ''}${a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}</div></div>`;
+          }).join('') || '<div class="muted" style="padding:8px 0">Ni zasedenih mest.</div>'}</div></div>`;
+      }).join('') || `<div class="box empty">${ic('calendarX', 'xl')}<b>Ni izmen</b></div>`;
+    }
+    h += `<div class="muted" style="text-align:center;margin-top:4px">Objavljeno ${fmtDT(pub.at)}${pub.by ? ' · ' + esc(pub.by) : ''}</div>`;
+  }
+  $('page').innerHTML = h;
+}
+
+/* =====================================================================
+   RAZPOLOŽLJIVOST (vsi)
+   ===================================================================== */
+function viewAvail() {
+  const days = Object.keys(S.days).filter(k => k >= today() && planOf(k) && shiftsOf(planOf(k)).length).sort();
+  let h = `<div class="notice info">${ic('info')}<div>Vodja za vsak dan določi, koliko izmen potrebujemo in katere funkcije. Za vsako izmeno označi, kaj lahko opravljaš – ali pa da ne moreš delati.</div></div>`;
+  h += `<div class="box">${days.map(k => {
+    const a = availOf(k, me()), pub = pubOf(k), sh = shiftsOf(planOf(k));
+    const st = pub ? `<span class="status bl">${ic('eye', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
+    return `<button class="list-row" onclick="openAvail('${k}')"><div class="si" style="width:44px;text-align:center"><b style="font-size:20px;display:block;line-height:1">${fromKey(k).getDate()}</b><small class="muted" style="font-size:11px;font-weight:700">${DOW3[fromKey(k).getDay()]}</small></div>
+      <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${sh.length} ${sh.length === 1 ? 'izmena' : sh.length === 2 ? 'izmeni' : sh.length < 5 ? 'izmene' : 'izmen'} · ${sh.map(s => tRange(s)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
+  }).join('') || `<div class="empty">${ic('calendarDays', 'xl')}<b>Ni načrtovanih dni</b>Ko vodja načrtuje nove dni, se bodo pojavili tukaj.</div>`}</div>`;
+  $('page').innerHTML = h;
+}
+function openAvail(k) {
+  S.availDate = k;
+  const a = availOf(k, me());
+  S.availDraft = a ? clone({ shifts: a.shifts || {}, note: a.note || '' }) : { shifts: {}, note: '' };
+  go('availDay');
+}
+function viewAvailDay() {
+  const k = S.availDate, plan = planOf(k);
+  if (!plan) { $('page').innerHTML = `<div class="box empty">${ic('calendarX', 'xl')}<b>Načrt tega dne ne obstaja več</b><button class="btn" style="margin-top:12px" onclick="go('avail')">Nazaj</button></div>`; return; }
+  const D = S.availDraft, sent = availOf(k, me());
+  let h = `<button class="btn sm ghost" style="margin-bottom:12px" onclick="go('avail')">${ic('arrowL', 'sm')}Nazaj na seznam</button>
+    <div class="box" style="text-align:center"><b style="font-size:19px">${fmtDay(k)}</b><div class="muted">${relDay(k) || ''}</div>
+    ${sent ? `<div style="margin-top:8px"><span class="status ok">${ic('check', 'sm')}Oddano ${fmtDT(sent.at)}</span></div>` : ''}</div>`;
+  if (pubOf(k)) h += `<div class="notice">${ic('alert')}<div>Urnik za ta dan je že objavljen. Spremembo bo vodja videl, urnik pa bo spremenil le, če bo to potrebno.</div></div>`;
+  h += shiftsOf(plan).map(sh => {
+    const v = D.shifts[sh.id] || {}, off = !!v.off, fids = Object.keys(sh.needs || {}).filter(f => +sh.needs[f] > 0).sort(funcOrder);
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div>
+      ${off ? `<span class="status no">${ic('ban', 'sm')}Ne morem</span>` : Object.keys(v.funcs || {}).length ? `<span class="status ok">${ic('check', 'sm')}Lahko</span>` : `<span class="status gr">${ic('help', 'sm')}Ni izbrano</span>`}</div>
+      <div class="shift-b"><div class="lbl">Na izmeni potrebujemo</div>
+      <div class="needs">${fids.map(f => fBadge(f, ` × ${sh.needs[f]}`)).join('')}</div>
+      <div class="lbl">Kaj lahko opravljam</div>
+      <div class="opts">${fids.map(f => { const on = !off && !!(v.funcs || {})[f], c = fn(f).color; return `<button class="opt ${on ? 'on' : ''}" style="${on ? `background:${c}1a;color:${c};border-color:${c}` : ''}" onclick="avToggle('${sh.id}','${f}')"><span class="ck">${ic('check')}</span>${ic(fn(f).icon || 'briefcase')}${esc(fn(f).name)}</button>`; }).join('')}
+      ${fids.length > 1 ? `<button class="opt" onclick="avAll('${sh.id}')">${ic('layers')}Vse</button>` : ''}
+      <button class="opt off ${off ? 'on' : ''}" onclick="avOff('${sh.id}')">${ic('ban')}Ne morem delati</button></div></div></div>`;
+  }).join('');
+  h += `<div class="box"><label class="lbl">Opomba za vodjo (neobvezno)</label><textarea id="av-note" class="inp" maxlength="300" placeholder="npr. lahko šele od 9:00 naprej"></textarea></div>
+    <div class="sticky"><button class="btn green" onclick="avSave()">${ic('send')}Shrani in pošlji vodji</button></div>`;
+  $('page').innerHTML = h;
+  const n = $('av-note'); n.value = D.note || ''; n.addEventListener('input', () => { S.availDraft.note = n.value; });
+}
+function avToggle(sid, f) {
+  const v = S.availDraft.shifts[sid] = S.availDraft.shifts[sid] || {};
+  delete v.off; v.funcs = v.funcs || {};
+  if (v.funcs[f]) delete v.funcs[f]; else v.funcs[f] = true;
+  keepScroll(viewAvailDay);
+}
+function avAll(sid) {
+  const sh = (planOf(S.availDate).shifts || {})[sid]; if (!sh) return;
+  const funcs = {}; Object.keys(sh.needs || {}).forEach(f => { if (+sh.needs[f] > 0) funcs[f] = true; });
+  S.availDraft.shifts[sid] = { funcs };
+  keepScroll(viewAvailDay);
+}
+function avOff(sid) {
+  const v = S.availDraft.shifts[sid];
+  S.availDraft.shifts[sid] = v && v.off ? {} : { off: true };
+  keepScroll(viewAvailDay);
+}
+function keepScroll(fnc) { const c = $('content'), y = c.scrollTop; fnc(); c.scrollTop = y; }
+function avSave() {
+  const k = S.availDate, plan = planOf(k); if (!plan) return;
+  const D = S.availDraft, out = {};
+  for (const sh of shiftsOf(plan)) {
+    const v = D.shifts[sh.id] || {};
+    const funcs = {}; Object.keys(v.funcs || {}).forEach(f => { if ((sh.needs || {})[f]) funcs[f] = true; });
+    if (v.off) out[sh.id] = { off: true };
+    else if (Object.keys(funcs).length) out[sh.id] = { funcs };
+    else return toast(`Izberi funkcije ali »Ne morem delati« za izmeno ${sh.name || ''} (${sh.start}–${sh.end}).`, 'err');
+  }
+  db.ref(`${U}/avail/${k}/${me()}`).set({ at: new Date().toISOString(), empName: S.emp.name, note: (D.note || '').trim(), shifts: out })
+    .then(() => { toast('Razpoložljivost je shranjena in poslana vodji.', 'ok'); go('avail'); })
+    .catch(e => toast('Napaka: ' + e.message, 'err'));
+}
+
+/* =====================================================================
+   NAČRTUJ DAN (vodja)
+   ===================================================================== */
+function defaultPlanDate() {
+  for (let i = 0; i < 60; i++) { const d = addDays(today(), i); if (!planOf(d)) return d; }
+  return today();
+}
+function loadPlan(k) {
+  S.planDate = k;
+  const p = planOf(k);
+  S.planDraft = p ? clone({ shifts: p.shifts || {} }) : { shifts: {} };
+  S.planDirty = false;
+}
+function planPick(k) {
+  if (!k) return;
+  const doIt = () => { loadPlan(k); viewPlan(); };
+  if (S.planDirty) return confirmBox('Načrt ni shranjen. Zamenjam dan brez shranjevanja?', 'Zamenjaj', doIt);
+  doIt();
+}
+function dayStrip(cur, onPick, from, n) {
+  return `<div class="strip">${[...Array(n)].map((_, i) => {
+    const d = addDays(from, i), p = planOf(d), ps = p ? pubState(d) : '';
+    const dots = (p ? `<em style="background:var(--primary)"></em>` : '') + (ps === 'pub' ? `<em style="background:var(--success)"></em>` : ps === 'changed' ? `<em style="background:var(--warn)"></em>` : '');
+    return `<button class="${d === cur ? 'on' : ''}" onclick="${onPick}('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}.${fromKey(d).getMonth() + 1}.</b><i>${dots}</i></button>`;
+  }).join('')}</div>`;
+}
+function viewPlan() {
+  if (!S.planDate) S.planDate = defaultPlanDate();
+  if (!S.planDirty || !S.planDraft) loadPlan(S.planDate);
+  const k = S.planDate, D = S.planDraft, saved = planOf(k), shifts = shiftsOf(D);
+  const nAvail = Object.keys(S.avail[k] || {}).length;
+  let h = `<div class="box"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><label class="lbl">Datum</label><input type="date" class="inp sm" id="pl-date" value="${k}" onchange="planPick(this.value)"></div>
+      <button class="btn sm ghost" onclick="manageFunctions()">${ic('briefcase', 'sm')}Funkcije</button>
+      <button class="btn sm ghost" onclick="copyPlanDlg()">${ic('copy', 'sm')}Kopiraj iz dne…</button></div>
+      <div style="margin-top:12px">${dayStrip(k, 'planPick', today(), 21)}</div>
+      <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> načrtovano</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span></div></div>
+    <h2 style="font-size:19px;margin:4px 2px 10px">${fmtDay(k)} ${relDay(k) ? `<span class="status bl">${relDay(k)}</span>` : ''} ${saved ? `<span class="status ok">${ic('check', 'sm')}shranjeno</span>` : '<span class="status gr">nov načrt</span>'} ${S.planDirty ? `<span class="status wr">${ic('edit', 'sm')}neshranjene spremembe</span>` : ''}</h2>`;
+  if (k < today()) h += `<div class="notice">${ic('alert')}<div>Ta dan je že minil.</div></div>`;
+  if (pubOf(k)) h += `<div class="notice">${ic('info')}<div>Urnik za ta dan je že objavljen. Po spremembi načrta ga v UREDI URNIK ponovno objavi.</div></div>`;
+  if (nAvail) h += `<div class="notice info">${ic('users')}<div>Razpoložljivost je oddalo že ${nAvail} zaposlenih. Če izmeno izbrišeš, se izgubijo njihovi odgovori za to izmeno.</div></div>`;
+
+  h += shifts.map(sh => {
+    const fids = Object.keys(sh.needs || {}).sort(funcOrder), free = funcsSorted().filter(f => !(sh.needs || {})[f.id]);
+    const [a, b] = range(sh);
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div>
+        <div class="grow"><input class="inp sm" style="font-weight:700" maxlength="40" value="${esc(sh.name || '')}" placeholder="Ime izmene" oninput="plSet('${sh.id}','name',this.value)"></div>
+        <button class="iconbtn red" title="Izbriši izmeno" onclick="plDel('${sh.id}')">${ic('trash')}</button></div>
+      <div class="shift-b">
+        <div class="times" style="margin-top:8px"><div><label class="lbl">${ic('clock', 'sm')} Začetek</label><input type="time" class="inp sm" value="${esc(sh.start)}" onchange="plSet('${sh.id}','start',this.value,1)"></div>
+        <div><label class="lbl">Konec</label><input type="time" class="inp sm" value="${esc(sh.end)}" onchange="plSet('${sh.id}','end',this.value,1)"></div></div>
+        <div class="muted" style="margin:6px 0 4px;font-size:13px">${ic('hourglass', 'sm')} ${durTxt(b - a)}${mins(sh.end) <= mins(sh.start) ? ' · konča se naslednji dan' : ''}</div>
+        <div class="lbl" style="margin-top:10px">Funkcije na izmeni · skupaj ${needTotal(sh)} ${needTotal(sh) === 1 ? 'oseba' : needTotal(sh) === 2 ? 'osebi' : needTotal(sh) < 5 ? 'osebe' : 'oseb'}</div>
+        ${fids.map(f => `<div class="prow"><div class="grow">${fBadge(f)}</div><div class="step"><button onclick="plNeed('${sh.id}','${f}',-1)">${ic('minus')}</button><b>${sh.needs[f]}</b><button onclick="plNeed('${sh.id}','${f}',1)">${ic('plus')}</button></div></div>`).join('') || '<div class="muted" style="padding:6px 0">Dodaj vsaj eno funkcijo.</div>'}
+        ${free.length ? `<div class="addf">${free.map(f => `<button onclick="plNeed('${sh.id}','${f.id}',1)">${ic('plus', 'sm')}${ic(f.icon || 'briefcase', 'sm')}${esc(f.name)}</button>`).join('')}</div>` : ''}
+      </div></div>`;
+  }).join('') || `<div class="box empty">${ic('calendarPlus', 'xl')}<b>Ta dan še nima izmen</b>Dodaj prvo izmeno spodaj.</div>`;
+
+  h += `<button class="btn out block" style="margin-bottom:14px" onclick="addShiftDlg()">${ic('plus')}Dodaj izmeno</button>
+    <div class="sticky"><button class="btn green" onclick="savePlan()">${ic('save')}Shrani načrt</button>${saved ? `<button class="btn red" style="flex:0 0 auto" onclick="delPlan()" title="Izbriši načrt dneva">${ic('trash')}</button>` : ''}</div>`;
+  $('page').innerHTML = h;
+}
+function plDirty() { S.planDirty = true; }
+function plSet(sid, key, val, rerender) {
+  const sh = S.planDraft.shifts[sid]; if (!sh) return;
+  sh[key] = val; plDirty();
+  if (rerender) keepScroll(viewPlan);
+}
+function plNeed(sid, f, d) {
+  const sh = S.planDraft.shifts[sid]; if (!sh) return;
+  sh.needs = sh.needs || {};
+  const n = Math.max(0, Math.min(30, (+sh.needs[f] || 0) + d));
+  if (n) sh.needs[f] = n; else delete sh.needs[f];
+  plDirty(); keepScroll(viewPlan);
+}
+function plDel(sid) {
+  const sh = S.planDraft.shifts[sid]; if (!sh) return;
+  confirmBox(`Izbrišem izmeno <b>${esc(sh.name || 'Izmena')}</b> (${tRange(sh)})?`, 'Izbriši', () => { delete S.planDraft.shifts[sid]; plDirty(); keepScroll(viewPlan); });
+}
+const PRESETS = [['Jutranja izmena', '07:00', '15:00'], ['Dopoldanska izmena', '08:00', '14:00'], ['Popoldanska izmena', '15:00', '23:00'], ['Nočna izmena', '23:00', '07:00']];
+function addShiftDlg() {
+  const ov = openModal(`<h3>${ic('plus')}Nova izmena</h3><div class="muted">Izberi predlogo ali vpiši po meri.</div>
+    <div style="margin-top:12px">${PRESETS.map((p, i) => `<button class="list-row" data-p="${i}"><span class="si" style="color:var(--primary)">${ic(shiftIcon({ start: p[1] }))}</span><span class="grow"><span class="t" style="display:block">${p[0]}</span><span class="s">${p[1]} – ${p[2]}</span></span>${ic('chevR')}</button>`).join('')}</div>
+    <div class="grp">${ic('edit', 'sm')}Po meri</div>
+    <input id="ns-name" class="inp" maxlength="40" placeholder="Ime izmene (npr. Vikend)">
+    <div class="times"><input id="ns-s" type="time" class="inp" value="09:00"><input id="ns-e" type="time" class="inp" value="17:00"></div>
+    <div class="row"><button class="btn ghost" id="ns-x">Prekliči</button><button class="btn green" id="ns-ok">${ic('plus')}Dodaj</button></div>`);
+  const add = (name, s, e) => {
+    if (!s || !e) return toast('Vpiši začetek in konec izmene.', 'err');
+    const id = db.ref(U).push().key;
+    S.planDraft.shifts[id] = { id, name: name || 'Izmena', start: s, end: e, needs: {}, order: Date.now() };
+    plDirty(); ov.close(); viewPlan();
+    setTimeout(() => { const c = $('content'); c.scrollTop = c.scrollHeight; }, 30);
+  };
+  ov.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const p = PRESETS[+b.dataset.p]; add(p[0], p[1], p[2]); });
+  ov.querySelector('#ns-x').onclick = () => ov.close();
+  ov.querySelector('#ns-ok').onclick = () => add(ov.querySelector('#ns-name').value.trim(), ov.querySelector('#ns-s').value, ov.querySelector('#ns-e').value);
+}
+function copyPlanDlg() {
+  const src = Object.keys(S.days).filter(d => planOf(d) && d !== S.planDate).sort().reverse().slice(0, 30);
+  const ov = openModal(`<h3>${ic('copy')}Kopiraj načrt</h3><div class="muted">Izmene in funkcije izbranega dne se prenesejo na ${fmtDay(S.planDate)}. Trenutne izmene tega dne se zamenjajo.</div>
+    <div style="margin-top:10px;max-height:50vh;overflow-y:auto">${src.map(d => `<button class="list-row" data-d="${d}"><span class="grow"><span class="t" style="display:block">${fmtDay(d)}</span><span class="s">${shiftsOf(planOf(d)).map(s => esc(s.name) + ' ' + tRange(s)).join(' · ')}</span></span>${ic('chevR')}</button>`).join('') || '<div class="muted">Ni drugih načrtovanih dni.</div>'}</div>
+    <button class="btn ghost block" style="margin-top:12px" id="cp-x">Zapri</button>`);
+  ov.querySelector('#cp-x').onclick = () => ov.close();
+  ov.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+    const shifts = {};
+    shiftsOf(planOf(b.dataset.d)).forEach((sh, i) => { const id = db.ref(U).push().key; shifts[id] = Object.assign(clone(sh), { id, order: i }); });
+    S.planDraft = { shifts }; plDirty(); ov.close(); viewPlan(); toast('Načrt prekopiran – ne pozabi shraniti.', 'ok');
+  });
+}
+function savePlan() {
+  const k = S.planDate, shifts = shiftsOf(S.planDraft);
+  if (!shifts.length) return toast('Dodaj vsaj eno izmeno.', 'err');
+  for (const sh of shifts) {
+    if (!sh.start || !sh.end) return toast(`Izmena »${sh.name}« nima vpisanega časa.`, 'err');
+    if (!needTotal(sh)) return toast(`Izmena »${sh.name}« nima nobene funkcije.`, 'err');
+  }
+  const out = {};
+  shifts.forEach((sh, i) => { out[sh.id] = { id: sh.id, name: (sh.name || 'Izmena').trim() || 'Izmena', start: sh.start, end: sh.end, needs: sh.needs, order: i }; });
+  db.ref(`${U}/days/${k}/plan`).set({ shifts: out, by: S.emp.name, at: new Date().toISOString() })
+    .then(() => { S.planDirty = false; toast('Načrt dneva shranjen. Zaposleni lahko oddajo razpoložljivost.', 'ok'); loadPlan(k); viewPlan(); renderChrome(); })
+    .catch(e => toast('Napaka: ' + e.message, 'err'));
+}
+function delPlan() {
+  const k = S.planDate;
+  confirmBox(`Izbrišem celoten načrt za <b>${fmtDay(k)}</b>? Izbrišejo se tudi razporeditev, objavljen urnik in oddane razpoložljivosti.`, 'Izbriši', () => {
+    const up = {}; up['days/' + k] = null; up['avail/' + k] = null;
+    db.ref(U).update(up).then(() => { toast('Načrt izbrisan.', 'ok'); loadPlan(k); viewPlan(); }).catch(e => toast('Napaka: ' + e.message, 'err'));
+  });
+}
+
+/* ---------- Funkcije ---------- */
+function manageFunctions() {
+  const ov = openModal('', true);
+  const draw = () => {
+    ov.querySelector('.modal').innerHTML = `<h3>${ic('briefcase')}Funkcije</h3><div class="muted">Funkcije, ki jih lahko potrebuješ na izmeni.</div>
+      <div style="margin-top:10px">${funcsSorted().map(f => `<div class="list-row"><div class="grow">${fBadge(f.id)}</div><button class="iconbtn" data-e="${f.id}" title="Uredi">${ic('edit')}</button><button class="iconbtn red" data-d="${f.id}" title="Izbriši">${ic('trash')}</button></div>`).join('') || '<div class="muted">Ni funkcij.</div>'}</div>
+      <div class="row"><button class="btn ghost" id="mf-x">Zapri</button><button class="btn green" id="mf-n">${ic('plus')}Nova funkcija</button></div>`;
+    ov.querySelector('#mf-x').onclick = () => ov.close();
+    ov.querySelector('#mf-n').onclick = () => editFunction(null, draw);
+    ov.querySelectorAll('[data-e]').forEach(b => b.onclick = () => editFunction(b.dataset.e, draw));
+    ov.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+      const f = fn(b.dataset.d);
+      confirmBox(`Izbrišem funkcijo <b>${esc(f.name)}</b>? V obstoječih načrtih bo prikazana kot »Neznana funkcija«.`, 'Izbriši', () => db.ref(U + '/functions/' + f.id).remove().then(draw));
+    });
+  };
+  draw();
+}
+function editFunction(id, after) {
+  const f = id ? S.functions[id] : null;
+  let col = f ? f.color : PALETTE[0], icon = f ? f.icon : 'briefcase';
+  const ov = openModal(`<h3>${ic(f ? 'edit' : 'plus')}${f ? 'Uredi funkcijo' : 'Nova funkcija'}</h3>
+    <label class="lbl">Naziv</label><input id="fe-n" class="inp" maxlength="30" value="${esc(f ? f.name : '')}" placeholder="npr. Blagajna">
+    <label class="lbl">Barva</label><div class="swatches" id="fe-c"></div>
+    <label class="lbl">Ikona</label><div class="icgrid" id="fe-i"></div>
+    <div class="row"><button class="btn ghost" id="fe-x">Prekliči</button><button class="btn green" id="fe-ok">${ic('save')}Shrani</button></div>`);
+  const draw = () => {
+    ov.querySelector('#fe-c').innerHTML = PALETTE.map(c => `<button data-c="${c}" class="${c === col ? 'on' : ''}" style="background:${c}"></button>`).join('');
+    ov.querySelector('#fe-i').innerHTML = FUNC_ICONS.map(n => `<button data-i="${n}" class="${n === icon ? 'on' : ''}" style="${n === icon ? `color:${col};border-color:${col};background:${col}1a` : ''}">${ic(n)}</button>`).join('');
+  };
+  ov.querySelector('#fe-c').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { col = b.dataset.c; draw(); } });
+  ov.querySelector('#fe-i').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) { icon = b.dataset.i; draw(); } });
+  ov.querySelector('#fe-x').onclick = () => ov.close();
+  ov.querySelector('#fe-ok').onclick = () => {
+    const name = ov.querySelector('#fe-n').value.trim();
+    if (!name) return toast('Vpiši naziv funkcije.', 'err');
+    if (funcsSorted().some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())) return toast('Funkcija s tem nazivom že obstaja.', 'err');
+    const fid = id || db.ref(U + '/functions').push().key;
+    const order = f ? (f.order ?? 99) : funcsSorted().length;
+    db.ref(U + '/functions/' + fid).set({ id: fid, name, color: col, icon, order }).then(() => { ov.close(); toast('Shranjeno', 'ok'); if (after) setTimeout(after, 50); });
+  };
+  draw();
+  setTimeout(() => ov.querySelector('#fe-n').focus(), 50);
+}
+
+/* =====================================================================
+   UREDI URNIK (vodja)
+   ===================================================================== */
+function defaultEditDate() {
+  const fut = Object.keys(S.days).filter(k => k >= today() && planOf(k)).sort();
+  return fut.find(k => pubState(k) !== 'pub') || fut[0] || today();
+}
+function editPick(k) { if (k) { S.editDate = k; viewEdit(); } }
+function availFor(k, empId, sid) { const a = availOf(k, empId); return a ? ((a.shifts || {})[sid] || null) : null; }
+function viewEdit() {
+  if (!S.editDate) S.editDate = defaultEditDate();
+  const k = S.editDate, plan = planOf(k), day = dayOf(k), draft = day.draft || {};
+  const emps = Object.values(S.employees).filter(Boolean).sort(byName);
+  const planned = Object.keys(S.days).filter(d => planOf(d) && d >= addDays(today(), -7)).sort();
+  let h = `<div class="box"><div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><div style="flex:1;min-width:200px"><label class="lbl">Dan</label><input type="date" class="inp sm" value="${k}" onchange="editPick(this.value)"></div></div>
+    ${planned.length ? `<div style="margin-top:12px" class="strip">${planned.map(d => { const ps = pubState(d); return `<button class="${d === k ? 'on' : ''}" onclick="editPick('${d}')"><small>${DOW3[fromKey(d).getDay()]}</small><b>${fromKey(d).getDate()}.${fromKey(d).getMonth() + 1}.</b><i><em style="background:${ps === 'pub' ? 'var(--success)' : ps === 'changed' ? 'var(--warn)' : 'var(--primary)'}"></em></i></button>`; }).join('')}</div>
+    <div class="muted" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px"><span><span class="dot" style="background:var(--primary)"></span> ni objavljeno</span><span><span class="dot" style="background:var(--success)"></span> objavljeno</span><span><span class="dot" style="background:var(--warn)"></span> neobjavljene spremembe</span></div>` : ''}</div>
+    <h2 style="font-size:19px;margin:4px 2px 10px">${fmtDay(k)} ${relDay(k) ? `<span class="status bl">${relDay(k)}</span>` : ''}</h2>`;
+  if (!plan) {
+    h += `<div class="box empty">${ic('calendarX', 'xl')}<b>Za ta dan še ni načrta</b>Najprej določi izmene in funkcije.<div style="margin-top:12px"><button class="btn" onclick="S.planDraft=null;S.planDirty=false;S.planDate='${k}';go('plan')">${ic('calendarPlus')}Načrtuj dan</button></div></div>`;
+    $('page').innerHTML = h; return;
+  }
+  const ps = pubState(k), pub = pubOf(k), shifts = shiftsOf(plan);
+  const nSent = emps.filter(e => availOf(k, e.id)).length;
+  h += ps === 'pub' ? `<div class="notice ok">${ic('checkCircle')}<div>Urnik je objavljen (${fmtDT(pub.at)}). Zaposleni ga vidijo.</div></div>`
+    : ps === 'changed' ? `<div class="notice">${ic('alert')}<div>Imaš neobjavljene spremembe – zaposleni vidijo staro različico (objavljeno ${fmtDT(pub.at)}).</div></div>`
+    : `<div class="notice info">${ic('eyeOff')}<div>Urnik še ni objavljen. Zaposleni ga ne vidijo, dokler ga ne objaviš.</div></div>`;
+
+  // razpoložljivost – tabela
+  h += `<div class="box"><button class="list-row" style="padding:0;border:none" onclick="S.showMtx=!S.showMtx;keepScroll(viewEdit)"><span class="grow"><span class="t" style="display:flex;align-items:center;gap:8px">${ic('users')}Razpoložljivost zaposlenih</span><span class="s">Oddalo ${nSent} od ${emps.length}</span></span><span class="status ${nSent >= emps.length ? 'ok' : 'wr'}">${nSent}/${emps.length}</span>${ic(S.showMtx ? 'chevU' : 'chevD')}</button>
+    ${S.showMtx ? `<div class="mtxw" style="margin-top:12px"><table class="mtx"><thead><tr><th>Zaposleni</th>${shifts.map(sh => `<th>${esc(sh.name)}<br>${tRange(sh)}</th>`).join('')}</tr></thead><tbody>
+      ${emps.map(e => { const a = availOf(k, e.id); return `<tr><td><b>${esc(e.name)}</b>${a && a.note ? `<div class="muted" style="font-size:12px">${ic('note', 'sm')} ${esc(a.note)}</div>` : ''}</td>${shifts.map(sh => {
+        const v = availFor(k, e.id, sh.id);
+        if (!v) return `<td title="Ni oddal"><span style="color:#b8c0cc">${ic('help', 'sm')}</span></td>`;
+        if (v.off) return `<td title="Ne more"><span style="color:var(--danger)">${ic('ban', 'sm')}</span></td>`;
+        const fs = Object.keys(v.funcs || {}).sort(funcOrder);
+        return `<td>${fs.map(f => `<span class="fi" title="${esc(fn(f).name)}" style="background:${fn(f).color}22;color:${fn(f).color}">${ic(fn(f).icon || 'briefcase')}</span>`).join('') || `<span style="color:#b8c0cc">${ic('help', 'sm')}</span>`}</td>`;
+      }).join('')}</tr>`; }).join('')}</tbody></table>
+      <div class="muted" style="margin-top:8px;font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap"><span>${ic('ban', 'sm')} ne more</span><span>${ic('help', 'sm')} ni oddal</span><span>ikone = funkcije, ki jih lahko opravlja</span></div></div>` : ''}</div>`;
+
+  // izmene in mesta
+  h += shifts.map(sh => {
+    const as = (draft.assign || {})[sh.id] || {}, sl = slotsOf(sh), filled = sl.filter(s => as[s.key] && S.employees[as[s.key].empId]).length;
+    return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name)}</div><div class="s">${ic('clock', 'sm')}${tRange(sh)}</div></div><span class="status ${filled >= sl.length ? 'ok' : 'wr'}">${ic('users', 'sm')}${filled}/${sl.length}</span></div>
+      <div class="shift-b">${sl.map(s => {
+        const a = as[s.key], e = a && S.employees[a.empId];
+        let dotc = '';
+        if (e) { const v = availFor(k, e.id, sh.id); dotc = !v ? '#b8c0cc' : v.off ? 'var(--danger)' : (v.funcs || {})[s.fid] ? 'var(--success)' : 'var(--warn)'; }
+        return `<div class="slot">${fBadge(s.fid)}
+          <button class="pick ${e ? 'set' : ''}" onclick="pickEmp('${sh.id}','${s.key}')">${e ? `<span class="avl" style="background:${dotc}"></span>` : ic('plus', 'sm')}<span class="grow">${e ? esc(e.name) : 'Izberi osebo'}${e && a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}</span>${ic('chevD', 'sm')}</button>
+          ${e ? `<button class="iconbtn ${a.note ? 'on' : ''}" title="Opomba" onclick="slotNote('${sh.id}','${s.key}')">${ic('note')}</button>` : ''}</div>`;
+      }).join('')}</div></div>`;
+  }).join('');
+
+  h += `<div class="box"><label class="lbl">${ic('note', 'sm')} Opomba za celoten dan (vidijo jo vsi)</label><textarea id="ed-note" class="inp" maxlength="400" placeholder="npr. ob 10:00 dostava blaga"></textarea></div>
+    <div class="sticky"><button class="btn green" onclick="publish()" ${ps === 'pub' ? 'disabled' : ''}>${ic('send')}${ps === 'none' ? 'Objavi urnik' : 'Objavi spremembe'}</button>${pub ? `<button class="btn ghost" style="flex:0 0 auto" title="Umakni objavo" onclick="unpublish()">${ic('eyeOff')}</button>` : ''}</div>`;
+  $('page').innerHTML = h;
+  const n = $('ed-note'); n.value = draft.note || '';
+  n.addEventListener('change', () => db.ref(`${U}/days/${k}/draft/note`).set(n.value.trim() || null));
+}
+function pickEmp(sid, sk) {
+  const k = S.editDate, plan = planOf(k), sh = plan && plan.shifts[sid]; if (!sh) return;
+  const fid = sk.slice(0, sk.lastIndexOf('_')), draft = dayOf(k).draft || {}, cur = ((draft.assign || {})[sid] || {})[sk];
+  const shifts = shiftsOf(plan);
+  // kje je kdo že razporejen
+  const busy = {};
+  shifts.forEach(x => Object.entries((draft.assign || {})[x.id] || {}).forEach(([key, a]) => {
+    if (!a || !a.empId || (x.id === sid && key === sk)) return;
+    if (x.id === sid || overlap(x, sh)) (busy[a.empId] = busy[a.empId] || []).push(x.id === sid ? 'že na tej izmeni (' + fn(a.fid).name + ')' : 'prekriva se: ' + x.name + ' ' + x.start + '–' + x.end);
+  }));
+  const groups = { yes: [], other: [], none: [], off: [] };
+  Object.values(S.employees).filter(Boolean).sort(byName).forEach(e => {
+    const v = availFor(k, e.id, sid);
+    if (!v) groups.none.push(e); else if (v.off) groups.off.push(e);
+    else if ((v.funcs || {})[fid]) groups.yes.push(e); else groups.other.push(e);
+  });
+  const row = (e, col, sub) => {
+    const b = busy[e.id], sel = cur && cur.empId === e.id;
+    return `<button class="list-row" data-e="${e.id}" ${b ? 'disabled' : ''} style="${sel ? 'background:var(--primary-l);border-radius:10px' : ''}"><span class="avl" style="background:${col}"></span><span class="grow"><span class="t" style="display:block">${esc(e.name)}</span>${sub ? `<span class="s">${sub}</span>` : ''}${b ? `<span class="s" style="color:var(--danger)">${esc(b.join(', '))}</span>` : ''}</span>${sel ? ic('check') : ''}</button>`;
+  };
+  const other = e => { const v = availFor(k, e.id, sh.id); return 'lahko: ' + Object.keys(v.funcs || {}).sort(funcOrder).map(f => esc(fn(f).name)).join(', '); };
+  const note = e => { const a = availOf(k, e.id); return a && a.note ? ic('note', 'sm') + ' ' + esc(a.note) : ''; };
+  const ov = openModal(`<h3>${ic(fn(fid).icon || 'briefcase')}${esc(fn(fid).name)}</h3><div class="muted">${esc(sh.name)} · ${tRange(sh)}</div>
+    <div style="max-height:60vh;overflow-y:auto;margin-top:6px">
+    ${groups.yes.length ? `<div class="grp" style="color:var(--success)">${ic('checkCircle', 'sm')}Na voljo za to funkcijo</div>${groups.yes.map(e => row(e, 'var(--success)', note(e))).join('')}` : ''}
+    ${groups.other.length ? `<div class="grp" style="color:#b7791f">${ic('info', 'sm')}Na voljo, a za drugo funkcijo</div>${groups.other.map(e => row(e, 'var(--warn)', other(e))).join('')}` : ''}
+    ${groups.none.length ? `<div class="grp">${ic('help', 'sm')}Razpoložljivosti ni oddal(a)</div>${groups.none.map(e => row(e, '#b8c0cc', '')).join('')}` : ''}
+    ${groups.off.length ? `<div class="grp" style="color:var(--danger)">${ic('ban', 'sm')}Ne more delati</div>${groups.off.map(e => row(e, 'var(--danger)', note(e))).join('')}` : ''}
+    </div>
+    <div class="row">${cur ? `<button class="btn red" id="pe-rm">${ic('x')}Odstrani</button>` : ''}<button class="btn ghost" id="pe-x">Zapri</button></div>`);
+  const ref = db.ref(`${U}/days/${k}/draft/assign/${sid}/${sk}`);
+  const set = e => ref.set({ empId: e.id, fid, note: cur ? cur.note || '' : '' }).then(() => ov.close()).catch(er => toast('Napaka: ' + er.message, 'err'));
+  ov.querySelectorAll('[data-e]').forEach(b => b.onclick = () => {
+    const e = S.employees[b.dataset.e]; if (!e) return;
+    const v = availFor(k, e.id, sid);
+    if (v && v.off) return confirmBox(`<b>${esc(e.name)}</b> je označil(a), da te izmene ne more delati. Vseeno razporedim?`, 'Razporedi', () => set(e), false);
+    set(e);
+  });
+  ov.querySelector('#pe-x').onclick = () => ov.close();
+  const rm = ov.querySelector('#pe-rm'); if (rm) rm.onclick = () => ref.remove().then(() => ov.close());
+}
+function slotNote(sid, sk) {
+  const k = S.editDate, cur = ((((dayOf(k).draft || {}).assign || {})[sid]) || {})[sk]; if (!cur) return;
+  const ov = openModal(`<h3>${ic('note')}Opomba</h3><div class="muted">${esc(empName(cur.empId))} · ${esc(fn(cur.fid).name)}</div>
+    <textarea id="sn-t" class="inp" style="margin-top:10px" maxlength="200" placeholder="npr. odpre blagajno 2"></textarea>
+    <div class="row"><button class="btn ghost" id="sn-x">Prekliči</button><button class="btn green" id="sn-ok">${ic('save')}Shrani</button></div>`);
+  const t = ov.querySelector('#sn-t'); t.value = cur.note || ''; setTimeout(() => t.focus(), 50);
+  ov.querySelector('#sn-x').onclick = () => ov.close();
+  ov.querySelector('#sn-ok').onclick = () => db.ref(`${U}/days/${k}/draft/assign/${sid}/${sk}/note`).set(t.value.trim()).then(() => ov.close());
+}
+function publish() {
+  const k = S.editDate, cand = buildPub(k); if (!cand) return;
+  const n = $('ed-note'); if (n) cand.note = n.value.trim();
+  const total = shiftsOf(planOf(k)).reduce((s, sh) => s + slotsOf(sh).length, 0);
+  const filled = Object.values(cand.assign).reduce((s, x) => s + Object.keys(x).length, 0);
+  const doIt = () => {
+    const up = {};
+    up[`days/${k}/draft/note`] = cand.note || null;
+    up[`days/${k}/pub`] = Object.assign(cand, { at: new Date().toISOString(), by: S.emp.name });
+    db.ref(U).update(up).then(() => toast('Urnik je objavljen zaposlenim.', 'ok')).catch(e => toast('Napaka: ' + e.message, 'err'));
+  };
+  if (filled < total) return confirmBox(`Zasedenih je ${filled} od ${total} mest. Vseeno objavim urnik?`, 'Objavi', doIt, false);
+  doIt();
+}
+function unpublish() {
+  confirmBox(`Umaknem objavljen urnik za <b>${fmtDay(S.editDate)}</b>? Zaposleni ga ne bodo več videli (osnutek ostane).`, 'Umakni', () => db.ref(`${U}/days/${S.editDate}/pub`).remove().then(() => toast('Objava umaknjena.', 'warn')));
+}
+
+/* =====================================================================
+   NASTAVITVE (administrator)
+   ===================================================================== */
+function viewSettings() {
+  const emps = Object.values(S.employees).filter(Boolean).sort(byName);
+  $('page').innerHTML = `<div class="box"><h3>${ic('crown')}Vodje (managerji)</h3>
+    <div class="muted" style="margin-bottom:6px">Vodje lahko načrtujejo dneve in urejajo ter objavljajo urnik. Administratorji so vodje samodejno. Zaposlene dodajaš v aplikaciji Blagajna (Nastavitve).</div>
+    ${emps.map(e => e.role === 'admin'
+      ? `<div class="tgl on" style="opacity:.6"><span>${esc(e.name)} <span class="status bl">admin</span></span><span class="sw"></span></div>`
+      : `<button class="tgl ${S.managers[e.id] ? 'on' : ''}" onclick="toggleMgr('${e.id}')"><span>${esc(e.name)}<br><span class="muted" style="font-weight:400">@${esc(e.username)}</span></span><span class="sw"></span></button>`).join('')}</div>
+    <div class="box"><h3>${ic('briefcase')}Funkcije</h3><div class="needs">${funcsSorted().map(f => fBadge(f.id)).join('') || '<span class="muted">Ni funkcij.</span>'}</div>
+    <button class="btn out block" onclick="manageFunctions()">${ic('edit')}Uredi funkcije</button></div>`;
+}
+function toggleMgr(id) { db.ref(U + '/managers/' + id).set(S.managers[id] ? null : true); }
+
+/* =====================================================================
+   ZAGON
+   ===================================================================== */
+initIcons();
+$('lg-user').addEventListener('keydown', e => { if (e.key === 'Enter') $('lg-pass').focus(); });
+$('lg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+startListeners();
+
+// samodejna ponovna prijava po osvežitvi
+(function autoLogin() {
+  let id = null; try { id = localStorage.getItem('wii_urnik_emp'); } catch (e) {}
+  if (!id) return;
+  const t = setInterval(() => {
+    if (!S.ready.employees) return;
+    clearInterval(t);
+    if (S.employees[id]) { S.emp = S.employees[id]; showApp(); }
+  }, 150);
+})();
+document.addEventListener('focusout', () => setTimeout(() => { if (S.pendingRefresh && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) { S.pendingRefresh = false; keepScroll(refreshView); } }, 200));
+window.addEventListener('beforeunload', e => { if (S.planDirty) { e.preventDefault(); e.returnValue = ''; } });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>

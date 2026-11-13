@@ -67,7 +67,7 @@ input,select{font-family:inherit}
 .tile-menu{background:var(--card);border-radius:16px;padding:26px 14px;text-align:center;font-size:17px;font-weight:700;color:var(--primary);box-shadow:0 3px 10px rgba(0,0,0,.06);border:2px solid transparent;position:relative}
 .tile-menu .ic{font-size:36px;display:block;margin-bottom:8px}
 .tile-menu.locked{opacity:.5;color:var(--muted)}
-.tile-menu.locked::after{content:"🔒";position:absolute;top:8px;right:10px;font-size:16px}
+.tile-menu.locked::after{content:"";background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/16px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/16px no-repeat;position:absolute;top:8px;right:10px;width:18px;height:18px}
 .tile-menu.adm{border-color:#c9d8f5;background:#f6f9ff}
 .sect{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-top:6px}
 .bigbtn{width:100%;padding:22px;font-size:19px;border-radius:14px;color:#fff;font-weight:800;margin-bottom:12px;background:var(--primary)}
@@ -187,9 +187,11 @@ select.inp{appearance:auto}
 #vkb button.on{background:var(--primary);color:#fff}
 #vkb.num{max-width:420px;margin:0 auto;border-radius:16px 16px 0 0}
 #vkb.num button{max-width:none;height:56px;font-size:24px}
+.ico{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none;display:inline-block}.tile-menu .ic .ico{width:1em;height:1em}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-backspace" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 2-2 2 2 3-2 3 2V2l-3 2-3-2-2 2-2-2-3 2Z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol><symbol id="i-shift" viewBox="0 0 24 24"><path d="M9 18v-6H5l7-8 7 8h-4v6Z"/></symbol><symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M10 2h4M12 9v4l2 2"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol></svg>
 <div id="root">
 
   <!-- PRIJAVA -->
@@ -212,7 +214,7 @@ select.inp{appearance:auto}
   <!-- APLIKACIJA -->
   <div id="app">
     <div id="topbar">
-      <button class="back" id="btn-home" onclick="go('menu')">☰ Meni</button>
+      <button class="back" id="btn-home" onclick="go('menu')"><svg class="ico"><use href="#i-menu"/></svg> Meni</button>
       <div class="ttl" id="tb-title">Meni</div>
       <span class="pill" id="tb-pill">NI NA DELU</span>
       <div class="uname" id="tb-user"></div>
@@ -343,8 +345,8 @@ function kbRender() {
   document.documentElement.style.setProperty('--kbh', el.offsetHeight + 'px');
 }
 function kbBtn(k) {
-  if (k === 'BS') return '<button class="fn" data-k="BS">⌫</button>';
-  if (k === 'SHIFT') return `<button class="fn ${KB.shift ? 'on' : ''}" data-k="SHIFT">⇧</button>`;
+  if (k === 'BS') return '<button class="fn" data-k="BS"><svg class="ico"><use href="#i-backspace"/></svg></button>';
+  if (k === 'SHIFT') return `<button class="fn ${KB.shift ? 'on' : ''}" data-k="SHIFT"><svg class="ico"><use href="#i-shift"/></svg></button>`;
   if (k === 'OK') return '<button class="ok" data-k="OK">OK</button>';
   if (k === 'C') return '<button class="fn" data-k="C">C</button>';
   if (k === ' ') return '<button class="sp" data-k=" ">presledek</button>';
@@ -537,7 +539,7 @@ function go(v) {
     c.style.overflow = 'hidden';
     c.innerHTML = `<div id="pos">
       <div id="pos-left">
-        <div class="search-row"><input id="pos-search" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="🔍 IŠČI artikel…"><button onclick="clearSearch()">✕</button></div>
+        <div class="search-row"><input id="pos-search" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="IŠČI artikel…"><button onclick="clearSearch()"><svg class="ico"><use href="#i-x"/></svg></button></div>
         <div id="pos-warn"></div>
         <div class="crumb" id="pos-crumb"></div>
         <div id="pos-grid"></div>
@@ -579,12 +581,12 @@ const tipsForShift = (list, shiftId) => r2((list || []).filter(t => t.shiftId ==
 /* ---------- MENI ---------- */
 function viewMenu() {
   const tiles = [
-    ['work', '⏱️', 'DELAVNI ČAS', true], ['pos', '🧾', 'BLAGAJNA', true], ['artikli', '📦', 'ARTIKLI', can('artikli')],
-    ['docs', '📄', 'DOKUMENTI', true], ['connect', '🔗', 'POVEŽI', true]
+    ['work', '<svg class="ico"><use href="#i-timer"/></svg>', 'DELAVNI ČAS', true], ['pos', '<svg class="ico"><use href="#i-receipt"/></svg>', 'BLAGAJNA', true], ['artikli', '<svg class="ico"><use href="#i-package"/></svg>', 'ARTIKLI', can('artikli')],
+    ['docs', '<svg class="ico"><use href="#i-file"/></svg>', 'DOKUMENTI', true], ['connect', '<svg class="ico"><use href="#i-link"/></svg>', 'POVEŽI', true]
   ];
   let h = tiles.map(t => `<button class="tile-menu ${t[3] ? '' : 'locked'}" onclick="go('${t[0]}')"><span class="ic">${t[1]}</span>${t[2]}</button>`).join('');
   if (isAdmin()) {
-    const adm = [['vouchers', '🎁', 'DARILNI BONI'], ['receipts', '🗂️', 'RAČUNI'], ['payroll', '💶', 'PLAČE'], ['settings', '⚙️', 'NASTAVITVE']];
+    const adm = [['vouchers', '<svg class="ico"><use href="#i-gift"/></svg>', 'DARILNI BONI'], ['receipts', '<svg class="ico"><use href="#i-folder"/></svg>', 'RAČUNI'], ['payroll', '<svg class="ico"><use href="#i-banknote"/></svg>', 'PLAČE'], ['settings', '<svg class="ico"><use href="#i-settings"/></svg>', 'NASTAVITVE']];
     h += '<div class="sect">ADMINISTRATOR</div>' + adm.map(t => `<button class="tile-menu adm" onclick="go('${t[0]}')"><span class="ic">${t[1]}</span>${t[2]}</button>`).join('');
   }
   $('page').innerHTML = `<div class="tiles">${h}</div>`;
@@ -708,12 +710,12 @@ function viewPos() { if (!$('pos')) return; posLeft(); posRight(); }
 function clearSearch() { const i = $('pos-search'); i.value = ''; posLeft(); }
 function artTile(a, showGroup) {
   const g = S.groups[a.group], c = safeCol(a.color, '#0a58ca'), lock = isRestricted(a), dim = lock && !can('omejeni');
-  return `<button class="tile" style="background:${c};color:${textOn(c)};${dim ? 'opacity:.45' : ''}" onclick="addArt('${a.id}')"><span>${lock ? '🔒 ' : ''}${esc(a.name)}</span><small>${money(a.price)} WII${showGroup && g ? ' · ' + esc(g.name) : ''}</small></button>`;
+  return `<button class="tile" style="background:${c};color:${textOn(c)};${dim ? 'opacity:.45' : ''}" onclick="addArt('${a.id}')"><span>${lock ? '<svg class="ico"><use href="#i-lock"/></svg> ' : ''}${esc(a.name)}</span><small>${money(a.price)} WII${showGroup && g ? ' · ' + esc(g.name) : ''}</small></button>`;
 }
 function posLeft() {
   if (!$('pos-grid')) return;
   const warn = $('pos-warn');
-  if (!getShift()) { warn.style.display = 'block'; warn.textContent = '🔒 Nisi na izmeni – blagajna je zaklenjena. Pojdi na DELAVNI ČAS → PRIHOD NA DELO.'; }
+  if (!getShift()) { warn.style.display = 'block'; warn.innerHTML = '<svg class="ico"><use href="#i-lock"/></svg> Nisi na izmeni – blagajna je zaklenjena. Pojdi na DELAVNI ČAS → PRIHOD NA DELO.'; }
   else warn.style.display = 'none';
   const q = norm($('pos-search').value.trim());
   const crumb = $('pos-crumb'), grid = $('pos-grid');
@@ -729,7 +731,7 @@ function posLeft() {
   } else {
     crumb.innerHTML = '<span>Skupine</span>';
     const gs = Object.values(S.groups).sort((a, b) => a.name.localeCompare(b.name));
-    grid.innerHTML = gs.map(g => { const c = safeCol(g.color, '#6f42c1'); return `<button class="tile" style="background:${c};color:${textOn(c)}" onclick="S.group='${g.id}';posLeft()"><span>${g.restricted ? '🔒 ' : ''}${esc(g.name)}</span><small>${arts.filter(a => a.group === g.id).length} artiklov</small></button>`; }).join('') || '<div class="empty">Ni skupin. Dodaj jih v ARTIKLI.</div>';
+    grid.innerHTML = gs.map(g => { const c = safeCol(g.color, '#6f42c1'); return `<button class="tile" style="background:${c};color:${textOn(c)}" onclick="S.group='${g.id}';posLeft()"><span>${g.restricted ? '<svg class="ico"><use href="#i-lock"/></svg> ' : ''}${esc(g.name)}</span><small>${arts.filter(a => a.group === g.id).length} artiklov</small></button>`; }).join('') || '<div class="empty">Ni skupin. Dodaj jih v ARTIKLI.</div>';
   }
 }
 
@@ -774,7 +776,7 @@ function posRight() {
   const box = $('ord-items');
   box.innerHTML = S.cart.map((i, idx) => {
     const c = lineCalc(i), vv = S.cartV.filter(v => v.uid === i.uid).length;
-    return `<button class="ord-item" onclick="itemOptions(${idx})"><div class="n">${esc(i.naziv)}<small>${money(i.cena)} WII${i.restricted ? ' · 🔒' : ''}</small>${c.d > 0 ? `<small class="dc">popust ${esc(c.dt)} (−${money(c.d)})</small>` : ''}${vv ? '<small class="dc">🎁 darilni bon</small>' : ''}</div><div class="q">×${i.kol}</div><div class="p">${c.d > 0 ? `<s>${money(c.gross)}</s>` : ''}${money(c.net)}</div></button>`;
+    return `<button class="ord-item" onclick="itemOptions(${idx})"><div class="n">${esc(i.naziv)}<small>${money(i.cena)} WII${i.restricted ? ' · <svg class="ico"><use href="#i-lock"/></svg>' : ''}</small>${c.d > 0 ? `<small class="dc">popust ${esc(c.dt)} (−${money(c.d)})</small>` : ''}${vv ? '<small class="dc"><svg class="ico"><use href="#i-gift"/></svg> darilni bon</small>' : ''}</div><div class="q">×${i.kol}</div><div class="p">${c.d > 0 ? `<s>${money(c.gross)}</s>` : ''}${money(c.net)}</div></button>`;
   }).join('') || '<div class="empty" style="grid-column:auto">Naročilo je prazno.<br>Dotakni se artikla.</div>';
   const t = totals();
   let h = '';
@@ -782,7 +784,7 @@ function posRight() {
   if (t.disc > 0) h += `<div class="l"><span>Popust (${t.discText})</span><span>−${money(t.disc)}</span></div>`;
   h += `<div class="tot ${t.vTotal > 0 ? 'sm' : ''}"><span>SKUPAJ</span><span>${money(t.total)} WII</span></div>`;
   if (t.vTotal > 0) {
-    t.vl.forEach((v, idx) => { if (v.eff > 0) h += `<div class="l"><span>🎁 Bon #${esc(v.number)}</span><span>−${money(v.eff)}<button onclick="removeV(${idx})">✕</button></span></div>`; });
+    t.vl.forEach((v, idx) => { if (v.eff > 0) h += `<div class="l"><span><svg class="ico"><use href="#i-gift"/></svg> Bon #${esc(v.number)}</span><span>−${money(v.eff)}<button onclick="removeV(${idx})"><svg class="ico"><use href="#i-x"/></svg></button></span></div>`; });
     h += `<div class="tot"><span>ZA PLAČILO</span><span>${money(t.payable)} WII</span></div>`;
   }
   $('ord-totals').innerHTML = h;
@@ -940,7 +942,7 @@ function startPay() {
 function payClose() { if (S.payOv) { S.payOv.close(); S.payOv = null; } S.payStep = ''; }
 function payBtn(id, cls, label, m) {
   const lt = lockText(m);
-  return `<button class="paybtn ${cls}" id="${id}" ${lt ? 'disabled' : ''}>${lt ? '🔒 ' : ''}${label}${lt ? `<small>${lt}</small>` : ''}</button>`;
+  return `<button class="paybtn ${cls}" id="${id}" ${lt ? 'disabled' : ''}>${lt ? '<svg class="ico"><use href="#i-lock"/></svg> ' : ''}${label}${lt ? `<small>${lt}</small>` : ''}</button>`;
 }
 function payStep(step, data) {
   const ov = S.payOv; if (!ov) return;
@@ -1255,11 +1257,11 @@ function viewArtikli() {
     .sort((a, b) => ((S.groups[a.group] || {}).name || '').localeCompare((S.groups[b.group] || {}).name || '') || a.name.localeCompare(b.name));
   $('page').innerHTML = `
     <div class="box"><h3>Skupine</h3>
-      <div class="chips">${gs.map(g => `<div class="chip" style="${S.artFilter === g.id ? 'outline:2px solid var(--primary)' : ''}"><span onclick="S.artFilter=S.artFilter==='${g.id}'?'':'${g.id}';viewArtikli()"><i class="dot" style="background:${safeCol(g.color, '#6f42c1')}"></i>${g.restricted ? '🔒 ' : ''}${esc(g.name)}</span><button class="mini ghost" onclick="editGroup('${g.id}')">✎</button><button class="mini red" onclick="delGroup('${g.id}')">✕</button></div>`).join('') || '<span class="muted">Ni skupin.</span>'}</div>
+      <div class="chips">${gs.map(g => `<div class="chip" style="${S.artFilter === g.id ? 'outline:2px solid var(--primary)' : ''}"><span onclick="S.artFilter=S.artFilter==='${g.id}'?'':'${g.id}';viewArtikli()"><i class="dot" style="background:${safeCol(g.color, '#6f42c1')}"></i>${g.restricted ? '<svg class="ico"><use href="#i-lock"/></svg> ' : ''}${esc(g.name)}</span><button class="mini ghost" onclick="editGroup('${g.id}')"><svg class="ico"><use href="#i-pencil"/></svg></button><button class="mini red" onclick="delGroup('${g.id}')"><svg class="ico"><use href="#i-x"/></svg></button></div>`).join('') || '<span class="muted">Ni skupin.</span>'}</div>
       <button class="btn green block" style="margin-top:12px" onclick="editGroup()">+ Nova skupina</button>
-      <div class="muted" style="margin-top:8px">Dotakni se imena skupine za filtriranje artiklov. 🔒 = skupina/artikel s pooblastili.</div></div>
+      <div class="muted" style="margin-top:8px">Dotakni se imena skupine za filtriranje artiklov. <svg class="ico"><use href="#i-lock"/></svg> = skupina/artikel s pooblastili.</div></div>
     <div class="box"><h3>Artikli ${S.artFilter && S.groups[S.artFilter] ? '· ' + esc(S.groups[S.artFilter].name) : ''}</h3>
-      ${arts.map(a => `<div class="list-row"><div class="grow"><div class="t"><i class="dot" style="background:${safeCol(a.color, '#0a58ca')}"></i>${isRestricted(a) ? '🔒 ' : ''}${esc(a.name)}</div><div class="s">${esc((S.groups[a.group] || {}).name || '—')} · ${money(a.price)} WII</div></div>
+      ${arts.map(a => `<div class="list-row"><div class="grow"><div class="t"><i class="dot" style="background:${safeCol(a.color, '#0a58ca')}"></i>${isRestricted(a) ? '<svg class="ico"><use href="#i-lock"/></svg> ' : ''}${esc(a.name)}</div><div class="s">${esc((S.groups[a.group] || {}).name || '—')} · ${money(a.price)} WII</div></div>
         <button class="mini ghost" onclick="editArticle('${a.id}')">Uredi</button><button class="mini red" onclick="delArticle('${a.id}')">Briši</button></div>`).join('') || '<span class="muted">Ni artiklov.</span>'}
       <button class="btn block" style="margin-top:12px" onclick="editArticle()">+ Nov artikel</button></div>`;
 }
@@ -1416,7 +1418,7 @@ function viewReceipts() {
   if (!$('page')) return;
   if (!$('rc-list')) {
     $('page').innerHTML = `<div class="box"><h3>Zgodovina računov</h3>
-      <input id="rc-q" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="🔍 Številka računa ali blagajnik…" value="${esc(S.rcQ)}">
+      <input id="rc-q" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="Številka računa ali blagajnik…" value="${esc(S.rcQ)}">
       <div class="muted">Prikazanih je zadnjih 500 računov. Natis iz tega zavihka je vedno označen s KOPIJA.</div></div><div class="box" id="rc-list"></div>`;
     $('rc-q').addEventListener('input', () => { S.rcQ = $('rc-q').value; viewReceipts(); });
   }
@@ -1527,7 +1529,7 @@ function viewSettings() {
   const list = Object.values(S.employees).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const locks = ['gotovina', 'kartica', 'kartica-vezano'].map(m => {
     const l = lockInfo(m);
-    return `<div class="list-row"><div class="grow"><div class="t">${methodLabel(m)}</div><div class="s">${l.locked ? '🔒 ' + lockText(m) : 'omogočeno'}</div></div>
+    return `<div class="list-row"><div class="grow"><div class="t">${methodLabel(m)}</div><div class="s">${l.locked ? '<svg class="ico"><use href="#i-lock"/></svg> ' + lockText(m) : 'omogočeno'}</div></div>
       ${l.locked ? `<button class="mini green" onclick="setLock('${m}',0,true)">Odkleni</button>` : ''}<button class="mini red" onclick="lockDlg('${m}')">${l.locked ? 'Spremeni' : 'Zakleni'}</button></div>`;
   }).join('');
   const f = S.users.find(u => u && (String(u.id) === FIRM_ID || String(u.card) === FIRM_ID));

@@ -44,7 +44,7 @@ h1{font-size:30px;margin-bottom:6px}
 .tips button.no{background:rgba(255,255,255,.18);color:#fff}
 .err{color:#ffb3b9;font-weight:700;min-height:22px;margin-top:8px}
 .pulse{width:90px;height:90px;border-radius:50%;margin:20px auto;background:rgba(255,255,255,.18);position:relative}
-.pulse::after{content:"💳";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px}
+.pulse::after{content:"";background:#fff;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20M6 15h4'/%3E%3C/svg%3E") center/44px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20M6 15h4'/%3E%3C/svg%3E") center/44px no-repeat;position:absolute;inset:0}
 .pulse::before{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid rgba(255,255,255,.6);animation:ring 1.8s infinite}
 @keyframes ring{from{transform:scale(1);opacity:.9}to{transform:scale(1.7);opacity:0}}
 .spinner{width:64px;height:64px;border:7px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;margin:20px auto;animation:spin 1s linear infinite}
@@ -55,9 +55,11 @@ h1{font-size:30px;margin-bottom:6px}
 @keyframes dash{to{stroke-dashoffset:0}}
 .status{display:inline-block;margin-top:18px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.15)}
 .link{background:none;color:rgba(255,255,255,.7);font-size:13px;margin-top:22px;text-decoration:underline}
+.ico{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none;display:inline-block}.tile-menu .ic .ico{width:1em;height:1em}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-backspace" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></symbol></svg>
 <div id="stage"></div>
 
 <script>
@@ -88,7 +90,7 @@ function pad(opts) {
   T.dec = !!opts.dec; T.mask = !!opts.mask; T.maxLen = opts.max || 12; T.onOk = opts.onOk;
   return `<div class="disp ph" id="disp">${opts.ph || ''}</div>
     <div class="pad">${['1','2','3','4','5','6','7','8','9'].map(k => `<button onclick="np('${k}')">${k}</button>`).join('')}
-      <button class="fn" onclick="np('C')">C</button><button onclick="np('0')">0</button><button class="fn" onclick="np('B')">⌫</button></div>
+      <button class="fn" onclick="np('C')">C</button><button onclick="np('0')">0</button><button class="fn" onclick="np('B')"><svg class="ico"><use href="#i-backspace"/></svg></button></div>
     ${opts.dec ? '<button class="cta sec" style="margin-top:10px;padding:12px" onclick="np(\'.\')">decimalna pika  ( . )</button>' : ''}`;
 }
 function np(k) {

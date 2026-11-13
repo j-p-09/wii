@@ -68,7 +68,7 @@ input,select{font-family:inherit}
 .tile-menu{background:var(--card);border-radius:16px;padding:26px 14px;text-align:center;font-size:17px;font-weight:700;color:var(--primary);box-shadow:0 3px 10px rgba(0,0,0,.06);border:2px solid transparent;position:relative}
 .tile-menu .ic{font-size:36px;display:block;margin-bottom:8px}
 .tile-menu.locked{opacity:.5;color:var(--muted)}
-.tile-menu.locked::after{content:"🔒";position:absolute;top:8px;right:10px;font-size:16px}
+.tile-menu.locked::after{content:"";background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/16px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/16px no-repeat;position:absolute;top:8px;right:10px;width:18px;height:18px}
 .tile-menu.adm{border-color:#f8d3bd;background:#fff7f2}
 .sect{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-top:6px}
 .bigbtn{width:100%;padding:22px;font-size:19px;border-radius:14px;color:#fff;font-weight:800;margin-bottom:12px;background:var(--primary)}
@@ -165,9 +165,11 @@ select.inp{appearance:auto}
 .pcard .head .t{font-size:17px;font-weight:800}
 .notice{background:#fff7e0;color:#7a5200;border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
 .code-big.sm{font-size:40px;letter-spacing:4px}
+.ico{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none;display:inline-block}.tile-menu .ic .ico{width:1em;height:1em}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/></symbol><symbol id="i-backspace" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 2-2 2 2 3-2 3 2V2l-3 2-3-2-2 2-2-2-3 2Z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol><symbol id="i-shift" viewBox="0 0 24 24"><path d="M9 18v-6H5l7-8 7 8h-4v6Z"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol></svg>
 <div id="root">
 
   <!-- PRIJAVA -->
@@ -190,7 +192,7 @@ select.inp{appearance:auto}
   <!-- APLIKACIJA -->
   <div id="app">
     <div id="topbar">
-      <button class="back" id="btn-home" onclick="go('menu')">☰ Meni</button>
+      <button class="back" id="btn-home" onclick="go('menu')"><svg class="ico"><use href="#i-menu"/></svg> Meni</button>
       <div class="ttl" id="tb-title">Meni</div>
       <span class="pill" id="tb-pill">NI NA DELU</span>
       <div class="uname" id="tb-user"></div>
@@ -306,8 +308,8 @@ function kbRender() {
   document.documentElement.style.setProperty('--kbh', el.offsetHeight + 'px');
 }
 function kbBtn(k) {
-  if (k === 'BS') return '<button class="fn" data-k="BS">⌫</button>';
-  if (k === 'SHIFT') return `<button class="fn ${KB.shift ? 'on' : ''}" data-k="SHIFT">⇧</button>`;
+  if (k === 'BS') return '<button class="fn" data-k="BS"><svg class="ico"><use href="#i-backspace"/></svg></button>';
+  if (k === 'SHIFT') return `<button class="fn ${KB.shift ? 'on' : ''}" data-k="SHIFT"><svg class="ico"><use href="#i-shift"/></svg></button>`;
   if (k === 'OK') return '<button class="ok" data-k="OK">OK</button>';
   if (k === 'C') return '<button class="fn" data-k="C">C</button>';
   if (k === ' ') return '<button class="sp" data-k=" ">presledek</button>';
@@ -508,8 +510,8 @@ function viewMenu() {
   if (!$('page')) return;
   const n = myOpen().length;
   const tiles = [
-    ['new', '📮', 'ODDAJ POŠILJKO', 0], ['check', '🔍', 'PREVERI POŠILJKO', 0],
-    ['mine', '📦', 'MOJE POŠILJKE', n], ['archive', '🗄️', 'ARHIV', 0]
+    ['new', '<svg class="ico"><use href="#i-send"/></svg>', 'ODDAJ POŠILJKO', 0], ['check', '<svg class="ico"><use href="#i-search"/></svg>', 'PREVERI POŠILJKO', 0],
+    ['mine', '<svg class="ico"><use href="#i-package"/></svg>', 'MOJE POŠILJKE', n], ['archive', '<svg class="ico"><use href="#i-archive"/></svg>', 'ARHIV', 0]
   ];
   $('page').innerHTML = '<div class="tiles">' + tiles.map(t => `<button class="tile-menu" onclick="go('${t[0]}')"><span class="ic">${t[1]}</span>${t[2]}${t[3] ? `<span class="badge">${t[3]}</span>` : ''}</button>`).join('') + '</div>';
 }
@@ -628,7 +630,7 @@ function viewMine() {
     <div class="kv"><span>Oddano</span><b>${fmtDT(p.created)}</b></div>
     ${p.notes ? `<div class="kv"><span>Opombe</span><b style="white-space:normal">${esc(p.notes)}</b></div>` : ''}
     <div class="stbtns">${ST_ORDER.map(s => `<button class="btn ${s === p.status ? (s === 'dostavljeno' ? 'green' : 'primary') : 'ghost'}" ${s === p.status ? 'disabled' : ''} onclick="setStatus('${p.key}','${s}')">${STAT[s]}</button>`).join('')}</div>
-    <div class="stbtns" style="margin-top:6px"><button class="btn vio" onclick="generateSlipPDF(S.parcels['${p.key}'])">🧾 Natisni listek</button><button class="btn warn" onclick="generateLabelPDF(S.parcels['${p.key}'])">🏷️ Natisni nalepko</button></div>
+    <div class="stbtns" style="margin-top:6px"><button class="btn vio" onclick="generateSlipPDF(S.parcels['${p.key}'])"><svg class="ico"><use href="#i-receipt"/></svg> Natisni listek</button><button class="btn warn" onclick="generateLabelPDF(S.parcels['${p.key}'])"><svg class="ico"><use href="#i-tag"/></svg> Natisni nalepko</button></div>
   </div>`).join('');
   $('page').innerHTML = `<div class="box"><div class="cnt"><div><b>${today}</b>Danes dostavljeno</div><div><b>${month}</b>V tem mesecu</div></div></div>
     ${cards || '<div class="box"><span class="muted">Trenutno nimaš pošiljk za dostavo.</span></div>'}`;
@@ -725,7 +727,7 @@ function renderCheck() {
    ===================================================================== */
 function viewArchive() {
   $('page').innerHTML = `<div class="seg" id="a-seg"></div>
-    <input id="a-q" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="🔍 Išči (številka, ime, račun, poštar…)">
+    <input id="a-q" class="inp kb" data-kb="text" readonly inputmode="none" autocomplete="off" placeholder="Išči (številka, ime, račun, poštar…)">
     <div class="box" id="a-list"></div>`;
   $('a-q').addEventListener('input', () => { S.archQ = $('a-q').value; S.archLimit = 50; renderArchiveList(); });
   $('a-q').addEventListener('kbenter', () => {});
@@ -745,7 +747,7 @@ function renderArchiveList() {
     <div class="s">${esc(p.sender)} → ${esc(p.recipient)}</div>
     <div class="s">${fmtDT(p.created)} · ${esc(p.courierName)}</div></div>
     ${stBadge(p.status)}
-    ${isAdmin() ? `<button class="mini" onclick="event.stopPropagation();editParcel('${p.key}')">Uredi</button><button class="mini red" onclick="event.stopPropagation();delParcel('${p.key}')">✕</button>` : ''}
+    ${isAdmin() ? `<button class="mini" onclick="event.stopPropagation();editParcel('${p.key}')">Uredi</button><button class="mini red" onclick="event.stopPropagation();delParcel('${p.key}')"><svg class="ico"><use href="#i-x"/></svg></button>` : ''}
   </div>`).join('') || '<span class="muted">Ni pošiljk.</span>')
     + (list.length > shown.length ? `<button class="btn ghost block" style="margin-top:10px" onclick="S.archLimit+=50;renderArchiveList()">Prikaži več (${list.length - shown.length})</button>` : '');
 }

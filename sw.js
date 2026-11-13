@@ -1,10 +1,13 @@
-// WII POS – service worker (omogoča namestitev kot aplikacijo in hitrejši zagon)
-const CACHE = 'wii-pos-v4';
-const SHELL = ['./posta.html', './oddaja.html', './manifest-posta.webmanifest', './manifest-oddaja.webmanifest',
-  './icon-posta-192.png', './icon-posta-512.png', './icon-posta-180.png', './icon-oddaja-192.png', './icon-oddaja-512.png', './icon-oddaja-180.png',
-  './blagajna.html', './terminal.html', './wii-mail.html', './manifest-mail.webmanifest', './icon-mail-192.png', './icon-mail-512.png', './icon-mail-180.png', './manifest-blagajna.webmanifest', './manifest-terminal.webmanifest',
-  './icon-blagajna-192.png', './icon-blagajna-512.png', './icon-blagajna-180.png',
-  './icon-terminal-192.png', './icon-terminal-512.png', './icon-terminal-180.png'];
+// WII – skupni service worker za vse aplikacije (omogoča namestitev kot aplikacijo in hitrejši zagon)
+// Vsaka aplikacija ima v svojem manifestu svoj "scope" (npr. ./posta.html), zato se nameščene
+// aplikacije med seboj ne prekrivajo, čeprav so na isti domeni.
+const CACHE = 'wii-pos-v5';
+const APPS = ['posta', 'oddaja', 'blagajna', 'terminal', 'mail', 'urnik'];
+const PAGES = ['./posta.html', './oddaja.html', './blagajna.html', './terminal.html', './wii-mail.html', './urnik.html'];
+const SHELL = PAGES.concat(
+  APPS.map(a => './manifest-' + a + '.webmanifest'),
+  ...APPS.map(a => ['./icon-' + a + '-180.png', './icon-' + a + '-192.png', './icon-' + a + '-512.png'])
+);
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
@@ -18,9 +21,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.hostname.endsWith('firebaseio.com') || url.hostname.endsWith('firebasedatabase.app')) return;
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('.html');
-  if (isPage) { // najprej omrežje (vedno nova verzija), sicer predpomnilnik
+  if (isPage) { // najprej omrežje (vedno nova verzija), sicer predpomnilnik – vedno ISTA stran, nikoli druga aplikacija
     e.respondWith(fetch(req).then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return res; })
-      .catch(() => caches.match(req).then(r => r || caches.match('./blagajna.html'))));
+      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || new Response(
+        '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WII</title>' +
+        '<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#eef2f7;color:#1f2937;text-align:center">' +
+        '<div><h2>Ni povezave</h2><p>Preveri internetno povezavo in poskusi znova.</p></div>',
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }))));
     return;
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
