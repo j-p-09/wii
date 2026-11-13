@@ -334,6 +334,7 @@ const ICONS = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
   hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/>',
   layers: '<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   crown: '<path d="M2 18h20M3 7l4 4 5-7 5 7 4-4-2 11H5Z"/>',
   /* funkcije */
   register: '<rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V4h10v6M7 14h2M11 14h2M15 14h2M7 17.5h10"/>',
@@ -663,7 +664,7 @@ function viewAvail() {
   let h = `<div class="notice info">${ic('info')}<div>Vodja za vsak dan določi, koliko izmen potrebujemo in katere funkcije. Za vsako izmeno označi, kaj lahko opravljaš – ali pa da ne moreš delati.</div></div>`;
   h += `<div class="box">${days.map(k => {
     const a = availOf(k, me()), pub = pubOf(k), sh = shiftsOf(planOf(k));
-    const st = pub ? `<span class="status bl">${ic('eye', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
+    const st = pub ? `<span class="status gr">${ic('lock', 'sm')}Objavljeno</span>` : a ? `<span class="status ok">${ic('check', 'sm')}Oddano</span>` : `<span class="status wr">${ic('alert', 'sm')}Manjka</span>`;
     return `<button class="list-row" onclick="openAvail('${k}')"><div class="si" style="width:44px;text-align:center"><b style="font-size:20px;display:block;line-height:1">${fromKey(k).getDate()}</b><small class="muted" style="font-size:11px;font-weight:700">${DOW3[fromKey(k).getDay()]}</small></div>
       <div class="grow"><div class="t">${fmtDay(k)}${relDay(k) ? ' · ' + relDay(k) : ''}</div><div class="s">${nIzmen(sh.length)} · ${sh.map(s => esc(s.name)).join(', ')}</div></div>${st}${ic('chevR')}</button>`;
   }).join('') || `<div class="empty">${ic('calendarDays', 'xl')}<b>Ni načrtovanih dni</b>Ko vodja načrtuje nove dni, se bodo pojavili tukaj.</div>`}</div>`;
@@ -678,11 +679,13 @@ function openAvail(k) {
 function viewAvailDay() {
   const k = S.availDate, plan = planOf(k);
   if (!plan) { $('page').innerHTML = `<div class="box empty">${ic('calendarX', 'xl')}<b>Načrt tega dne ne obstaja več</b><button class="btn" style="margin-top:12px" onclick="go('avail')">Nazaj</button></div>`; return; }
-  const D = S.availDraft, sent = availOf(k, me());
+  const sent = availOf(k, me()), locked = !!pubOf(k);
+  const D = locked ? (sent ? { shifts: sent.shifts || {}, note: sent.note || '' } : { shifts: {}, note: '' }) : S.availDraft;
+  const dis = locked ? 'disabled' : '';
   let h = `<button class="btn sm ghost" style="margin-bottom:12px" onclick="go('avail')">${ic('arrowL', 'sm')}Nazaj na seznam</button>
     <div class="box" style="text-align:center"><b style="font-size:19px">${fmtDay(k)}</b><div class="muted">${relDay(k) || ''}</div>
     ${sent ? `<div style="margin-top:8px"><span class="status ok">${ic('check', 'sm')}Oddano ${fmtDT(sent.at)}</span></div>` : ''}</div>`;
-  if (pubOf(k)) h += `<div class="notice">${ic('alert')}<div>Urnik za ta dan je že objavljen. Spremembo bo vodja videl, urnik pa bo spremenil le, če bo to potrebno.</div></div>`;
+  if (locked) h += `<div class="notice">${ic('lock')}<div>Urnik za ta dan je že objavljen, zato razpoložljivosti ni več mogoče oddati ali spremeniti. Če vodja objavo umakne, jo boš lahko spet urejal/a.${sent ? '' : '<br>Za ta dan razpoložljivosti nisi oddal/a.'}</div></div>`;
   h += shiftsOf(plan).map(sh => {
     const v = D.shifts[sh.id] || {}, off = !!v.off, fids = Object.keys(sh.needs || {}).filter(f => +sh.needs[f] > 0).sort(funcOrder);
     return `<div class="shift"><div class="shift-h"><div class="si">${ic(shiftIcon(sh))}</div><div class="grow"><div class="t">${esc(sh.name || 'Izmena')}</div></div>
@@ -690,28 +693,31 @@ function viewAvailDay() {
       <div class="shift-b"><div class="lbl">Na izmeni potrebujemo</div>
       <div class="needs">${fids.map(f => fBadge(f, ` × ${sh.needs[f]}`)).join('')}</div>
       <div class="lbl">Kaj lahko opravljam</div>
-      <div class="opts">${fids.map(f => { const on = !off && !!(v.funcs || {})[f], c = fn(f).color; return `<button class="opt ${on ? 'on' : ''}" style="${on ? `background:${c}1a;color:${c};border-color:${c}` : ''}" onclick="avToggle('${sh.id}','${f}')"><span class="ck">${ic('check')}</span>${ic(fn(f).icon || 'briefcase')}${esc(fn(f).name)}</button>`; }).join('')}
-      ${fids.length > 1 ? `<button class="opt" onclick="avAll('${sh.id}')">${ic('layers')}Vse</button>` : ''}
-      <button class="opt off ${off ? 'on' : ''}" onclick="avOff('${sh.id}')">${ic('ban')}Ne morem delati</button></div></div></div>`;
+      <div class="opts">${fids.map(f => { const on = !off && !!(v.funcs || {})[f], c = fn(f).color; return `<button class="opt ${on ? 'on' : ''}" style="${on ? `background:${c}1a;color:${c};border-color:${c}` : ''}" ${dis} onclick="avToggle('${sh.id}','${f}')"><span class="ck">${ic('check')}</span>${ic(fn(f).icon || 'briefcase')}${esc(fn(f).name)}</button>`; }).join('')}
+      ${fids.length > 1 && !locked ? `<button class="opt" onclick="avAll('${sh.id}')">${ic('layers')}Vse</button>` : ''}
+      <button class="opt off ${off ? 'on' : ''}" ${dis} onclick="avOff('${sh.id}')">${ic('ban')}Ne morem delati</button></div></div></div>`;
   }).join('');
-  h += `<div class="box"><label class="lbl">Opomba za vodjo (neobvezno)</label><textarea id="av-note" class="inp" maxlength="300" placeholder="npr. lahko šele od 9:00 naprej"></textarea></div>
-    <div class="sticky"><button class="btn green" onclick="avSave()">${ic('send')}Shrani in pošlji vodji</button></div>`;
+  h += `<div class="box"><label class="lbl">Opomba za vodjo (neobvezno)</label><textarea id="av-note" class="inp" maxlength="300" placeholder="npr. lahko šele od 9:00 naprej" ${dis}></textarea></div>
+    <div class="sticky">${locked ? `<button class="btn" onclick="S.date='${k}';go('urnik')">${ic('calendarDays')}Poglej objavljen urnik</button>` : `<button class="btn green" onclick="avSave()">${ic('send')}Shrani in pošlji vodji</button>`}</div>`;
   $('page').innerHTML = h;
-  const n = $('av-note'); n.value = D.note || ''; n.addEventListener('input', () => { S.availDraft.note = n.value; });
+  const n = $('av-note'); n.value = D.note || ''; if (!locked) n.addEventListener('input', () => { S.availDraft.note = n.value; });
 }
 function avToggle(sid, f) {
+  if (pubOf(S.availDate)) return;
   const v = S.availDraft.shifts[sid] = S.availDraft.shifts[sid] || {};
   delete v.off; v.funcs = v.funcs || {};
   if (v.funcs[f]) delete v.funcs[f]; else v.funcs[f] = true;
   keepScroll(viewAvailDay);
 }
 function avAll(sid) {
+  if (pubOf(S.availDate)) return;
   const sh = (planOf(S.availDate).shifts || {})[sid]; if (!sh) return;
   const funcs = {}; Object.keys(sh.needs || {}).forEach(f => { if (+sh.needs[f] > 0) funcs[f] = true; });
   S.availDraft.shifts[sid] = { funcs };
   keepScroll(viewAvailDay);
 }
 function avOff(sid) {
+  if (pubOf(S.availDate)) return;
   const v = S.availDraft.shifts[sid];
   S.availDraft.shifts[sid] = v && v.off ? {} : { off: true };
   keepScroll(viewAvailDay);
@@ -719,6 +725,7 @@ function avOff(sid) {
 function keepScroll(fnc) { const c = $('content'), y = c.scrollTop; fnc(); c.scrollTop = y; }
 function avSave() {
   const k = S.availDate, plan = planOf(k); if (!plan) return;
+  if (pubOf(k)) { toast('Urnik za ta dan je že objavljen – razpoložljivosti ni več mogoče spremeniti.', 'err'); return keepScroll(viewAvailDay); }
   const D = S.availDraft, out = {};
   for (const sh of shiftsOf(plan)) {
     const v = D.shifts[sh.id] || {};
@@ -1029,7 +1036,7 @@ function publish() {
   doIt();
 }
 function unpublish() {
-  confirmBox(`Umaknem objavljen urnik za <b>${fmtDay(S.editDate)}</b>? Zaposleni ga ne bodo več videli (osnutek ostane).`, 'Umakni', () => db.ref(`${U}/days/${S.editDate}/pub`).remove().then(() => toast('Objava umaknjena.', 'warn')));
+  confirmBox(`Umaknem objavljen urnik za <b>${fmtDay(S.editDate)}</b>? Zaposleni ga ne bodo več videli (osnutek ostane), razpoložljivost pa bodo lahko spet oddajali.`, 'Umakni', () => db.ref(`${U}/days/${S.editDate}/pub`).remove().then(() => toast('Objava umaknjena.', 'warn')));
 }
 
 /* =====================================================================
