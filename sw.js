@@ -1,7 +1,7 @@
 // WII – skupni service worker za vse aplikacije (omogoča namestitev kot aplikacijo in hitrejši zagon)
 // Vsaka aplikacija ima v svojem manifestu svoj "scope" (npr. ./posta.html), zato se nameščene
 // aplikacije med seboj ne prekrivajo, čeprav so na isti domeni.
-const CACHE = 'wii-pos-v5';
+const CACHE = 'wii-pos-v6';
 const APPS = ['posta', 'oddaja', 'blagajna', 'terminal', 'mail', 'urnik'];
 const PAGES = ['./posta.html', './oddaja.html', './blagajna.html', './terminal.html', './wii-mail.html', './urnik.html'];
 const SHELL = PAGES.concat(
@@ -20,6 +20,11 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.hostname.endsWith('firebaseio.com') || url.hostname.endsWith('firebasedatabase.app')) return;
+  if (url.pathname.endsWith('.webmanifest')) { // manifest vedno najprej z omrežja, da spremembe (scope, ikone) takoj veljajo
+    e.respondWith(fetch(req).then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return res; })
+      .catch(() => caches.match(req)));
+    return;
+  }
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('.html');
   if (isPage) { // najprej omrežje (vedno nova verzija), sicer predpomnilnik – vedno ISTA stran, nikoli druga aplikacija
     e.respondWith(fetch(req).then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return res; })
