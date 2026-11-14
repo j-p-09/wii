@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WII Alarm">
+<link rel="manifest" href="manifest-alarm.webmanifest">
+<link rel="apple-touch-icon" href="icon-alarm-180.png">
+<link rel="icon" type="image/png" href="icon-alarm-192.png">
+<title>WII Alarm</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{--bg:#111418;--card:#1b2027;--card2:#232a33;--text:#f1f5f9;--muted:#94a3b8;--red:#ef4444;--redd:#b91c1c;--green:#22c55e;--amber:#f59e0b;--border:#2d3540}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text)}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{font-family:inherit}
+.ico{width:1.2em;height:1.2em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.25em}
+.ico.sm{width:1em;height:1em;vertical-align:-.15em}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:0 auto;position:relative}
+.top{display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top))}
+.brand{flex:1;font-weight:800;font-size:19px;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+.brand .ico{color:var(--red)}
+.ibtn{width:42px;height:42px;border-radius:12px;background:var(--card);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.main{flex:1;overflow-y:auto;padding:8px 18px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.shield{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;position:relative}
+.shield .ico{width:70px;height:70px;stroke-width:1.6}
+.shield.off{background:#1f2a22;color:var(--green);box-shadow:0 0 0 10px rgba(34,197,94,.08)}
+.shield.on{background:#2a1416;color:var(--red);box-shadow:0 0 0 10px rgba(239,68,68,.1);animation:breathe 3s infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 22px rgba(239,68,68,.04)}}
+.big{font-size:26px;font-weight:800;letter-spacing:.5px}
+.sub{color:var(--muted);font-size:15px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:var(--card);font-size:13px;font-weight:600;color:var(--muted)}
+.chip.ok{color:#86efac}.chip.no{color:#fca5a5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:17px 20px;border-radius:16px;font-size:17px;font-weight:800;color:#fff;background:var(--red);letter-spacing:.5px;transition:transform .08s,filter .08s}
+.btn:active{transform:scale(.97);filter:brightness(.9)}
+.btn.block{width:100%}.btn.ghost{background:var(--card2)}.btn.green{background:#16a34a}.btn.sm{padding:10px 14px;font-size:14px;border-radius:12px;font-weight:700}
+.warn{display:flex;gap:10px;align-items:flex-start;background:#3a2a10;color:#fcd34d;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600;margin-bottom:10px;text-align:left}
+.warn.red{background:#3b1416;color:#fca5a5}.warn.info{background:#14263b;color:#93c5fd}
+.lastev{margin-top:14px;font-size:13px;color:var(--muted)}
+
+/* odštevanje */
+.count{width:190px;height:190px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:800;font-variant-numeric:tabular-nums;position:relative;margin-bottom:16px}
+.count svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.count circle{fill:none;stroke-width:10}
+.count .bgc{stroke:var(--card2)}
+.count .fg{stroke:var(--amber);stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+
+/* vklopljen */
+body.armed,body.armed #app{background:#000}
+.meters{width:100%;max-width:320px;margin-top:22px;display:flex;flex-direction:column;gap:12px}
+.meter{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:600}
+.meter .bar{flex:1;height:8px;border-radius:8px;background:#1f242b;position:relative;overflow:hidden}
+.meter .bar i{position:absolute;left:0;top:0;bottom:0;background:#64748b;border-radius:8px;transition:width .15s}
+.meter .bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--red)}
+.cam{width:120px;height:90px;border-radius:12px;object-fit:cover;transform:scaleX(-1);opacity:.55;margin-top:14px;background:#111}
+
+/* sprožen */
+body.entry #app{background:#2b1203}
+body.siren{animation:flash .5s infinite}
+body.siren #app{background:transparent}
+@keyframes flash{0%,49%{background:#b91c1c}50%,100%{background:#200}}
+.alarmtitle{font-size:44px;font-weight:900;letter-spacing:4px;color:#fff}
+
+/* PIN */
+.pin{width:100%;max-width:340px;margin:0 auto}
+.pin .ttl{text-align:center;font-weight:700;font-size:17px;margin-bottom:12px}
+.dots{display:flex;gap:14px;justify-content:center;margin-bottom:8px;min-height:20px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted)}
+.dots i.f{background:#fff;border-color:#fff}
+.pinerr{text-align:center;color:#fca5a5;font-weight:700;min-height:22px;font-size:14px;margin-bottom:8px}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pad button{height:68px;border-radius:18px;background:rgba(255,255,255,.1);font-size:30px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.pad button.pr{background:rgba(255,255,255,.28)}
+.pad button.fn{font-size:16px;font-weight:700;color:var(--muted)}
+.pad button.ok{background:#16a34a;color:#fff}
+
+/* nastavitve */
+.sec{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px}
+.sec h3{font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#e2e8f0}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);width:100%;text-align:left}
+.row:last-child{border-bottom:none}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:700}
+.row .s{font-size:13px;color:var(--muted);margin-top:2px}
+.tgl .sw{width:48px;height:28px;border-radius:28px;background:#3a4350;position:relative;transition:.2s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on .sw{background:var(--green)} .tgl.on .sw::after{left:23px}
+.rng{width:100%;accent-color:var(--red);margin:6px 0 2px}
+.num{display:flex;align-items:center;gap:8px}
+.num button{width:38px;height:38px;border-radius:10px;background:var(--card2);font-size:20px;font-weight:700}
+.num b{min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.inp{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:12px;font-size:17px;outline:none;background:#0f1317;color:var(--text);margin-bottom:10px}
+.inp:focus{border-color:var(--red)}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:6px 0 4px}
+.err{color:#fca5a5;font-weight:700;font-size:14px;min-height:20px;text-align:center;margin-top:4px}
+.rowbtns{display:flex;gap:10px;margin-top:12px}.rowbtns>*{flex:1}
+.mini{width:36px;height:36px;border-radius:10px;background:var(--card2);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.mini.red{color:#fca5a5}
+.ev{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.ev:last-child{border-bottom:none}
+.ev .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none}
+.ev .grow{flex:1;min-width:0}
+.ev img{width:84px;height:63px;object-fit:cover;border-radius:8px;cursor:pointer;flex:none}
+.test video{width:100%;max-height:220px;border-radius:12px;background:#000;object-fit:cover;transform:scaleX(-1)}
+.dev{display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* modal / toast */
+#modal-root{position:fixed;inset:0;pointer-events:none;z-index:2000}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;pointer-events:auto}
+@media (min-width:600px){ .overlay{align-items:center} }
+.modal{background:#181d23;border-radius:22px 22px 0 0;padding:20px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+@media (min-width:600px){ .modal{border-radius:22px} }
+.modal h3{font-size:19px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:14px}
+#toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:5000;display:flex;flex-direction:column;gap:8px;align-items:center;width:90%;max-width:420px;pointer-events:none}
+.toast{background:#334155;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.4);display:flex;gap:8px;align-items:center}
+.toast.err{background:var(--redd)}.toast.ok{background:#15803d}
+.spinner{width:44px;height:44px;border:5px solid #2d3540;border-top-color:var(--red);border-radius:50%;margin:60px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<svg id="sprite" width="0" height="0" style="position:absolute" aria-hidden="true"></svg>
+<div id="app"></div>
+<video id="cam" playsinline muted style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+<canvas id="cv" width="64" height="48" style="display:none"></canvas>
+<canvas id="snapcv" width="320" height="240" style="display:none"></canvas>
+<div id="modal-root"></div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   FIREBASE (ista baza kot ostale aplikacije)
+   ===================================================================== */
+firebase.initializeApp({ databaseURL: "https://wii-sh-default-rtdb.europe-west1.firebasedatabase.app/" });
+const db = firebase.database();
+const P = 'wii_db_v3/pos';     // zaposleni (prijava administratorja)
+const AL = 'wii_db_v3/alarm';  // config, pins, log, devices
+
+/* =====================================================================
+   IKONE
+   ===================================================================== */
+const ICONS = {
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
+  shieldOn: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+  shieldOff: '<path d="M19.7 14a6.9 6.9 0 0 0 .3-2V5l-8-3-3.2 1.2M4.7 4.7 4 5v7c0 6 8 10 8 10a20.3 20.3 0 0 0 5.6-4.4M2 2l20 20"/>',
+  siren: '<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2Z"/><path d="M21 12h1M18.5 4.5 18 5M2 12h1M12 2v1M4.9 4.9l.7.7M12 12v6"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z"/><circle cx="12" cy="13" r="3"/>',
+  cameraOff: '<path d="M2 2l20 20M7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16M9.5 4h5L17 7h3a2 2 0 0 1 2 2v7.3M14.1 14.1A3 3 0 1 1 9.9 9.9"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>',
+  micOff: '<path d="M2 2l20 20M9 9v2a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M17 16.9A7 7 0 0 1 5 11v-1M19 10v1c0 .8-.1 1.6-.4 2.3M12 18v4M8 22h8"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  settings: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.2"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  edit: '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  trash: '<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  login: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/>',
+  arrowL: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  backspace: '<path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><path d="m18 9-6 6M12 9l6 6"/>',
+  volume: '<path d="M11 5 6 9H2v6h4l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  phone: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>'
+};
+const ic = (n, c = '') => `<svg class="ico ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+document.getElementById('sprite').innerHTML = Object.entries(ICONS).map(([k, v]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${v}</symbol>`).join('');
+
+/* =====================================================================
+   POMOŽNO
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const nowIso = () => new Date().toISOString();
+const fmtDT = iso => { const d = new Date(iso); return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
+function toast(msg, type = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + type;
+  t.innerHTML = ic(type === 'err' ? 'alert' : type === 'ok' ? 'checkCircle' : 'info') + '<span></span>';
+  t.querySelector('span').textContent = msg; $('toast').appendChild(t); setTimeout(() => t.remove(), 3500);
+}
+function openModal(html) {
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="modal">${html}</div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) ov.close(); });
+  $('modal-root').appendChild(ov); ov.close = () => ov.remove(); return ov;
+}
+function confirmBox(msg, yes, cb) {
+  const ov = openModal(`<h3>${ic('alert')}Potrditev</h3><p style="margin:10px 0 4px;font-size:16px">${msg}</p><div class="rowbtns"><button class="btn ghost sm" id="c-no">Ne</button><button class="btn sm" id="c-yes">${yes}</button></div>`);
+  ov.querySelector('#c-no').onclick = () => ov.close();
+  ov.querySelector('#c-yes').onclick = () => { ov.close(); cb(); };
+}
+let DEV = store.get('wii_alarm_dev');
+if (!DEV) { DEV = 'a' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); store.set('wii_alarm_dev', DEV); }
+const devName = () => store.get('wii_alarm_name') || 'Naprava ' + DEV.slice(-4).toUpperCase();
+
+/* =====================================================================
+   STANJE IN NASTAVITVE
+   ===================================================================== */
+const DEF = { exitDelay: 10, entryDelay: 5, sirenDur: 60, cam: true, facing: 'user', sens: 6, mic: true, micThr: -25, keepScreenOn: false, snapshot: true, wrongMax: 3 };
+const S = { ready: {}, cfg: Object.assign({}, DEF), pins: {}, employees: {}, log: {}, devices: {}, admin: null, view: 'main', st: 'disarmed', until: 0, by: '', reason: '', lastAlarm: null, wrong: 0, padOpen: false, wake: null, hiddenWhileArmed: false };
+const cfg = () => S.cfg;
+const pinList = () => Object.values(S.pins).filter(p => p && p.pin).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'sl'));
+const motionThr = () => +(15 * Math.pow(0.73, cfg().sens - 1)).toFixed(2);   // % spremenjenih točk; občutljivost 1–10
+
+db.ref(AL + '/config').on('value', s => { S.cfg = Object.assign({}, DEF, s.val() || {}); S.ready.cfg = true; refresh(); });
+db.ref(AL + '/pins').on('value', s => { S.pins = s.val() || {}; S.ready.pins = true; refresh(); });
+db.ref(P + '/employees').on('value', s => { S.employees = s.val() || {}; S.ready.emp = true; refresh(); });
+db.ref(AL + '/log').on('value', s => { S.log = s.val() || {}; if (S.view === 'settings') drawLog(); });
+db.ref(AL + '/devices').on('value', s => { S.devices = s.val() || {}; if (S.view === 'settings') drawDevices(); });
+function refresh() {
+  if (!S.ready.cfg || !S.ready.pins || !S.ready.emp) return;
+  if (!S.booted) { S.booted = true; boot(); return; }
+  if (S.view === 'settings') { // osveži nastavitve, ohrani položaj in preizkus senzorjev
+    const m = document.querySelector('.main'), y = m ? m.scrollTop : 0, testing = !!(SEN.stream && SEN.onSample && S.st === 'disarmed');
+    renderSettings(); if (testing) testUI();
+    const m2 = document.querySelector('.main'); if (m2) m2.scrollTop = y; return;
+  }
+  if (S.view === 'main' && S.st === 'disarmed' && !S.padOpen) render();
+}
+
+function logEv(type, detail, snap) { try { logEv2(type, detail, snap); } catch (e) { console.warn('logEv', e); } }
+function logEv2(type, detail, snap) {
+  const id = db.ref(AL + '/log').push().key;
+  db.ref(`${AL}/log/${id}`).set({ id, at: nowIso(), type, by: S.by || null, dev: devName(), detail: detail || null, snap: snap || null });
+  // dnevnik omejimo na zadnjih 300 dogodkov
+  const keys = Object.keys(S.log).sort(); if (keys.length > 300) keys.slice(0, keys.length - 300).forEach(k => db.ref(`${AL}/log/${k}`).remove());
+}
+let devRef = null;
+function pubDevice() { // sporočanje stanja v bazo nikoli ne sme ustaviti alarma
+  try {
+    if (!devRef) { devRef = db.ref(`${AL}/devices/${DEV}`); devRef.child('online').onDisconnect().set(false); }
+    devRef.set({ name: devName(), state: S.st, online: true, at: nowIso(), lastAlarm: S.lastAlarm || null, cam: !!cfg().cam, mic: !!cfg().mic });
+  } catch (e) { console.warn('pubDevice', e); }
+}
+
+/* =====================================================================
+   ZVOKI – piski in sirena
+   ===================================================================== */
+let AC = null, SIREN = null, beepT = null;
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (AC.state === 'suspended') AC.resume().catch(() => {}); return AC; }
+document.addEventListener('pointerdown', () => ac(), true);
+function beep(f = 1800, d = 0.09, v = 0.5) {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+  o.type = 'square'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.setValueAtTime(v, t + d - 0.01); g.gain.linearRampToValueAtTime(0, t + d);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + 0.02);
+}
+function stopBeeps() { clearInterval(beepT); clearTimeout(beepT); beepT = null; }
+function sirenStart() {
+  const a = ac(); if (!a || SIREN) return;
+  const comp = a.createDynamicsCompressor(); comp.connect(a.destination);
+  const g = a.createGain(); g.gain.value = 1; g.connect(comp);
+  const o1 = a.createOscillator(), o2 = a.createOscillator(); o1.type = 'sawtooth'; o2.type = 'square';
+  const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 0.9; lg.gain.value = 450; lfo.connect(lg);
+  o1.frequency.value = 1050; o2.frequency.value = 1060; lg.connect(o1.frequency); lg.connect(o2.frequency);
+  const g2 = a.createGain(); g2.gain.value = 0.35; o2.connect(g2); g2.connect(g); o1.connect(g);
+  o1.start(); o2.start(); lfo.start();
+  SIREN = { stop: () => { [o1, o2, lfo].forEach(o => { try { o.stop(); } catch (e) {} }); g.disconnect(); } };
+  if (navigator.vibrate) navigator.vibrate([1000, 300, 1000, 300, 1000, 300, 1000]);
+}
+function sirenStop() { if (SIREN) { SIREN.stop(); SIREN = null; } if (navigator.vibrate) navigator.vibrate(0); }
+
+/* =====================================================================
+   ZASLON OSTANE PRIŽGAN
+   ===================================================================== */
+async function wakeOn() {
+  if (S.wake) return true;
+  if (!('wakeLock' in navigator)) return false;
+  try { S.wake = await navigator.wakeLock.request('screen'); S.wake.addEventListener('release', () => { S.wake = null; }); return true; } catch (e) { return false; }
+}
+function wakeOff() { if (S.wake) { S.wake.release().catch(() => {}); S.wake = null; } }
+document.addEventListener('visibilitychange', async () => {
+  const active = ['exit', 'armed', 'entry', 'alarm'].includes(S.st);
+  if (document.visibilityState === 'hidden' && active) { S.hiddenWhileArmed = true; logEv('hidden', 'Aplikacija je bila skrita ali zaslon ugasnjen – zaznavanje ni delovalo.'); }
+  if (document.visibilityState === 'visible' && active) { await wakeOn(); if (S.hiddenWhileArmed) { S.hiddenWhileArmed = false; logEv('visible', 'Aplikacija je spet aktivna.'); toast('Aplikacija je bila skrita – med tem zaznavanje ni delovalo.', 'err'); } }
+});
+
+/* =====================================================================
+   SENZORJI – gibanje (kamera) in zvok (mikrofon)
+   ===================================================================== */
+const SEN = { stream: null, analyser: null, buf: null, prev: null, motion: 0, level: -100, timer: null, hitM: 0, hitS: 0, onSample: null, cam: false, mic: false };
+async function sensorsStart(useCam, useMic, facing) {
+  sensorsStop();
+  if (!useCam && !useMic) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Brskalnik ne podpira kamere/mikrofona (potreben je HTTPS).');
+  const c = { video: useCam ? { facingMode: facing || 'user', width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 10 } } : false,
+    audio: useMic ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : false };
+  SEN.stream = await navigator.mediaDevices.getUserMedia(c);
+  SEN.cam = useCam; SEN.mic = useMic; SEN.prev = null; SEN.hitM = SEN.hitS = 0;
+  if (useCam) { const v = $('cam'); v.srcObject = SEN.stream; await v.play().catch(() => {}); }
+  if (useMic) {
+    const a = ac(), src = a.createMediaStreamSource(new MediaStream(SEN.stream.getAudioTracks()));
+    SEN.analyser = a.createAnalyser(); SEN.analyser.fftSize = 1024; SEN.buf = new Float32Array(SEN.analyser.fftSize); src.connect(SEN.analyser);
+  }
+  SEN.timer = setInterval(sample, 150);
+  return true;
+}
+function sensorsStop() {
+  clearInterval(SEN.timer); SEN.timer = null;
+  if (SEN.stream) SEN.stream.getTracks().forEach(t => t.stop());
+  SEN.stream = null; SEN.analyser = null; SEN.prev = null; SEN.cam = SEN.mic = false; SEN.motion = 0; SEN.level = -100;
+  $('cam').srcObject = null;
+}
+function sample() {
+  if (SEN.cam) {
+    const v = $('cam');
+    if (v.readyState >= 2) {
+      const cv = $('cv'), x = cv.getContext('2d', { willReadFrequently: true });
+      x.drawImage(v, 0, 0, 64, 48);
+      const d = x.getImageData(0, 0, 64, 48).data, n = 64 * 48, cur = new Uint8Array(n);
+      for (let i = 0, j = 0; i < n; i++, j += 4) cur[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+      if (SEN.prev) { let ch = 0; for (let i = 0; i < n; i++) if (Math.abs(cur[i] - SEN.prev[i]) > 26) ch++; SEN.motion = ch / n * 100; }
+      SEN.prev = cur;
+    }
+  }
+  if (SEN.mic && SEN.analyser) {
+    SEN.analyser.getFloatTimeDomainData(SEN.buf);
+    let sum = 0; for (let i = 0; i < SEN.buf.length; i++) sum += SEN.buf[i] * SEN.buf[i];
+    SEN.level = Math.max(-100, 20 * Math.log10(Math.sqrt(sum / SEN.buf.length) || 1e-6));
+  }
+  if (SEN.onSample) SEN.onSample();
+}
+function meterHTML(prefix) {
+  const out = [];
+  if (SEN.cam || cfg().cam) out.push(`<div class="meter">${ic('camera', 'sm')}<span style="width:62px">Gibanje</span><div class="bar"><i id="${prefix}-m"></i><b style="left:${Math.min(100, motionThr() * 4)}%"></b></div></div>`);
+  if (SEN.mic || cfg().mic) out.push(`<div class="meter">${ic('mic', 'sm')}<span style="width:62px">Zvok</span><div class="bar"><i id="${prefix}-s"></i><b style="left:${(cfg().micThr + 70) / 70 * 100}%"></b></div></div>`);
+  return out.join('');
+}
+function updMeters(prefix) {
+  const m = $(prefix + '-m'), s = $(prefix + '-s');
+  if (m) { m.style.width = Math.min(100, SEN.motion * 4) + '%'; m.style.background = SEN.motion > motionThr() ? 'var(--red)' : '#64748b'; }
+  if (s) { s.style.width = Math.max(0, Math.min(100, (SEN.level + 70) / 70 * 100)) + '%'; s.style.background = SEN.level > cfg().micThr ? 'var(--red)' : '#64748b'; }
+}
+
+/* =====================================================================
+   ALARMNI SISTEM – stanja: disarmed › exit › armed › entry › alarm
+   ===================================================================== */
+let stT = null, tickT = null, warmUntil = 0;
+function setSt(st, o = {}) {
+  S.st = st; Object.assign(S, o);
+  store.set('wii_alarm_state', JSON.stringify({ st: ['exit', 'armed', 'entry', 'alarm'].includes(st) ? 'armed' : 'disarmed', at: nowIso() }));
+  document.body.className = { armed: 'armed', entry: 'entry', alarm: 'siren' }[st] || '';
+  S.padOpen = ['entry', 'alarm'].includes(st); S.wrong = st === 'disarmed' ? 0 : S.wrong;
+  pubDevice(); render();
+}
+async function arm(byName) {
+  if (!cfg().keepScreenOn) return toast('Administrator mora v nastavitvah dovoliti, da zaslon ostane prižgan.', 'err');
+  if (!cfg().cam && !cfg().mic) return toast('V nastavitvah ni vklopljen noben senzor (kamera ali mikrofon).', 'err');
+  if (!(await wakeOn())) return toast('Ta naprava ne dovoli, da zaslon ostane prižgan – alarma ni mogoče vklopiti.', 'err');
+  try { await sensorsStart(cfg().cam, cfg().mic, cfg().facing); }
+  catch (e) { wakeOff(); return toast('Kamera ali mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); }
+  S.by = byName;
+  logEv('arming', `Vklop – zakasnitev ${cfg().exitDelay} s`);
+  setSt('exit', { until: Date.now() + cfg().exitDelay * 1000 });
+  try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+  stopBeeps(); const t0 = Date.now();
+  beepT = setInterval(() => { const left = S.until - Date.now(); beep(left < 3000 ? 2200 : 1600, left < 3000 ? 0.15 : 0.07, 0.35); }, 1000); beep(1600, 0.07, 0.35);
+  clearTimeout(stT); stT = setTimeout(() => goArmed('Alarm je vklopljen'), cfg().exitDelay * 1000);
+}
+function goArmed(msg) {
+  stopBeeps(); sirenStop(); clearTimeout(stT);
+  warmUntil = Date.now() + 2500; SEN.prev = null; SEN.hitM = SEN.hitS = 0;
+  SEN.onSample = detect;
+  if (msg) logEv('armed', msg);
+  setSt('armed', { until: 0 });
+  beep(2400, 0.25, 0.4);
+}
+function detect() {
+  if (S.st === 'armed') updMeters('am');
+  if (S.st !== 'armed' || Date.now() < warmUntil) return;
+  if (SEN.cam) { SEN.hitM = SEN.motion > motionThr() ? SEN.hitM + 1 : 0; if (SEN.hitM >= 2) return trigger('motion', `Zaznano gibanje (${SEN.motion.toFixed(1)} %)`); }
+  if (SEN.mic) { SEN.hitS = SEN.level > cfg().micThr ? SEN.hitS + 1 : 0; if (SEN.hitS >= 2) return trigger('sound', `Zaznan močan zvok (${SEN.level.toFixed(0)} dB)`); }
+}
+function snapshot() {
+  if (!cfg().snapshot || !SEN.cam) return null;
+  try { const v = $('cam'), c = $('snapcv'), x = c.getContext('2d'); x.drawImage(v, 0, 0, 320, 240); return c.toDataURL('image/jpeg', 0.6); } catch (e) { return null; }
+}
+function trigger(kind, detail) {
+  if (S.st !== 'armed') return;
+  const snap = snapshot();
+  logEv(kind, detail, snap);
+  setSt('entry', { until: Date.now() + cfg().entryDelay * 1000, reason: kind === 'motion' ? 'Zaznano gibanje' : kind === 'sound' ? 'Zaznan močan zvok' : detail });
+  stopBeeps(); beep(2600, 0.12, 0.6);
+  beepT = setInterval(() => beep(2600, 0.12, 0.6), 450);
+  clearTimeout(stT); stT = setTimeout(goSiren, cfg().entryDelay * 1000);
+}
+function goSiren() {
+  stopBeeps();
+  S.lastAlarm = nowIso();
+  logEv('alarm', `Sirena – PIN ni bil vnesen v ${cfg().entryDelay} s (${S.reason})`, snapshot());
+  setSt('alarm', { until: Date.now() + cfg().sirenDur * 1000 });
+  sirenStart();
+  clearTimeout(stT); stT = setTimeout(() => { sirenStop(); logEv('siren_end', `Sirena se je ustavila po ${cfg().sirenDur} s – alarm ostaja vklopljen.`); goArmed(null); }, cfg().sirenDur * 1000);
+}
+function disarm(byName) {
+  stopBeeps(); sirenStop(); clearTimeout(stT);
+  const was = S.st; S.by = byName;
+  logEv('disarmed', was === 'alarm' ? 'Izklop med sireno' : was === 'entry' ? 'Izklop po sprožitvi (pravočasno)' : was === 'exit' ? 'Preklic vklopa' : 'Izklop');
+  SEN.onSample = null; sensorsStop(); wakeOff();
+  try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {}
+  setSt('disarmed', { until: 0, reason: '' });
+  toast('Alarm je izklopljen.', 'ok');
+}
+function pinOk(v) { return pinList().find(p => String(p.pin) === v) || null; }
+
+/* ---------- osvežitev odštevanja brez prerisovanja gumbov ---------- */
+function tick() {
+  const left = Math.max(0, Math.ceil((S.until - Date.now()) / 1000));
+  const c = $('cnt'); if (c) c.textContent = left;
+  const fg = $('cntfg'); if (fg) { const tot = { exit: cfg().exitDelay, entry: cfg().entryDelay, alarm: cfg().sirenDur }[S.st] || 1; fg.style.strokeDashoffset = String(565 * (1 - left / tot)); }
+  const sr = $('sirleft'); if (sr) sr.textContent = left;
+}
+setInterval(tick, 250);
+
+/* =====================================================================
+   PRIKAZ
+   ===================================================================== */
+function render() {
+  const app = $('app');
+  if (!S.booted) { app.innerHTML = '<div class="spinner"></div>'; return; }
+  if (S.view === 'settings') return renderSettings();
+  if (S.view === 'resume') return renderResume();
+  const st = S.st;
+  if (st === 'disarmed') {
+    const noPin = !pinList().length, noWake = !cfg().keepScreenOn, noSens = !cfg().cam && !cfg().mic;
+    if (S.padOpen) { app.innerHTML = `<div class="top"><button class="ibtn" onclick="closePad()">${ic('arrowL')}</button><div class="brand">Vklop alarma</div></div><div class="main" style="justify-content:center">${pinHTML('Vpiši PIN za vklop')}</div>`; bindPad(v => { const p = pinOk(v); if (!p) return false; S.padOpen = false; arm(p.name); return true; }); return; }
+    app.innerHTML = `<div class="top"><div class="brand">${ic('siren')}WII ALARM</div><button class="ibtn" onclick="openSettings()" aria-label="Nastavitve">${ic('settings')}</button></div>
+      <div class="main">
+        ${noPin ? `<div class="warn">${ic('key')}<div>Administrator še ni nastavil nobene PIN kode.</div></div>` : ''}
+        ${noWake ? `<div class="warn">${ic('sun')}<div>Administrator mora v nastavitvah dovoliti, da zaslon ostane prižgan – brez tega alarma ni mogoče vklopiti.</div></div>` : ''}
+        ${noSens ? `<div class="warn">${ic('alert')}<div>V nastavitvah ni vklopljen noben senzor.</div></div>` : ''}
+        <div class="center">
+          <div class="shield off">${ic('shieldOff')}</div>
+          <div class="big">Alarm je IZKLOPLJEN</div>
+          <div class="sub">${esc(devName())}</div>
+          <div class="chips">
+            <span class="chip ${cfg().cam ? 'ok' : 'no'}">${ic(cfg().cam ? 'camera' : 'cameraOff', 'sm')}Kamera ${cfg().cam ? (cfg().facing === 'user' ? '(sprednja)' : '(zadnja)') : 'izklopljena'}</span>
+            <span class="chip ${cfg().mic ? 'ok' : 'no'}">${ic(cfg().mic ? 'mic' : 'micOff', 'sm')}Mikrofon ${cfg().mic ? 'vklopljen' : 'izklopljen'}</span>
+          </div>
+          ${S.lastAlarm ? `<div class="warn red" style="margin-top:16px">${ic('siren')}<div>Zadnja sirena: ${fmtDT(S.lastAlarm)}</div></div>` : ''}
+        </div>
+        <button class="btn block" style="margin-top:16px" onclick="openPad()" ${noPin || noWake || noSens ? 'disabled' : ''}>${ic('lock')}VKLOPI ALARM</button>
+        <div class="lastev" style="text-align:center">Zakasnitev ob odhodu ${cfg().exitDelay} s · čas za PIN ${cfg().entryDelay} s · sirena ${cfg().sirenDur} s</div>
+      </div>`;
+    return;
+  }
+  if (st === 'exit') {
+    app.innerHTML = `<div class="main"><div class="center">
+      <div class="count"><svg viewBox="0 0 200 200"><circle class="bgc" cx="100" cy="100" r="90"/><circle class="fg" id="cntfg" cx="100" cy="100" r="90" stroke-dasharray="565" stroke-dashoffset="0"/></svg><span id="cnt">${cfg().exitDelay}</span></div>
+      <div class="big">Zapusti prostor</div><div class="sub">Alarm se bo vklopil čez nekaj sekund.</div></div>
+      <button class="btn ghost block" onclick="cancelExit()">${ic('x')}Prekliči vklop</button></div>`;
+    tick(); return;
+  }
+  if (st === 'armed') {
+    if (S.padOpen) { app.innerHTML = `<div class="main" style="justify-content:center">${pinHTML('Vpiši PIN za izklop')}<button class="btn ghost block" style="margin-top:14px;max-width:340px;align-self:center" onclick="closePad()">Zapri</button></div>`; bindPad(padDisarm); armPadTimeout(); return; }
+    app.innerHTML = `<div class="main" onclick="openPad()"><div class="center">
+      <div class="shield on">${ic('shieldOn')}</div>
+      <div class="big" style="color:#fca5a5">VAROVANJE VKLOPLJENO</div>
+      <div class="sub">${esc(devName())}${S.by ? ' · vklopil(a) ' + esc(S.by) : ''}</div>
+      <div class="meters">${meterHTML('am')}</div>
+      ${SEN.cam ? '<div class="sub" style="font-size:12px;margin-top:10px">Kamera spremlja prostor</div>' : ''}
+      <div class="sub" style="margin-top:22px">Tapni zaslon za izklop</div></div></div>`;
+    return;
+  }
+  if (st === 'entry') {
+    app.innerHTML = `<div class="main"><div class="center" style="flex:0;padding-top:18px">
+      <div class="big" style="color:#fdba74">${ic('alert')} ${esc(S.reason || 'Zaznava')}</div>
+      <div class="count" style="width:130px;height:130px;font-size:56px;margin:10px 0"><svg viewBox="0 0 200 200"><circle class="bgc" cx="100" cy="100" r="90"/><circle class="fg" id="cntfg" cx="100" cy="100" r="90" stroke-dasharray="565" stroke-dashoffset="0" style="stroke:var(--red)"/></svg><span id="cnt">${cfg().entryDelay}</span></div>
+      </div>${pinHTML('Vpiši PIN, sicer se sproži sirena')}</div>`;
+    bindPad(padDisarm); tick(); return;
+  }
+  if (st === 'alarm') {
+    app.innerHTML = `<div class="main"><div class="center" style="flex:0;padding-top:18px">
+      <div class="alarmtitle">${ic('siren')} ALARM</div><div class="sub" style="color:#fecaca">${esc(S.reason || '')} · sirena še <b id="sirleft">${cfg().sirenDur}</b> s</div></div>
+      <div style="margin-top:18px">${pinHTML('Vpiši PIN za izklop')}</div></div>`;
+    bindPad(padDisarm); tick(); return;
+  }
+}
+function padDisarm(v) {
+  const p = pinOk(v);
+  if (p) { disarm(p.name); return true; }
+  S.wrong++;
+  logEv('wrong_pin', `Napačna PIN koda (${S.wrong}×)`);
+  if (S.st === 'armed' && S.wrong >= cfg().wrongMax) { S.wrong = 0; S.padOpen = false; trigger('pin', `${cfg().wrongMax}× napačna PIN koda`); }
+  return false;
+}
+let padIdle = null;
+function armPadTimeout() { clearTimeout(padIdle); padIdle = setTimeout(() => { if (S.st === 'armed' && S.padOpen) { S.padOpen = false; render(); } }, 20000); }
+function openPad() { ac(); S.padOpen = true; render(); }
+function closePad() { S.padOpen = false; render(); }
+function cancelExit() { disarm(S.by); }
+
+/* ---------- PIN tipkovnica (odzivna – brez prerisovanja med tipkanjem) ---------- */
+let PINBUF = '';
+function pinHTML(title) {
+  PINBUF = '';
+  return `<div class="pin" id="pinbox"><div class="ttl">${esc(title)}</div><div class="dots" id="pdots"></div><div class="pinerr" id="perr"></div>
+    <div class="pad" id="ppad">${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(k => `<button data-k="${k}">${k}</button>`).join('')}
+      <button class="fn" data-k="C">${ic('backspace')}</button><button data-k="0">0</button><button class="ok" data-k="OK">${ic('check')}</button></div></div>`;
+}
+function bindPad(onSubmit) {
+  const padEl = $('ppad'); if (!padEl) return;
+  const dots = () => { $('pdots').innerHTML = PINBUF.split('').map(() => '<i class="f"></i>').join('') || '<i></i><i></i><i></i><i></i>'; };
+  dots();
+  padEl.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button[data-k]'); if (!b) return;
+    e.preventDefault(); ac(); b.classList.add('pr'); setTimeout(() => b.classList.remove('pr'), 120);
+    const k = b.dataset.k; armPadTimeout();
+    if (k === 'C') PINBUF = PINBUF.slice(0, -1);
+    else if (k === 'OK') {
+      if (!PINBUF) return;
+      const ok = onSubmit(PINBUF);
+      if (!ok) { const box = $('pinbox'); if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); } const er = $('perr'); if (er) er.textContent = 'Napačna PIN koda'; PINBUF = ''; if (navigator.vibrate) navigator.vibrate(200); }
+      if (!ok && $('pdots')) dots();
+      return;
+    } else if (PINBUF.length < 8) { PINBUF += k; if (S.st !== 'entry' && S.st !== 'alarm') beep(1200, 0.04, 0.15); }
+    const er = $('perr'); if (er) er.textContent = '';
+    dots();
+  });
+}
+
+/* ---------- ponovni zagon, ko je bil alarm vklopljen ---------- */
+function renderResume() {
+  $('app').innerHTML = `<div class="main"><div class="center"><div class="shield on">${ic('shieldOn')}</div>
+    <div class="big">Alarm je bil vklopljen</div><div class="sub">Aplikacija se je ponovno zagnala. Tapni, da nadaljuješ varovanje (potreben je dostop do kamere in mikrofona).</div></div>
+    <button class="btn block" onclick="resumeArmed()">${ic('shieldOn')}Nadaljuj varovanje</button>
+    <button class="btn ghost block" style="margin-top:10px" onclick="S.view='main';S.padOpen=true;S.st='armed';render()">${ic('unlock')}Izklopi s PIN-om</button></div>`;
+}
+async function resumeArmed() {
+  ac();
+  if (!(await wakeOn())) toast('Zaslon morda ne bo ostal prižgan.', 'err');
+  try { await sensorsStart(cfg().cam, cfg().mic, cfg().facing); } catch (e) { toast('Kamera ali mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); return; }
+  S.view = 'main'; logEv('restart', 'Ponovni zagon – varovanje nadaljevano'); goArmed(null);
+}
+
+/* =====================================================================
+   NASTAVITVE (samo administrator)
+   ===================================================================== */
+function openSettings() {
+  const ov = openModal(`<h3>${ic('lock')}Prijava administratorja</h3><div class="muted">Nastavitve alarma ureja samo administrator (račun iz blagajne).</div>
+    <label class="lbl" style="margin-top:12px">Uporabniško ime</label><input id="al-u" class="inp" autocapitalize="none" autocomplete="username">
+    <label class="lbl">Geslo</label><input id="al-p" type="password" class="inp" autocomplete="current-password">
+    <div class="err" id="al-e"></div><div class="rowbtns"><button class="btn ghost sm" id="al-x">Prekliči</button><button class="btn sm" id="al-ok">${ic('login')}Prijava</button></div>`);
+  const go = () => {
+    const u = ov.querySelector('#al-u').value.trim().toLowerCase(), p = ov.querySelector('#al-p').value;
+    const e = Object.values(S.employees).find(x => x && (x.username || '').toLowerCase() === u && x.password === p);
+    if (!e) return ov.querySelector('#al-e').textContent = 'Napačno uporabniško ime ali geslo.';
+    if (e.role !== 'admin') return ov.querySelector('#al-e').textContent = 'Nastavitve lahko ureja samo administrator.';
+    S.admin = e; ov.close(); S.view = 'settings'; render();
+  };
+  ov.querySelector('#al-x').onclick = () => ov.close();
+  ov.querySelector('#al-ok').onclick = go;
+  ov.querySelector('#al-p').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  setTimeout(() => ov.querySelector('#al-u').focus(), 60);
+}
+function closeSettings() { testStop(); S.admin = null; S.view = 'main'; render(); }
+const setCfg = (k, v) => db.ref(`${AL}/config/${k}`).set(v);
+function renderSettings() {
+  const c = cfg(), tg = (k, t, s) => `<button class="row tgl ${c[k] ? 'on' : ''}" onclick="setCfg('${k}', ${!c[k]})"><span class="grow"><div class="t">${t}</div>${s ? `<div class="s">${s}</div>` : ''}</span><span class="sw"></span></button>`;
+  const num = (k, t, min, max, step, unit) => `<div class="row"><span class="grow"><div class="t">${t}</div></span><div class="num"><button onclick="setCfg('${k}', Math.max(${min}, ${c[k]} - ${step}))">−</button><b>${c[k]} ${unit}</b><button onclick="setCfg('${k}', Math.min(${max}, ${c[k]} + ${step}))">+</button></div></div>`;
+  $('app').innerHTML = `<div class="top"><button class="ibtn" onclick="closeSettings()">${ic('arrowL')}</button><div class="brand">Nastavitve alarma</div><button class="ibtn" onclick="closeSettings()" title="Odjava">${ic('logout')}</button></div>
+    <div class="main" style="display:block">
+      <div class="warn info">${ic('user')}<div>Administrator: ${esc(S.admin.name)}. Nastavitve veljajo za vse naprave z WII Alarmom.</div></div>
+      <div class="sec"><h3>${ic('sun')}Zaslon</h3>
+        ${tg('keepScreenOn', 'Dovoli, da zaslon ostane prižgan', 'Obvezno: zaznavanje deluje samo, dokler je aplikacija odprta in zaslon prižgan. Telefon priključi na polnilec.')}
+        <button class="row" onclick="testWake()"><span class="grow"><div class="t">Preizkusi na tej napravi</div><div class="s" id="wk-s">${'wakeLock' in navigator ? 'Ta brskalnik to podpira' : 'Ta brskalnik tega NE podpira'}</div></span>${ic('refresh')}</button>
+      </div>
+      <div class="sec"><h3>${ic('key')}PIN kode</h3><div id="pins"></div><button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="editPin()">${ic('plus', 'sm')}Dodaj PIN kodo</button></div>
+      <div class="sec"><h3>${ic('clock')}Časi</h3>
+        ${num('exitDelay', 'Zakasnitev ob vklopu (odhod)', 5, 120, 5, 's')}
+        ${num('entryDelay', 'Čas za vpis PIN-a po zaznavi', 3, 60, 1, 's')}
+        ${num('sirenDur', 'Trajanje sirene', 10, 600, 10, 's')}
+        ${num('wrongMax', 'Napačnih PIN-ov do sprožitve', 2, 10, 1, '×')}
+      </div>
+      <div class="sec"><h3>${ic('camera')}Kamera (gibanje)</h3>
+        ${tg('cam', 'Zaznavanje gibanja s kamero', '')}
+        <div class="row"><span class="grow"><div class="t">Kamera</div></span><div class="num"><button style="width:auto;padding:0 12px;font-size:14px;${c.facing === 'user' ? 'background:var(--red)' : ''}" onclick="setCfg('facing','user')">Sprednja</button><button style="width:auto;padding:0 12px;font-size:14px;${c.facing !== 'user' ? 'background:var(--red)' : ''}" onclick="setCfg('facing','environment')">Zadnja</button></div></div>
+        <div class="row" style="display:block"><div class="t">Občutljivost: ${c.sens} / 10</div><input type="range" class="rng" min="1" max="10" value="${c.sens}" onchange="setCfg('sens', +this.value)"><div class="s muted">Višja številka = zazna že manjše gibanje (prag ${motionThr()} % slike).</div></div>
+        ${tg('snapshot', 'Shrani fotografijo ob sprožitvi', 'Posnetek se shrani v dnevnik dogodkov.')}
+      </div>
+      <div class="sec"><h3>${ic('mic')}Mikrofon (zvok)</h3>
+        ${tg('mic', 'Zaznavanje močnega zvoka', '')}
+        <div class="row" style="display:block"><div class="t">Prag glasnosti: ${c.micThr} dB</div><input type="range" class="rng" min="-60" max="-5" value="${c.micThr}" onchange="setCfg('micThr', +this.value)"><div class="s muted">Nižja vrednost (npr. −45) = zazna že tišje zvoke. Privzeto −25 dB (glasen udarec, razbitje stekla).</div></div>
+      </div>
+      <div class="sec test"><h3>${ic('activity')}Preizkus senzorjev</h3>
+        <div class="muted" style="margin-bottom:8px">Premikaj se pred kamero in ploskni – rdeča črta je meja, nad katero se alarm sproži.</div>
+        <div id="testbox"><button class="btn ghost sm" style="width:100%" onclick="testStart()">${ic('eye', 'sm')}Začni preizkus</button></div>
+      </div>
+      <div class="sec"><h3>${ic('phone')}Ta naprava</h3>
+        <div class="row"><span class="grow"><div class="t">${esc(devName())}</div><div class="s">Ime se izpiše v dnevniku</div></span><button class="mini" onclick="renameDev()">${ic('edit')}</button></div>
+        <div id="devs"></div></div>
+      <div class="sec"><h3>${ic('list')}Dnevnik dogodkov</h3><div id="log"></div></div>
+    </div>`;
+  drawPins(); drawDevices(); drawLog();
+}
+function drawPins() {
+  const el = $('pins'); if (!el) return;
+  el.innerHTML = pinList().map(p => `<div class="row"><span class="grow"><div class="t">${esc(p.name)}</div><div class="s">PIN: ${'•'.repeat(String(p.pin).length)}</div></span><button class="mini" onclick="editPin('${p.id}')">${ic('edit')}</button><button class="mini red" onclick="delPin('${p.id}')">${ic('trash')}</button></div>`).join('') || '<div class="muted">Ni PIN kod – alarma ni mogoče vklopiti.</div>';
+}
+function editPin(id) {
+  const p = id ? S.pins[id] : null;
+  const ov = openModal(`<h3>${ic('key')}${p ? 'Uredi PIN kodo' : 'Nova PIN koda'}</h3>
+    <label class="lbl" style="margin-top:10px">Ime (kdo uporablja kodo)</label><input id="pe-n" class="inp" maxlength="30" placeholder="npr. Ana Novak" value="${esc(p ? p.name : '')}">
+    <label class="lbl">PIN (4–8 števk)</label><input id="pe-p" class="inp" inputmode="numeric" maxlength="8" placeholder="npr. 2580" value="${esc(p ? p.pin : '')}">
+    <div class="err" id="pe-e"></div><div class="rowbtns"><button class="btn ghost sm" id="pe-x">Prekliči</button><button class="btn green sm" id="pe-ok">${ic('check')}Shrani</button></div>`);
+  ov.querySelector('#pe-x').onclick = () => ov.close();
+  ov.querySelector('#pe-ok').onclick = () => {
+    const n = ov.querySelector('#pe-n').value.trim(), pin = ov.querySelector('#pe-p').value.replace(/\D/g, ''), er = t => ov.querySelector('#pe-e').textContent = t;
+    if (!n) return er('Vpiši ime.');
+    if (!/^\d{4,8}$/.test(pin)) return er('PIN mora imeti od 4 do 8 števk.');
+    if (pinList().some(x => x.id !== id && String(x.pin) === pin)) return er('Ta PIN že uporablja nekdo drug.');
+    const pid = id || db.ref(AL + '/pins').push().key;
+    db.ref(`${AL}/pins/${pid}`).set({ id: pid, name: n, pin, by: S.admin.name, at: nowIso() }).then(() => { ov.close(); toast('Shranjeno.', 'ok'); drawPins(); });
+  };
+}
+function delPin(id) { const p = S.pins[id]; confirmBox(`Izbrišem PIN kodo za <b>${esc(p.name)}</b>?`, 'Izbriši', () => db.ref(`${AL}/pins/${id}`).remove().then(drawPins)); }
+async function testWake() { const ok = await wakeOn(); $('wk-s').textContent = ok ? 'Deluje – zaslon bo ostal prižgan.' : 'Ne deluje na tej napravi/brskalniku.'; if (ok && S.st === 'disarmed') setTimeout(wakeOff, 3000); }
+function renameDev() {
+  const ov = openModal(`<h3>${ic('phone')}Ime naprave</h3><input id="rn" class="inp" style="margin-top:10px" maxlength="30" value="${esc(devName())}"><div class="rowbtns"><button class="btn ghost sm" id="rn-x">Prekliči</button><button class="btn green sm" id="rn-ok">Shrani</button></div>`);
+  ov.querySelector('#rn-x').onclick = () => ov.close();
+  ov.querySelector('#rn-ok').onclick = () => { const v = ov.querySelector('#rn').value.trim(); if (v) store.set('wii_alarm_name', v); ov.close(); pubDevice(); renderSettings(); };
+}
+const ST_NAME = { disarmed: ['Izklopljen', '#22c55e'], exit: ['Vklaplja se', '#f59e0b'], armed: ['Varuje', '#ef4444'], entry: ['Sprožen – čaka PIN', '#f97316'], alarm: ['SIRENA', '#ef4444'] };
+function drawDevices() {
+  const el = $('devs'); if (!el) return;
+  const list = Object.entries(S.devices).filter(([k, d]) => d && k !== DEV).sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''));
+  el.innerHTML = list.length ? `<div class="lbl" style="margin-top:10px">Druge naprave</div>` + list.map(([k, d]) => { const s = d.online ? (ST_NAME[d.state] || ['?', '#94a3b8']) : ['brez povezave', '#64748b'];
+    return `<div class="row"><span class="dot" style="background:${s[1]}"></span><span class="grow"><div class="t">${esc(d.name)}</div><div class="s">${s[0]} · ${d.at ? fmtDT(d.at) : ''}</div></span><button class="mini red" title="Odstrani s seznama" onclick="db.ref('${AL}/devices/${k}').remove()">${ic('x')}</button></div>`; }).join('') : '';
+}
+const EV = { arming: ['lock', '#f59e0b', 'Vklop'], armed: ['shieldOn', '#ef4444', 'Varovanje vklopljeno'], disarmed: ['unlock', '#22c55e', 'Izklop'], motion: ['camera', '#f97316', 'Gibanje'], sound: ['mic', '#f97316', 'Zvok'], pin: ['key', '#f97316', 'Napačni PIN-i'], alarm: ['siren', '#ef4444', 'SIRENA'], siren_end: ['clock', '#94a3b8', 'Konec sirene'], wrong_pin: ['key', '#eab308', 'Napačen PIN'], hidden: ['alert', '#eab308', 'Aplikacija skrita'], visible: ['eye', '#94a3b8', 'Aplikacija aktivna'], restart: ['refresh', '#94a3b8', 'Ponovni zagon'] };
+function drawLog() {
+  const el = $('log'); if (!el) return;
+  const list = Object.values(S.log).filter(x => x && x.at).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 100);
+  el.innerHTML = (list.length ? `<button class="btn ghost sm" style="width:100%;margin-bottom:6px" onclick="confirmBox('Počistim celoten dnevnik?','Počisti',()=>db.ref('${AL}/log').remove())">${ic('trash', 'sm')}Počisti dnevnik</button>` : '')
+    + (list.map(x => { const e = EV[x.type] || ['info', '#94a3b8', x.type];
+      return `<div class="ev"><span class="ic" style="background:${e[1]}22;color:${e[1]}">${ic(e[0])}</span><div class="grow"><div class="t" style="font-weight:700">${e[2]}</div><div class="s muted" style="font-size:13px">${fmtDT(x.at)} · ${esc(x.dev || '')}${x.by ? ' · ' + esc(x.by) : ''}</div>${x.detail ? `<div class="muted" style="font-size:13px">${esc(x.detail)}</div>` : ''}</div>${x.snap ? `<img src="${x.snap}" alt="posnetek" onclick="showSnap('${x.id}')">` : ''}</div>`; }).join('') || '<div class="muted">Ni dogodkov.</div>');
+}
+function showSnap(id) { const x = S.log[id]; if (!x || !x.snap) return; const ov = openModal(`<h3>${ic('camera')}Posnetek</h3><div class="muted">${fmtDT(x.at)} · ${esc(x.detail || '')}</div><img src="${x.snap}" style="width:100%;border-radius:12px;margin-top:10px"><button class="btn ghost sm" style="width:100%;margin-top:10px" id="sx">Zapri</button>`); ov.querySelector('#sx').onclick = () => ov.close(); }
+
+/* ---------- preizkus senzorjev ---------- */
+async function testStart() {
+  if (S.st !== 'disarmed') return toast('Najprej izklopi alarm.', 'err');
+  ac();
+  try { await sensorsStart(cfg().cam, cfg().mic, cfg().facing); } catch (e) { return toast('Kamera ali mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); }
+  testUI();
+}
+function testUI() {
+  if (!$('testbox')) return;
+  $('testbox').innerHTML = `${SEN.cam ? '<video id="tv" playsinline muted autoplay></video>' : ''}<div class="meters" style="max-width:none;margin-top:12px">${meterHTML('tm')}</div>
+    <div class="muted" style="font-size:13px;margin-top:8px" id="tvals"></div><button class="btn ghost sm" style="width:100%;margin-top:10px" onclick="testStop(true)">${ic('x', 'sm')}Ustavi preizkus</button>`;
+  const tv = $('tv'); if (tv) { tv.srcObject = SEN.stream; tv.play().catch(() => {}); if (cfg().facing !== 'user') tv.style.transform = 'none'; }
+  SEN.onSample = () => { updMeters('tm'); const t = $('tvals'); if (t) t.textContent = `${SEN.cam ? 'Gibanje ' + SEN.motion.toFixed(1) + ' % (meja ' + motionThr() + ' %)' : ''}${SEN.cam && SEN.mic ? ' · ' : ''}${SEN.mic ? 'Zvok ' + SEN.level.toFixed(0) + ' dB (meja ' + cfg().micThr + ' dB)' : ''}`; };
+}
+function testStop(redraw) { if (S.st === 'disarmed') { SEN.onSample = null; sensorsStop(); } if (redraw && $('testbox')) $('testbox').innerHTML = `<button class="btn ghost sm" style="width:100%" onclick="testStart()">${ic('eye', 'sm')}Začni preizkus</button>`; }
+
+/* =====================================================================
+   ZAGON
+   ===================================================================== */
+function boot() {
+  let saved = null; try { saved = JSON.parse(store.get('wii_alarm_state') || 'null'); } catch (e) {}
+  if (saved && saved.st === 'armed') { S.view = 'resume'; logEv('restart', 'Aplikacija se je ponovno zagnala med varovanjem'); }
+  pubDevice(); render();
+}
+render();
+window.addEventListener('beforeunload', e => { if (['exit', 'armed', 'entry', 'alarm'].includes(S.st)) { e.preventDefault(); e.returnValue = ''; } });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
