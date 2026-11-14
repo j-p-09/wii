@@ -95,7 +95,19 @@ textarea.inp{resize:vertical;min-height:70px;font-size:15px}
   .side-user{border-top:1px solid var(--border);padding:12px 8px 0;font-size:13px;color:var(--muted)}
   .side-user b{display:block;color:var(--text);font-size:15px}
 }
-@media (max-width:899px){ #topbar .tbtn.adm{display:flex} #topbar .uname{display:none} }
+@media (max-width:899px){ #topbar .tbtn.adm{display:flex} #topbar .uname{display:none} body.mgr #topbar .tbtn.out{display:flex} body.mgr #bnav .nav-out{display:none} }
+.swrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border)}
+.swrow:last-child{border-bottom:none}
+.swrow .grow{flex:1;min-width:0}
+.swrow .lab{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.swhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:16px}
+.choice{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid var(--border);background:#fff;width:100%;text-align:left;margin-bottom:8px}
+.choice.on{border-color:var(--primary);background:var(--primary-l)}
+.choice:disabled{opacity:.5}
+.choice .grow{flex:1;min-width:0}
+.choice .rd{width:20px;height:20px;border-radius:50%;border:2px solid #b8c0cc;flex:none}
+.choice.on .rd{border:6px solid var(--primary)}
+.swmark{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#6f42c1}
 
 /* ---------- SKUPNI ELEMENTI ---------- */
 .box{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:14px}
@@ -275,6 +287,7 @@ button.list-row:hover{background:#fafbfd}
         <div class="ttl" id="tb-title"></div>
         <div class="uname" id="tb-user"></div>
         <button class="tbtn adm" id="tb-set" onclick="go('settings')" title="Nastavitve"><i data-ic="settings"></i></button>
+        <button class="tbtn out" onclick="logout()" title="Odjava"><i data-ic="logout"></i></button>
       </div>
       <div id="content"></div>
     </div>
@@ -303,6 +316,8 @@ const ICONS = {
   calendarPlus: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 13v6M9 16h6"/>',
   calendarEdit: '<path d="M21 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M19.4 14.6a1.9 1.9 0 0 1 2.7 2.7L17 22.4l-3.5.9.9-3.5Z"/>',
   calendarCheck: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  swap: '<path d="m17 3 4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"/>',
   calendarX: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4"/>',
   clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
@@ -422,7 +437,7 @@ function confirmBox(msg, yes, cb, danger = true) {
    STANJE
    ===================================================================== */
 const S = {
-  ready: {}, emp: null, employees: {}, functions: {}, managers: {}, days: {}, avail: {},
+  ready: {}, emp: null, employees: {}, functions: {}, managers: {}, days: {}, avail: {}, swaps: {}, sw: null, swTab: 'mine',
   view: 'urnik', date: today(), mode: 'all',
   availDate: null, availDraft: null,
   planDate: null, planDraft: null, planDirty: false,
@@ -466,7 +481,7 @@ function buildPub(k) {
   const draft = day.draft || {}, assign = {};
   shiftsOf(plan).forEach(sh => {
     const src = (draft.assign || {})[sh.id] || {}, dst = {};
-    slotsOf(sh).forEach(sl => { const a = src[sl.key]; if (a && a.empId && S.employees[a.empId]) dst[sl.key] = { empId: a.empId, fid: sl.fid, note: a.note || '' }; });
+    slotsOf(sh).forEach(sl => { const a = src[sl.key]; if (a && a.empId && S.employees[a.empId]) dst[sl.key] = { empId: a.empId, fid: sl.fid, note: a.note || '', swap: a.swap || undefined }; });
     if (Object.keys(dst).length) assign[sh.id] = dst;
   });
   const shiftNotes = {}, empNotes = {};
@@ -493,6 +508,7 @@ function startListeners() {
   listen('managers', db.ref(U + '/managers'));
   listen('days', db.ref(U + '/days').orderByKey().startAt(from));
   listen('avail', db.ref(U + '/avail').orderByKey().startAt(addDays(today(), -14)));
+  listen('swaps', db.ref(U + '/swaps'));
 }
 function onData(key) {
   if (key === 'employees') {
@@ -563,29 +579,31 @@ function logout() {
 /* =====================================================================
    NAVIGACIJA
    ===================================================================== */
-const TITLES = { urnik: ['calendarDays', 'Urnik'], avail: ['clipboard', 'Razpoložljivost'], availDay: ['clipboard', 'Razpoložljivost'], plan: ['calendarPlus', 'Načrtuj dan'], edit: ['calendarEdit', 'Uredi urnik'], settings: ['settings', 'Nastavitve'] };
+const TITLES = { urnik: ['calendarDays', 'Urnik'], avail: ['clipboard', 'Razpoložljivost'], availDay: ['clipboard', 'Razpoložljivost'], plan: ['calendarPlus', 'Načrtuj dan'], edit: ['calendarEdit', 'Uredi urnik'], settings: ['settings', 'Nastavitve'], swaps: ['swap', 'Menjave'], swapNew: ['swap', 'Nova menjava'] };
 function badgeAvail() { // načrtovani prihodnji dnevi brez moje razpoložljivosti
   return Object.keys(S.days).filter(k => k >= today() && planOf(k) && !isClosedDay(k) && openShifts(planOf(k)).length && !pubOf(k) && !availOf(k, me())).length;
 }
+function badgeSwaps() { return swapList().filter(x => x.to === me() && swStatus(x) === 'pending').length; }
 function badgeEdit() {
   return Object.keys(S.days).filter(k => k >= today() && planOf(k) && !isClosedDay(k) && pubState(k) !== 'pub').length;
 }
 function navItems() {
-  const it = [['urnik', 'calendarDays', 'Urnik', 0], ['avail', 'clipboard', 'Razpoložljivost', badgeAvail(), 'wide']];
+  const it = [['urnik', 'calendarDays', 'Urnik', 0], ['avail', 'clipboard', 'Razpoložljivost', badgeAvail(), 'wide'], ['swaps', 'swap', 'Menjave', badgeSwaps()]];
   if (isMgr()) it.push(['sep', '', 'VODJA']), it.push(['plan', 'calendarPlus', 'Načrtuj dan', 0]), it.push(['edit', 'calendarEdit', 'Uredi urnik', badgeEdit()]);
   if (isAdmin()) it.push(['settings', 'settings', 'Nastavitve', 0, 'nav-settings']);
   return it;
 }
 function renderChrome() {
   if (!S.emp) return;
-  const cur = S.view === 'availDay' ? 'avail' : S.view;
+  const cur = S.view === 'availDay' ? 'avail' : S.view === 'swapNew' ? 'swaps' : S.view;
+  document.body.classList.toggle('mgr', isMgr());
   const items = navItems();
   const btn = (t, side) => {
     if (t[0] === 'sep') return side ? `<div class="sep">${t[2]}</div>` : '';
     return `<button class="${cur === t[0] ? 'on' : ''} ${t[4] || ''}" onclick="go('${t[0]}')">${ic(t[1])}<span>${t[2]}</span>${t[3] ? `<span class="nbadge">${t[3]}</span>` : ''}</button>`;
   };
   $('snav').innerHTML = items.map(t => btn(t, true)).join('') + `<button onclick="logout()" style="margin-top:auto">${ic('logout')}<span>Odjava</span></button>`;
-  $('bnav').innerHTML = items.map(t => btn(t, false)).join('') + `<button onclick="logout()">${ic('logout')}<span>Odjava</span></button>`;
+  $('bnav').innerHTML = items.map(t => btn(t, false)).join('') + `<button class="nav-out" onclick="logout()">${ic('logout')}<span>Odjava</span></button>`;
   const role = isAdmin() ? 'administrator' : isMgr() ? 'vodja' : 'zaposleni';
   $('tb-user').innerHTML = esc(S.emp.name) + '<br><span style="opacity:.8">' + role + '</span>';
   $('side-user').innerHTML = `<b>${esc(S.emp.name)}</b>${role}`;
@@ -603,9 +621,9 @@ function go(v, force) {
 }
 function refreshView() {
   if (!S.emp || !$('page')) return;
-  const ready = S.ready.days && S.ready.functions && S.ready.avail;
+  const ready = S.ready.days && S.ready.functions && S.ready.avail && S.ready.swaps;
   if (!ready) { $('page').innerHTML = '<div class="spinner"></div>'; return; }
-  const f = { urnik: viewUrnik, avail: viewAvail, availDay: viewAvailDay, plan: viewPlan, edit: viewEdit, settings: viewSettings }[S.view];
+  const f = { urnik: viewUrnik, avail: viewAvail, availDay: viewAvailDay, plan: viewPlan, edit: viewEdit, settings: viewSettings, swaps: viewSwaps, swapNew: viewSwapNew }[S.view];
   if (f) f();
 }
 
@@ -630,6 +648,8 @@ function viewUrnik() {
     <div class="seg"><button class="${S.mode === 'mine' ? 'on' : ''}" onclick="S.mode='mine';viewUrnik()">${ic('user')}Moje izmene</button><button class="${S.mode === 'all' ? 'on' : ''}" onclick="S.mode='all';viewUrnik()">${ic('users')}Celoten urnik</button></div>`;
   if (k !== today()) h = h.replace('<div class="week">', `<div style="text-align:center;margin:-4px 0 10px"><button class="btn sm ghost" onclick="setDate(today())">${ic('calendar', 'sm')}Danes</button></div><div class="week">`);
 
+  const nIn = badgeSwaps();
+  if (nIn) h += `<div class="notice" style="align-items:center">${ic('swap')}<div style="flex:1">Imaš ${nIn} ${nIn === 1 ? 'prošnjo' : nIn === 2 ? 'prošnji' : nIn < 5 ? 'prošnje' : 'prošenj'} za menjavo izmene.</div><button class="btn sm" onclick="S.swTab='mine';go('swaps')">Odpri</button></div>`;
   if (plan && plan.closed) {
     h += `<div class="box empty closedbox">${ic('lock', 'xl')}<b>ZAPRTO</b>${plan.closedNote ? esc(plan.closedNote) : 'Ta dan je zaprto.'}
       ${isMgr() ? `<div style="margin-top:12px"><button class="btn out" onclick="S.planDraft=null;S.planDirty=false;S.planDate='${k}';go('plan')">${ic('calendarPlus')}Uredi v Načrtuj dan</button></div>` : ''}</div>`;
@@ -650,7 +670,9 @@ function viewUrnik() {
           <div class="shift-b" style="padding-top:12px">${shNote(sh)}
           ${a.note ? `<div class="notice" style="margin:4px 0 10px">${ic('user')}<div><b>Osebna opomba zate:</b> ${esc(a.note)}</div></div>` : ''}
           <div class="lbl">Sodelavci na izmeni</div>
-          ${others.length ? others.map(o => `<div class="slot"><div class="who">${esc(empName(o.empId))}</div>${fBadge(o.fid)}</div>`).join('') : '<div class="muted" style="padding:6px 0">Na tej izmeni si sam/a.</div>'}</div></div>`;
+          ${others.length ? others.map(o => `<div class="slot"><div class="who">${esc(empName(o.empId))}</div>${fBadge(o.fid)}</div>`).join('') : '<div class="muted" style="padding:6px 0">Na tej izmeni si sam/a.</div>'}
+          ${a.swap ? `<div class="swmark" style="margin-top:8px">${ic('swap', 'sm')}Izmeno si dobil/a z menjavo (${esc(empName(a.swap.from))})</div>` : ''}
+          ${k >= today() ? (pendingFor(k, sh.id, sk) ? `<div class="notice info" style="margin:10px 0 0">${ic('hourglass')}<div>Prošnja za menjavo te izmene čaka na odgovor.</div></div>` : `<button class="btn out block sm" style="margin-top:12px" onclick="startSwap('${k}','${sh.id}','${sk}')">${ic('swap', 'sm')}Prosi za menjavo</button>`) : ''}</div></div>`;
       }).join('') : `<div class="box empty">${ic('coffee', 'xl')}<b>Ta dan nisi razporejen/a</b>Prost dan.</div>`;
       // prihajajoče izmene
       const up = Object.keys(S.days).filter(d => d >= today()).sort().flatMap(d => myAssignments(d, id).map(m => Object.assign({ d }, m))).slice(0, 12);
@@ -668,7 +690,7 @@ function viewUrnik() {
             const a = as[s.key];
             if (!a) return `<div class="slot">${fBadge(s.fid)}<div class="who free">prosto mesto</div></div>`;
             const mine = a.empId === me();
-            return `<div class="slot ${mine ? 'me' : ''}">${fBadge(s.fid)}<div class="who">${esc(empName(a.empId))}${mine ? ' <span class="status bl">Ti</span>' : ''}${a.note && (mine || isMgr()) ? `<small>${ic('user', 'sm')} ${esc(a.note)}</small>` : ''}</div></div>`;
+            return `<div class="slot ${mine ? 'me' : ''}">${fBadge(s.fid)}<div class="who">${esc(empName(a.empId))}${mine ? ' <span class="status bl">Ti</span>' : ''}${a.note && (mine || isMgr()) ? `<small>${ic('user', 'sm')} ${esc(a.note)}</small>` : ''}${a.swap ? `<small class="swmark">${ic('swap', 'sm')} menjava (prej: ${esc(empName(a.swap.from))})</small>` : ''}</div></div>`;
           }).join('') || '<div class="muted" style="padding:8px 0">Ni zasedenih mest.</div>'}</div></div>`;
       }).join('') || `<div class="box empty">${ic('calendarX', 'xl')}<b>Ni izmen</b></div>`;
     }
@@ -1002,7 +1024,7 @@ function viewEdit() {
         let dotc = '';
         if (e) { const v = availFor(k, e.id, sh.id); dotc = !v ? '#b8c0cc' : v.off ? 'var(--danger)' : (v.funcs || {})[s.fid] ? 'var(--success)' : 'var(--warn)'; }
         return `<div class="slot">${fBadge(s.fid)}
-          <button class="pick ${e ? 'set' : ''}" onclick="pickEmp('${sh.id}','${s.key}')">${e ? `<span class="avl" style="background:${dotc}"></span>` : ic('plus', 'sm')}<span class="grow">${e ? esc(e.name) : 'Izberi osebo'}${e && a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}</span>${ic('chevD', 'sm')}</button>
+          <button class="pick ${e ? 'set' : ''}" onclick="pickEmp('${sh.id}','${s.key}')">${e ? `<span class="avl" style="background:${dotc}"></span>` : ic('plus', 'sm')}<span class="grow">${e ? esc(e.name) : 'Izberi osebo'}${e && a.note ? `<small>${ic('note', 'sm')} ${esc(a.note)}</small>` : ''}${e && a.swap ? `<small class="swmark">${ic('swap', 'sm')} menjava (prej: ${esc(empName(a.swap.from))})</small>` : ''}</span>${ic('chevD', 'sm')}</button>
           ${e ? `<button class="iconbtn ${a.note ? 'on' : ''}" title="Osebna opomba" onclick="slotNote('${sh.id}','${s.key}')">${ic('note')}</button>` : ''}</div>`;
       }).join('')}</div></div>`;
   }).join('');
@@ -1117,6 +1139,166 @@ function publish() {
 }
 function unpublish() {
   confirmBox(`Umaknem objavljen urnik za <b>${fmtDay(S.editDate)}</b>? Zaposleni ga ne bodo več videli (osnutek ostane), razpoložljivost pa bodo lahko spet oddajali.`, 'Umakni', () => db.ref(`${U}/days/${S.editDate}/pub`).remove().then(() => toast('Objava umaknjena.', 'warn')));
+}
+
+/* =====================================================================
+   MENJAVE IZMEN (vsi)
+   ===================================================================== */
+const SW_ST = { pending: ['wr', 'hourglass', 'Čaka na odgovor'], approved: ['ok', 'checkCircle', 'Odobreno'], rejected: ['no', 'x', 'Zavrnjeno'],
+  cancelled: ['gr', 'ban', 'Preklicano'], expired: ['gr', 'clock', 'Poteklo'] };
+const swapList = () => Object.values(S.swaps || {}).filter(x => x && x.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+const swStatus = x => x.status === 'pending' && x.a && x.a.date < today() ? 'expired' : x.status;
+const slotAt = (d, sid, sk) => { const p = pubOf(d); return (p && ((p.assign || {})[sid] || {})[sk]) || null; };
+const shiftAt = (d, sid) => { const p = pubOf(d); return (p && (p.shifts || {})[sid]) || null; };
+const onShift = (d, sid, emp, exceptSk) => { const as = ((pubOf(d) || {}).assign || {})[sid] || {}; return Object.keys(as).some(k => k !== exceptSk && as[k] && as[k].empId === emp); };
+const pendingFor = (d, sid, sk) => swapList().some(x => swStatus(x) === 'pending' && ((x.a && x.a.date === d && x.a.sid === sid && x.a.sk === sk) || (x.b && x.b.date === d && x.b.sid === sid && x.b.sk === sk)));
+function upcomingOf(emp) { // objavljene prihodnje izmene zaposlenega
+  return Object.keys(S.days).filter(d => d >= today() && !isClosedDay(d)).sort().flatMap(d => myAssignments(d, emp).filter(m => !m.sh.closed).map(m => ({ d, sh: m.sh, sk: m.sk, a: m.a })));
+}
+function swapProblem(x) { // null = menjava je še izvedljiva
+  if (!x || !x.a) return 'Napačni podatki.';
+  const chk = (side, emp, other, label) => {
+    if (side.date < today()) return `Dan ${label} je že minil.`;
+    if (isClosedDay(side.date)) return `Dan ${label} je zaprt.`;
+    const sh = shiftAt(side.date, side.sid), sl = slotAt(side.date, side.sid, side.sk);
+    if (!sh || sh.closed) return `Izmena ${label} ne obstaja več ali je zaprta.`;
+    if (!sl || sl.empId !== emp) return `${empName(emp)} ni več razporejen(a) na izmeno ${label}.`;
+    const both = x.type === 'swap' && x.b && x.a.date === x.b.date && x.a.sid === x.b.sid;
+    const except = both ? (side === x.a ? x.b.sk : x.a.sk) : null;
+    if (onShift(side.date, side.sid, other, except)) return `${empName(other)} je že na izmeni ${sh.name} (${fmtShort(side.date)}).`;
+    return null;
+  };
+  return chk(x.a, x.from, x.to, 'ki jo oddajaš') || (x.type === 'swap' ? (x.b ? chk(x.b, x.to, x.from, 'za menjavo') : 'Napačni podatki.') : null);
+}
+const sideTxt = sd => { const sh = shiftAt(sd.date, sd.sid); return `<b>${fmtShort(sd.date)}</b> · ${esc((sh && sh.name) || sd.shift || 'Izmena')} ${fBadge(sd.fid)}`; };
+function swapCard(x, mode) {
+  const st = swStatus(x), S1 = SW_ST[st] || SW_ST.pending, prob = st === 'pending' ? swapProblem(x) : null;
+  const me_ = me(), from = x.from === me_ ? 'Ti' : esc(empName(x.from)), to = x.to === me_ ? 'ti' : esc(empName(x.to));
+  return `<div class="box">
+    <div class="swhead"><span class="status ${S1[0]}">${ic(S1[1], 'sm')}${S1[2]}</span><span class="muted" style="font-weight:500;font-size:13px;margin-left:auto">${fmtDT(x.createdAt)}</span></div>
+    <div style="margin:10px 0 4px;font-size:15px">${x.type === 'swap' ? `${from} ${x.from === me_ ? 'želiš' : 'želi'} <b>zamenjati izmeno</b> z ${x.to === me_ ? 'tabo' : to}` : `${from} ${x.from === me_ ? 'prosiš' : 'prosi'} ${x.to === me_ ? 'tebe' : to}, da <b>prevzame${x.to === me_ ? 'š' : ''} izmeno</b>`}</div>
+    <div class="swrow"><span class="iconbtn" style="background:#fde2e4;color:var(--danger)">${ic('arrowL', 'sm')}</span><div class="grow"><div class="lab">${esc(empName(x.from))} odda</div><div>${sideTxt(x.a)}</div></div></div>
+    ${x.type === 'swap' && x.b ? `<div class="swrow"><span class="iconbtn" style="background:#d1f2de;color:var(--success)">${ic('swap', 'sm')}</span><div class="grow"><div class="lab">${esc(empName(x.to))} odda v zameno</div><div>${sideTxt(x.b)}</div></div></div>`
+      : `<div class="swrow"><span class="iconbtn">${ic('info', 'sm')}</span><div class="grow muted">Brez izmene v zameno – samo prevzem.</div></div>`}
+    ${x.note ? `<div class="notice info" style="margin:10px 0 0">${ic('note')}<div><b>Sporočilo:</b> ${esc(x.note)}</div></div>` : ''}
+    ${prob ? `<div class="notice" style="margin:10px 0 0">${ic('alert')}<div>Menjave ni več mogoče izvesti: ${esc(prob)}</div></div>` : ''}
+    ${x.decidedAt ? `<div class="muted" style="margin-top:10px;font-size:13px">${st === 'approved' ? 'Odobril(a)' : st === 'rejected' ? 'Zavrnil(a)' : 'Preklical(a)'} ${esc(x.decidedBy || '')} · ${fmtDT(x.decidedAt)}${x.reason ? `<br>Razlog: ${esc(x.reason)}` : ''}</div>` : ''}
+    ${st === 'pending' && mode === 'in' ? `<div class="row"><button class="btn red" onclick="rejectSwap('${x.id}')">${ic('x')}Zavrni</button><button class="btn green" onclick="approveSwap('${x.id}')" ${prob ? 'disabled' : ''}>${ic('check')}Odobri</button></div>` : ''}
+    ${st === 'pending' && mode === 'out' ? `<div class="row"><button class="btn ghost" onclick="cancelSwap('${x.id}')">${ic('ban')}Prekliči prošnjo</button></div>` : ''}
+  </div>`;
+}
+function viewSwaps() {
+  const id = me(), all = swapList();
+  let h = `<button class="btn block" style="margin-bottom:14px" onclick="startSwap()">${ic('plus')}Nova prošnja za menjavo</button>`;
+  if (isMgr()) h += `<div class="seg"><button class="${S.swTab === 'mine' ? 'on' : ''}" onclick="S.swTab='mine';viewSwaps()">${ic('user')}Moje</button><button class="${S.swTab === 'all' ? 'on' : ''}" onclick="S.swTab='all';viewSwaps()">${ic('list')}Dnevnik vseh</button></div>`;
+  if (isMgr() && S.swTab === 'all') {
+    const list = all.filter(x => !x.a || x.a.date >= addDays(today(), -60));
+    h += list.map(x => swapCard(x, 'log')).join('') || `<div class="box empty">${ic('swap', 'xl')}<b>Ni menjav</b></div>`;
+    $('page').innerHTML = h; return;
+  }
+  const inc = all.filter(x => x.to === id && swStatus(x) === 'pending');
+  const out = all.filter(x => x.from === id && swStatus(x) === 'pending');
+  const hist = all.filter(x => (x.from === id || x.to === id) && swStatus(x) !== 'pending').slice(0, 30);
+  h += `<h3 style="margin:4px 2px 10px;display:flex;gap:8px;align-items:center">${ic('arrowL')}Prejete prošnje ${inc.length ? `<span class="nbadge" style="position:static">${inc.length}</span>` : ''}</h3>`
+    + (inc.map(x => swapCard(x, 'in')).join('') || `<div class="box muted">Ni prejetih prošenj.</div>`)
+    + `<h3 style="margin:18px 2px 10px;display:flex;gap:8px;align-items:center">${ic('send')}Moje prošnje</h3>`
+    + (out.map(x => swapCard(x, 'out')).join('') || `<div class="box muted">Nimaš odprtih prošenj.</div>`)
+    + `<h3 style="margin:18px 2px 10px;display:flex;gap:8px;align-items:center">${ic('clock')}Zgodovina</h3>`
+    + (hist.map(x => swapCard(x, 'hist')).join('') || `<div class="box muted">Še ni zaključenih menjav.</div>`);
+  $('page').innerHTML = h;
+}
+function startSwap(d, sid, sk) {
+  S.sw = { a: null, to: null, b: null, take: false, note: '' };
+  if (d) { const m = upcomingOf(me()).find(x => x.d === d && x.sh.id === sid && x.sk === sk); if (m) S.sw.a = m; }
+  go('swapNew');
+}
+const swReq = (to, b) => { const A = S.sw.a; return { from: me(), to, type: b ? 'swap' : 'take', a: { date: A.d, sid: A.sh.id, sk: A.sk, fid: A.a.fid, shift: A.sh.name }, b: b ? { date: b.d, sid: b.sh.id, sk: b.sk, fid: b.a.fid, shift: b.sh.name } : null }; };
+function viewSwapNew() {
+  const W = S.sw || (S.sw = { a: null, to: null, b: null, take: false, note: '' }), id = me();
+  const mineUp = upcomingOf(id);
+  let h = `<button class="btn sm ghost" style="margin-bottom:12px" onclick="go('swaps')">${ic('arrowL', 'sm')}Nazaj na menjave</button>`;
+  // 1. moja izmena
+  h += `<div class="box"><h3>${ic('calendarDays')}1. Katero izmeno oddajaš?</h3>
+    ${mineUp.map((m, i) => { const pend = pendingFor(m.d, m.sh.id, m.sk), on = W.a && W.a.d === m.d && W.a.sh.id === m.sh.id && W.a.sk === m.sk;
+      return `<button class="choice ${on ? 'on' : ''}" ${pend ? 'disabled' : ''} onclick="swPickA(${i})"><span class="rd"></span><span class="grow"><b>${fmtShort(m.d)}${relDay(m.d) ? ' · ' + relDay(m.d) : ''}</b><br><span class="muted">${esc(m.sh.name)}${pend ? ' · prošnja že čaka' : ''}</span></span>${fBadge(m.a.fid)}</button>`; }).join('')
+      || '<div class="muted">Nimaš objavljenih prihajajočih izmen.</div>'}</div>`;
+  if (W.a) {
+    // 2. sodelavec
+    const d = W.a.d, sid = W.a.sh.id, fid = W.a.a.fid;
+    const emps = Object.values(S.employees).filter(e => e && e.id !== id).sort(byName);
+    const working = [], free = [];
+    emps.forEach(e => (myAssignments(d, e.id).length ? working : free).push(e));
+    const hint = e => {
+      const w = myAssignments(d, e.id); if (w.length) return 'ta dan dela: ' + w.map(m => esc(m.sh.name)).join(', ');
+      const v = availFor(d, e.id, sid);
+      if (!v) return 'razpoložljivosti ni oddal(a)';
+      if (v.off) return '<span style="color:var(--danger)">označil(a), da te izmene ne more</span>';
+      return (v.funcs || {})[fid] ? '<span style="color:var(--success)">označil(a), da lahko</span>' : 'na voljo za drugo funkcijo';
+    };
+    const row = e => `<button class="choice ${W.to === e.id ? 'on' : ''}" onclick="swPickTo('${e.id}')"><span class="rd"></span><span class="grow"><b>${esc(e.name)}</b><br><span class="muted" style="font-size:13px">${hint(e)}</span></span></button>`;
+    h += `<div class="box"><h3>${ic('users')}2. S kom?</h3>
+      ${working.length ? `<div class="grp">${ic('calendarCheck', 'sm')}Ta dan že delajo</div>${working.map(row).join('')}` : ''}
+      ${free.length ? `<div class="grp">${ic('coffee', 'sm')}Ta dan ne delajo</div>${free.map(row).join('')}` : ''}
+      ${emps.length ? '' : '<div class="muted">Ni drugih zaposlenih.</div>'}</div>`;
+  }
+  if (W.a && W.to) {
+    // 3. kaj dobiš v zameno
+    const theirs = upcomingOf(W.to);
+    const takeProb = swapProblem(swReq(W.to, null));
+    h += `<div class="box"><h3>${ic('swap')}3. Kaj dobiš v zameno?</h3>
+      <button class="choice ${W.take ? 'on' : ''}" ${takeProb ? 'disabled' : ''} onclick="swPickB(-1)"><span class="rd"></span><span class="grow"><b>Nič – samo prevzem</b><br><span class="muted" style="font-size:13px">${takeProb ? esc(takeProb) : esc(empName(W.to)) + ' prevzame tvojo izmeno.'}</span></span></button>
+      ${theirs.length ? `<div class="grp">${ic('swap', 'sm')}Menjava za izmeno ${esc(empName(W.to))}</div>` : ''}
+      ${theirs.map((m, i) => { const pr = swapProblem(swReq(W.to, m)) || (pendingFor(m.d, m.sh.id, m.sk) ? 'za to izmeno že čaka druga prošnja' : null), on = W.b && W.b.d === m.d && W.b.sh.id === m.sh.id && W.b.sk === m.sk;
+        return `<button class="choice ${on ? 'on' : ''}" ${pr ? 'disabled' : ''} onclick="swPickB(${i})"><span class="rd"></span><span class="grow"><b>${fmtShort(m.d)}${relDay(m.d) ? ' · ' + relDay(m.d) : ''}</b><br><span class="muted" style="font-size:13px">${esc(m.sh.name)}${pr ? ' · ' + esc(pr) : ''}</span></span>${fBadge(m.a.fid)}</button>`; }).join('')}</div>`;
+  }
+  if (W.a && W.to && (W.take || W.b)) {
+    h += `<div class="box"><h3>${ic('note')}4. Sporočilo (neobvezno)</h3><textarea id="sw-note" class="inp" maxlength="300" placeholder="npr. imam zdravniški pregled"></textarea></div>
+      <div class="sticky"><button class="btn green" onclick="sendSwap()">${ic('send')}Pošlji prošnjo ${esc(empName(W.to))}</button></div>`;
+  }
+  $('page').innerHTML = h;
+  const n = $('sw-note'); if (n) { n.value = W.note || ''; n.addEventListener('input', () => { S.sw.note = n.value; }); }
+}
+function swPickA(i) { const m = upcomingOf(me())[i]; if (!m) return; S.sw.a = m; S.sw.to = null; S.sw.b = null; S.sw.take = false; keepScroll(viewSwapNew); }
+function swPickTo(id) { S.sw.to = id; S.sw.b = null; S.sw.take = false; keepScroll(viewSwapNew); }
+function swPickB(i) { if (i < 0) { S.sw.take = true; S.sw.b = null; } else { S.sw.b = upcomingOf(S.sw.to)[i] || null; S.sw.take = false; } keepScroll(viewSwapNew); }
+function sendSwap() {
+  const W = S.sw; if (!W || !W.a || !W.to || !(W.take || W.b)) return;
+  const x = swReq(W.to, W.take ? null : W.b), prob = swapProblem(x);
+  if (prob) return toast(prob, 'err');
+  if (pendingFor(x.a.date, x.a.sid, x.a.sk) || (x.b && pendingFor(x.b.date, x.b.sid, x.b.sk))) return toast('Za to izmeno že čaka prošnja za menjavo.', 'err');
+  const id = db.ref(U + '/swaps').push().key;
+  db.ref(U + '/swaps/' + id).set(Object.assign(x, { id, note: (W.note || '').trim(), status: 'pending', createdAt: new Date().toISOString(), fromName: S.emp.name, toName: empName(W.to) }))
+    .then(() => { toast(`Prošnja poslana – ${empName(W.to)} jo mora odobriti.`, 'ok'); S.sw = null; S.swTab = 'mine'; go('swaps'); })
+    .catch(e => toast('Napaka: ' + e.message, 'err'));
+}
+function approveSwap(id) {
+  const x = S.swaps[id]; if (!x || swStatus(x) !== 'pending' || x.to !== me()) return;
+  const prob = swapProblem(x); if (prob) return toast(prob, 'err');
+  confirmBox(x.type === 'swap' ? `Odobrim menjavo? Ti prevzameš <b>${fmtShort(x.a.date)} · ${esc(shiftAt(x.a.date, x.a.sid).name)}</b>, ${esc(empName(x.from))} pa tvojo izmeno <b>${fmtShort(x.b.date)} · ${esc(shiftAt(x.b.date, x.b.sid).name)}</b>.`
+    : `Odobrim? Prevzameš izmeno <b>${fmtShort(x.a.date)} · ${esc(shiftAt(x.a.date, x.a.sid).name)}</b> namesto ${esc(empName(x.from))}.`, 'Odobri', () => {
+    const p2 = swapProblem(S.swaps[id]); if (p2) return toast(p2, 'err');
+    const now = new Date().toISOString(), up = {};
+    const put = (side, newEmp, oldEmp) => {
+      const sl = slotAt(side.date, side.sid, side.sk);
+      const val = { empId: newEmp, fid: sl.fid, note: sl.note || '', swap: { id, from: oldEmp, at: now } };
+      up[`days/${side.date}/pub/assign/${side.sid}/${side.sk}`] = val;
+      const dr = ((((dayOf(side.date).draft || {}).assign || {})[side.sid]) || {})[side.sk];
+      if (!dr || dr.empId === oldEmp) up[`days/${side.date}/draft/assign/${side.sid}/${side.sk}`] = val; // osnutek vodje ostane, če ga je medtem spremenil
+    };
+    put(x.a, x.to, x.from);
+    if (x.type === 'swap') put(x.b, x.from, x.to);
+    up[`swaps/${id}/status`] = 'approved'; up[`swaps/${id}/decidedAt`] = now; up[`swaps/${id}/decidedBy`] = S.emp.name;
+    db.ref(U).update(up).then(() => toast('Menjava odobrena – urnik je posodobljen.', 'ok')).catch(e => toast('Napaka: ' + e.message, 'err'));
+  }, false);
+}
+function rejectSwap(id) {
+  const x = S.swaps[id]; if (!x || x.to !== me()) return;
+  noteDlg('Zavrni prošnjo', `${esc(empName(x.from))} bo videl(a) tvoj odgovor`, '', 'Razlog (neobvezno)', v =>
+    db.ref(`${U}/swaps/${id}`).update({ status: 'rejected', decidedAt: new Date().toISOString(), decidedBy: S.emp.name, reason: v || null }).then(() => toast('Prošnja zavrnjena.', 'warn')));
+}
+function cancelSwap(id) {
+  const x = S.swaps[id]; if (!x || x.from !== me()) return;
+  confirmBox('Prekličem prošnjo za menjavo?', 'Prekliči', () => db.ref(`${U}/swaps/${id}`).update({ status: 'cancelled', decidedAt: new Date().toISOString(), decidedBy: S.emp.name }));
 }
 
 /* =====================================================================
