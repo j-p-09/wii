@@ -1,9 +1,9 @@
 // WII – skupni service worker za vse aplikacije (omogoča namestitev kot aplikacijo in hitrejši zagon)
 // Vsaka aplikacija ima v svojem manifestu svoj "scope" (npr. ./posta.html), zato se nameščene
 // aplikacije med seboj ne prekrivajo, čeprav so na isti domeni.
-const CACHE = 'wii-pos-v7';
-const APPS = ['posta', 'oddaja', 'blagajna', 'terminal', 'mail', 'urnik', 'fon'];
-const PAGES = ['./posta.html', './oddaja.html', './blagajna.html', './terminal.html', './wii-mail.html', './urnik.html', './fon.html'];
+const CACHE = 'wii-pos-v8';
+const APPS = ['posta', 'oddaja', 'blagajna', 'terminal', 'mail', 'urnik', 'fon', 'alarm'];
+const PAGES = ['./posta.html', './oddaja.html', './blagajna.html', './terminal.html', './wii-mail.html', './urnik.html', './fon.html', './alarm.html'];
 const SHELL = PAGES.concat(
   APPS.map(a => './manifest-' + a + '.webmanifest'),
   ...APPS.map(a => ['./icon-' + a + '-180.png', './icon-' + a + '-192.png', './icon-' + a + '-512.png'])

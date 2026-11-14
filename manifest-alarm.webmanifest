@@ -1,0 +1,39 @@
+{
+  "id": "./alarm.html",
+  "name": "WII Alarm",
+  "short_name": "WII Alarm",
+  "description": "Alarmni sistem podjetja WII – zaznava gibanja in zvoka",
+  "start_url": "./alarm.html",
+  "scope": "./alarm.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111418",
+  "theme_color": "#111418",
+  "lang": "sl",
+  "icons": [
+    {
+      "src": "icon-alarm-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-alarm-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-alarm-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-alarm-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
