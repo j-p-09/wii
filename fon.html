@@ -137,7 +137,11 @@ input,select,textarea{font-family:inherit}
 .cbig{display:flex;gap:70px;justify-content:center;margin-top:auto}
 .cbig .cbtn{width:78px;height:78px}
 .cbig .lab{display:flex;flex-direction:column;align-items:center;gap:9px;font-weight:600;font-size:14px}
-.swipeup{animation:bob 1.2s infinite}
+.swipeup{position:relative}
+.swipeup::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid rgba(34,197,94,.55);animation:rp 1.6s infinite;pointer-events:none}
+button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.cbtn:active,.cact:active span.c,.btn:active,.callmini:active,.row:active,.tabs button:active{transform:scale(.94);filter:brightness(.92)}
+.cbtn,.cact span.c,.btn,.callmini{transition:transform .08s,filter .08s}
 @keyframes bob{50%{transform:translateY(-6px)}}
 
 /* modal, toast */
@@ -206,6 +210,7 @@ const ICONS = {
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>',
   micOff: '<path d="M2 2l20 20M9 9v2a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M17 16.9A7 7 0 0 1 5 11v-1M19 10v1c0 .8-.1 1.6-.4 2.3M12 18v4M8 22h8"/>',
+  volumeLow: '<path d="M11 5 6 9H2v6h4l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
   volume: '<path d="M11 5 6 9H2v6h4l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -343,7 +348,7 @@ function ac() {
   if (AC.state === 'suspended') AC.resume().catch(() => {});
   return AC;
 }
-document.addEventListener('pointerdown', () => { ac(); setTimeout(renderSoft, 50); }, true);
+document.addEventListener('pointerdown', () => { ac(); setTimeout(updBanner, 80); }, true);
 document.addEventListener('keydown', () => ac(), true);
 function tone(freqs, dur, vol = 0.12, when = 0) {
   const a = ac(); if (!a || a.state !== 'running') return;
@@ -356,10 +361,10 @@ function tone(freqs, dur, vol = 0.12, when = 0) {
 function stopTones() { clearInterval(loopT); loopT = null; OSC.forEach(o => { try { o.stop(); } catch (e) {} }); OSC = []; if (navigator.vibrate) navigator.vibrate(0); }
 const DTMF = { '1': [697, 1209], '2': [697, 1336], '3': [697, 1477], '4': [770, 1209], '5': [770, 1336], '6': [770, 1477], '7': [852, 1209], '8': [852, 1336], '9': [852, 1477], '*': [941, 1209], '0': [941, 1336], '#': [941, 1477], '+': [941, 1336] };
 const dtmf = k => DTMF[k] && tone(DTMF[k], 0.12, 0.09);
-function ringback() { stopTones(); const f = () => tone([425], 1, 0.09); f(); loopT = setInterval(f, 5000); }      // EU: 1 s ton, 4 s tišina
-function busyTone(n = 5) { stopTones(); for (let i = 0; i < n; i++) tone([425], 0.5, 0.09, i); }                      // zasedeno
-function sitTone() { stopTones(); [950, 1400, 1800].forEach((f, i) => tone([f], 0.33, 0.09, i * 0.33)); }             // številka ne obstaja
-function endBeep() { stopTones(); tone([480], 0.15, 0.08); tone([400], 0.25, 0.08, 0.18); }
+function ringback() { stopTones(); const f = () => tone([425], 1, 0.04); f(); loopT = setInterval(f, 5000); }      // EU: 1 s ton, 4 s tišina
+function busyTone(n = 5) { stopTones(); for (let i = 0; i < n; i++) tone([425], 0.5, 0.04, i); }                      // zasedeno
+function sitTone() { stopTones(); [950, 1400, 1800].forEach((f, i) => tone([f], 0.33, 0.04, i * 0.33)); }             // številka ne obstaja
+function endBeep() { stopTones(); tone([480], 0.15, 0.04); tone([400], 0.25, 0.04, 0.18); }
 function ringtone() {
   stopTones();
   const f = () => {
@@ -380,13 +385,16 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* =====================================================================
    KLICI (WebRTC + signalizacija prek Firebase)
    ===================================================================== */
-const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+const STUN = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }];
+let TURN = [];
+db.ref(F + '/config/iceServers').on('value', s => { const v = s.val(); TURN = Array.isArray(v) ? v.filter(x => x && x.urls) : []; });
+const iceConfig = () => ({ iceServers: STUN.concat(TURN), iceCandidatePoolSize: 2 });
 const RING_SEC = 45;
 let C = null;   // trenutni klic
 const callRef = id => db.ref(`${F}/calls/${id}`);
 
 function newCall(o) {
-  C = Object.assign({ pc: null, stream: null, seen: {}, queue: [], offs: [], timers: [], muted: false, t0: null, ended: false }, o);
+  C = Object.assign({ pc: null, stream: null, seen: {}, queue: [], offs: [], timers: [], muted: false, speaker: false, t0: null, ended: false }, o);
   setBusy(true); showCall();
 }
 function addOff(ref, ev, fn) { ref.on(ev, fn); C.offs.push(() => ref.off(ev, fn)); }
@@ -395,15 +403,16 @@ async function getMic() {
   return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
 }
 function makePC(myCand, theirCand) {
-  const pc = new RTCPeerConnection(ICE), cur = C;
+  const pc = new RTCPeerConnection(iceConfig()), cur = C;
   C.stream.getTracks().forEach(t => pc.addTrack(t, C.stream));
   pc.onicecandidate = e => { if (e.candidate && cur === C) callRef(C.id).child(myCand).push(e.candidate.toJSON()); };
-  pc.ontrack = e => { const a = $('remote'); a.srcObject = e.streams[0]; a.play().catch(() => {}); };
+  pc.ontrack = e => { const a = $('remote'); a.srcObject = e.streams[0]; applyVolume(); a.play().catch(() => {}); };
   pc.onconnectionstatechange = () => {
     if (cur !== C) return;
     const st = pc.connectionState;
     if (st === 'connected' && C.status !== 'active') { C.status = 'active'; C.t0 = Date.now(); stopTones(); tickCall(); showCall(); callRef(C.id).child('status').onDisconnect().set('ended'); }
-    if (st === 'failed') finish('Povezave ni bilo mogoče vzpostaviti.', 'failed', true);
+    if (st === 'failed') finish(C.t0 ? 'Povezava je bila prekinjena' : NOCONN, C.t0 ? 'answered' : 'failed', !C.t0);
+    if (st === 'disconnected' && C.t0) { clearTimeout(C.dcT); C.dcT = setTimeout(() => { if (C === cur && pc.connectionState !== 'connected') finish('Povezava je bila prekinjena', 'answered'); }, 10000); }
   };
   addOff(callRef(C.id).child(theirCand), 'value', s => {
     const v = s.val() || {};
@@ -427,17 +436,18 @@ async function dial(num) {
   if (isBusy(num)) { C.status = 'busy'; showCall(); busyTone(); writeHist('out', num, 'busy', at, 0); return later(() => finish(null, null), 4500); }
   try { C.stream = await getMic(); } catch (e) { toast('Mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); return finish(null, null); }
   if (!C || C.id !== id) return;
+  await callRef(id).set({ id, from: S.me, to: num, fromName: lineName(S.me) || '', status: 'ringing', createdAt: at });
   C.pc = makePC('cc', 'ac');
   const offer = await C.pc.createOffer({ offerToReceiveAudio: true });
   await C.pc.setLocalDescription(offer);
-  await callRef(id).set({ id, from: S.me, to: num, fromName: lineName(S.me) || '', status: 'ringing', createdAt: at, offer: { type: offer.type, sdp: offer.sdp } });
+  await callRef(id).update({ offer: { type: offer.type, sdp: offer.sdp } });
   db.ref(`${F}/ring/${num}/${id}`).set({ from: S.me, at: Date.now() });
   ringback();
   addOff(callRef(id), 'value', async s => {
     const v = s.val(); if (!C || C.id !== id) return;
     if (!v) return finish('Klic končan', C.t0 ? 'answered' : 'cancelled');
     if (v.ringingAt && C.status === 'calling') { C.status = 'ringing'; showCall(); }
-    if (v.answer && !C.pc.currentRemoteDescription) { C.status = 'connecting'; stopTones(); showCall(); try { await setRemote(v.answer); } catch (e) { finish('Napaka pri povezavi.', 'failed', true); } }
+    if (v.answer && !C.gotAnswer) { C.gotAnswer = true; C.status = 'connecting'; stopTones(); showCall(); armConnectTimeout(); try { await setRemote(v.answer); } catch (e) { finish('Napaka pri povezavi.', 'failed', true); } }
     if (v.status === 'rejected') { C.status = 'rejected'; showCall(); busyTone(4); writeHist('out', num, 'rejected', at, 0); cleanupSignal(); later(() => finish(null, null), 3800); }
     if (v.status === 'ended' && v.endedBy !== DEV) finish('Klic končan', C.t0 ? 'answered' : 'noanswer');
   });
@@ -469,12 +479,13 @@ function onRing(snap) {
 }
 async function answer() {
   if (!C || C.role !== 'in' || C.status !== 'incoming') return;
-  ac(); stopTones();
-  const id = C.id; C.answering = true;
+  ac(); stopTones(); if (navigator.vibrate) navigator.vibrate(30);
+  const id = C.id; C.answering = true; C.status = 'connecting'; showCall(); armConnectTimeout();   // zaslon se odzove takoj
+  const micP = getMic().then(m => ({ m }), e => ({ e }));                     // mikrofon se pripravlja vzporedno
   const res = await callRef(id).transaction(cur => { if (cur && cur.status === 'ringing') { cur.status = 'answered'; cur.answeredBy = DEV; return cur; } return undefined; });
-  if (!res.committed) { C.answering = false; return finish('Klica ni več.', null); }
-  C.status = 'connecting'; showCall();
-  try { C.stream = await getMic(); } catch (e) { toast('Mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); callRef(id).update({ status: 'ended', endedBy: DEV, endedAt: nowIso() }); return finish(null, 'failed'); }
+  if (!res.committed) { C.answering = false; micP.then(x => x.m && x.m.getTracks().forEach(t => t.stop())); return finish('Klica ni več.', null); }
+  const mic = await micP;
+  try { if (mic.e) throw mic.e; C.stream = mic.m; } catch (e) { toast('Mikrofon ni dovoljen: ' + (e.message || e.name), 'err'); callRef(id).update({ status: 'ended', endedBy: DEV, endedAt: nowIso() }); return finish(null, 'failed'); }
   if (!C || C.id !== id) return;
   C.pc = makePC('ac', 'cc');
   await setRemote(C.offer);
@@ -484,6 +495,7 @@ async function answer() {
 }
 function reject() {
   if (!C || C.role !== 'in') return;
+  if (navigator.vibrate) navigator.vibrate(30);
   callRef(C.id).update({ status: 'rejected', endedAt: nowIso(), endedBy: DEV });
   writeHist('in', C.other, 'rejected', C.createdAt, 0);
   db.ref(`${F}/ring/${S.me}/${C.id}`).remove();
@@ -496,6 +508,8 @@ function hangup() {
   finish('Klic končan', C.t0 ? 'answered' : (C.role === 'out' ? 'cancelled' : 'missed'));
 }
 function toggleMute() { if (!C || !C.stream) return; C.muted = !C.muted; C.stream.getAudioTracks().forEach(t => t.enabled = !C.muted); showCall(); }
+const NOCONN = 'Povezave ni bilo mogoče vzpostaviti – omrežje blokira neposredno povezavo.';
+function armConnectTimeout() { const c = C; later(() => { if (C === c && !c.t0) finish(NOCONN, 'failed', true); }, 20000); }
 function later(fn, ms) { if (C) C.timers.push(setTimeout(fn, ms)); }
 function cleanupSignal() { if (C && C.role === 'out') db.ref(`${F}/ring/${C.other}/${C.id}`).remove(); }
 function finish(msg, result, err) {
@@ -546,14 +560,16 @@ function showCall(cc) {
   else if (c.status === 'ended') actions = '<div style="margin-top:auto"></div>';
   else actions = `<div class="cgrid">
       <button class="cact ${c.muted ? 'on' : ''}" onclick="toggleMute()" ${c.stream ? '' : 'disabled'}><span class="c">${ic(c.muted ? 'micOff' : 'mic')}</span>${c.muted ? 'Utišano' : 'Utišaj'}</button>
-      <button class="cact" onclick="openRemoteAudio()"><span class="c">${ic('volume')}</span>Zvok</button></div>
+      <button class="cact ${c.speaker ? 'on' : ''}" onclick="toggleSpeaker()"><span class="c">${ic(c.speaker ? 'volume' : 'volumeLow')}</span>${c.speaker ? 'Zvočnik vklopljen' : 'Zvočnik'}</button></div>
       <button class="cbtn red" style="width:78px;height:78px" onclick="hangup()" aria-label="Končaj">${ic('phoneOff')}</button>`;
   el.innerHTML = `<div class="${ringing ? 'ring' : ''}" style="border-radius:50%">${avatar(c.other, 'lg')}</div>
     <div class="who">${esc(name || c.other)}</div><div class="no">${name ? esc(c.other) : (c.status === 'invalid' ? '' : 'Neznana številka')}</div>
     <div class="st" id="c-st">${esc(st)}</div>${actions}`;
   el.classList.remove('hidden');
 }
-function openRemoteAudio() { const a = $('remote'); a.muted = false; a.volume = 1; a.play().catch(() => {}); toast('Zvok sogovornika je vklopljen.'); }
+const VOL_EAR = 0.3, VOL_SPK = 1;   // običajno tiho (kot pri slušalki), glasno samo na zvočniku
+function applyVolume() { const a = $('remote'); a.muted = false; a.volume = C && C.speaker ? VOL_SPK : VOL_EAR; }
+function toggleSpeaker() { if (!C) return; C.speaker = !C.speaker; applyVolume(); $('remote').play().catch(() => {}); showCall(); }
 
 /* =====================================================================
    PRIKAZ
@@ -570,20 +586,22 @@ function render() {
   renderSoft(true);
   if (C) showCall();
 }
+function setHTML(el, html) { if (el && el.__h !== html) { el.innerHTML = html; el.__h = html; return true; } return false; } // brez nepotrebnega prerisovanja
+function updBanner() {
+  const bb = $('bannerbox'); if (!bb || !S.user) return;
+  let b = '';
+  if (!S.me) b = `<div class="banner">${ic('info')}Nimaš dodeljene številke – klicanje ni mogoče. Kot administrator jo lahko dodeliš v Imenik › Uredi.</div>`;
+  else if (S.connected === false) b = `<div class="banner">${ic('wifi')}Ni povezave s strežnikom – klici ne bodo zvonili.</div>`;
+  else if (!AC || AC.state !== 'running') b = `<div class="banner" onclick="ac()">${ic('bell')}Tapni zaslon, da omogočiš zvonjenje.</div>`;
+  setHTML(bb, b);
+}
 function renderSoft(full) {
   if (!S.user || !$('view')) return;
   const chip = $('mychip'); if (chip) { chip.className = 'chip ' + (S.connected === false || !S.me ? 'off' : ''); chip.innerHTML = `<span class="dot"></span>${S.me ? esc(S.me) : 'brez številke'}`; }
-  const bb = $('bannerbox');
-  if (bb) {
-    let b = '';
-    if (!S.me) b = `<div class="banner">${ic('info')}Nimaš dodeljene številke – klicanje ni mogoče. Kot administrator jo lahko dodeliš v Imenik › Uredi.</div>`;
-    else if (S.connected === false) b = `<div class="banner">${ic('wifi')}Ni povezave s strežnikom – klici ne bodo zvonili.</div>`;
-    else if (!AC || AC.state !== 'running') b = `<div class="banner" onclick="ac()">${ic('bell')}Tapni zaslon, da omogočiš zvonjenje.</div>`;
-    bb.innerHTML = b;
-  }
+  updBanner();
   const miss = missedCount();
-  $('tabs').innerHTML = [['keys', 'grid', 'Tipkovnica', 0], ['recent', 'clock', 'Nedavni', miss], ['contacts', 'book', 'Imenik', 0]]
-    .map(t => `<button class="${S.tab === t[0] ? 'on' : ''}" onclick="setTab('${t[0]}')">${ic(t[1])}${t[2]}${t[3] ? `<span class="badge">${t[3]}</span>` : ''}</button>`).join('');
+  setHTML($('tabs'), [['keys', 'grid', 'Tipkovnica', 0], ['recent', 'clock', 'Nedavni', miss], ['contacts', 'book', 'Imenik', 0]]
+    .map(t => `<button class="${S.tab === t[0] ? 'on' : ''}" onclick="setTab('${t[0]}')">${ic(t[1])}${t[2]}${t[3] ? `<span class="badge">${t[3]}</span>` : ''}</button>`).join(''));
   const a = document.activeElement, typing = a && $('view').contains(a) && a.tagName === 'INPUT';
   if (full || (S.tab !== 'keys' && !typing)) renderView();
   else if (S.tab === 'keys') updDisp();
@@ -591,12 +609,14 @@ function renderSoft(full) {
 function setTab(t) { S.tab = t; if (t === 'recent') store.set('wii_fon_seen_' + S.me, nowIso()); renderSoft(true); }
 function renderView() {
   const v = $('view'); if (!v) return;
-  if (S.tab === 'keys') viewKeys(v); else if (S.tab === 'recent') viewRecent(v); else viewContacts(v);
+  if (S.tab === 'keys') v.__h = null;
+  if (S.tab === 'keys') { if (v.__h !== 'keys') viewKeys(v); else updDisp(); } else if (S.tab === 'recent') viewRecent(v); else viewContacts(v);
 }
 
 /* ---------- tipkovnica ---------- */
 const LET = { '2': 'ABC', '3': 'DEF', '4': 'GHI', '5': 'JKL', '6': 'MNO', '7': 'PQRS', '8': 'TUV', '9': 'WXYZ', '0': '+' };
 function viewKeys(v) {
+  v.__h = 'keys';
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
   v.innerHTML = `<div class="dialwrap"><div class="disp"><div class="num" id="d-num"></div><div class="name" id="d-name"></div></div>
     <div class="sugg" id="d-sugg"></div>
@@ -648,14 +668,14 @@ function missedCount() { const seen = store.get('wii_fon_seen_' + S.me) || ''; r
 const RES = { answered: '', missed: 'zgrešen', rejected: 'zavrnjen', noanswer: 'ni odgovora', cancelled: 'preklican', busy: 'zasedeno', unreachable: 'ni dosegljiv', failed: 'napaka povezave' };
 function viewRecent(v) {
   const list = histList().slice(0, 150);
-  v.innerHTML = `<div class="sec"><div class="h1">Nedavni<span class="sp"></span>${list.length ? `<button class="btn sm ghost" onclick="clearHist()">${ic('trash', 'sm')}Počisti</button>` : ''}</div>
+  setHTML(v, `<div class="sec"><div class="h1">Nedavni<span class="sp"></span>${list.length ? `<button class="btn sm ghost" onclick="clearHist()">${ic('trash', 'sm')}Počisti</button>` : ''}</div>
     ${list.map(h => {
       const miss = h.dir === 'in' && (h.result === 'missed' || h.result === 'rejected'), name = lineName(h.other);
       const icn = h.dir === 'out' ? 'phoneOut' : miss ? 'phoneMiss' : 'phoneIn';
       return `<div class="row"><button class="grow" style="display:flex;align-items:center;gap:12px;text-align:left;min-width:0" onclick="dial('${esc(h.other)}')">${avatar(h.other)}<span class="grow"><div class="t ${miss ? 'miss' : ''}">${esc(name || h.other)}</div>
         <div class="s" style="${miss ? 'color:var(--red)' : ''}">${ic(icn, 'sm')}${h.dir === 'out' ? 'Odhodni' : 'Dohodni'}${RES[h.result] ? ' · ' + RES[h.result] : ''}${h.dur ? ' · ' + fmtDur(h.dur) : ''}${name ? ' · ' + esc(h.other) : ''}</div></span></button>
         <div class="r">${fmtWhen(h.at)}</div><button class="callmini" onclick="dial('${esc(h.other)}')" aria-label="Pokliči">${ic('phone', 'sm')}</button></div>`;
-    }).join('') || `<div class="empty">${ic('clock')}<b>Ni klicev</b>Tukaj se bodo prikazali tvoji klici.</div>`}</div>`;
+    }).join('') || `<div class="empty">${ic('clock')}<b>Ni klicev</b>Tukaj se bodo prikazali tvoji klici.</div>`}</div>`);
 }
 function clearHist() { confirmBox('Počistim zgodovino klicev te številke?', 'Počisti', () => db.ref(`${F}/history/${S.me}`).remove()); }
 
@@ -664,14 +684,15 @@ function viewContacts(v) {
   const q = S.search.trim().toLowerCase();
   const list = linesSorted().filter(l => !q || (l.name || '').toLowerCase().includes(q) || l.number.includes(q) || (l.dept || '').toLowerCase().includes(q));
   let last = '';
-  v.innerHTML = `<div class="sec"><div class="h1">Imenik<span class="sp"></span>${S.admin ? `<button class="btn sm" onclick="openEditor()">${ic('edit', 'sm')}Uredi</button>` : ''}</div>
+  const changed = setHTML(v, `<div class="sec"><div class="h1">Imenik<span class="sp"></span>${S.admin ? `<button class="btn sm" onclick="openEditor()">${ic('edit', 'sm')}Uredi</button>` : ''}</div>
     <div class="search">${ic('search')}<input id="c-q" placeholder="Išči ime ali številko" value="${esc(S.search)}"></div>
     ${S.me && S.lines[S.me] ? `<button class="row" onclick="contactSheet('${esc(S.me)}')">${avatar(S.me)}<span class="grow"><div class="t">${esc(S.lines[S.me].name)}</div><div class="s">Moja številka · ${esc(S.me)}</div></span></button>` : ''}
     <div id="c-list">${list.filter(l => l.number !== S.me).map(l => {
       const L = (l.name || '#').charAt(0).toUpperCase(), head = L !== last ? `<div class="letter">${esc(L)}</div>` : ''; last = L;
       return `${head}<div class="row"><button class="grow" style="display:flex;align-items:center;gap:12px;text-align:left;min-width:0" onclick="contactSheet('${esc(l.number)}')">${avatar(l.number)}<span class="grow"><div class="t">${esc(l.name)}${l.type === 'employee' ? '' : ' <span class="tag ext">ZUNANJI</span>'}</div><div class="s">${esc(l.number)}${l.dept ? ' · ' + esc(l.dept) : ''}${isOnline(l.number) ? (isBusy(l.number) ? ' · <span style="color:#e8590c">v klicu</span>' : ' · <span style="color:#16a34a">dosegljiv</span>') : ''}</div></span></button>
         <button class="callmini" onclick="dial('${esc(l.number)}')" aria-label="Pokliči">${ic('phone', 'sm')}</button></div>`;
-    }).join('') || `<div class="empty">${ic('book')}<b>${q ? 'Ni zadetkov' : 'Imenik je prazen'}</b>${q ? '' : 'Administrator mora najprej dodati številke (Uredi).'}</div>`}</div></div>`;
+    }).join('') || `<div class="empty">${ic('book')}<b>${q ? 'Ni zadetkov' : 'Imenik je prazen'}</b>${q ? '' : 'Administrator mora najprej dodati številke (Uredi).'}</div>`}</div></div>`);
+  if (!changed) return;
   const qi = $('c-q');
   qi.addEventListener('input', () => { S.search = qi.value; const pos = qi.selectionStart; viewContacts(v); const n = $('c-q'); n.focus(); n.setSelectionRange(pos, pos); });
 }
@@ -702,7 +723,10 @@ function openEditor() {
       ${noNum.length ? `<div class="muted" style="font-size:13px;margin-top:6px">${ic('info', 'sm')} Brez številke: ${noNum.map(e => esc(e.name)).join(', ')}</div>` : ''}
       <div class="grp">Zaposleni (${emp.length})</div>${emp.map(row).join('') || '<div class="muted" style="padding:6px 0">Ni številk zaposlenih.</div>'}
       <div class="grp">Zunanji (${ext.length})</div>${ext.map(row).join('') || '<div class="muted" style="padding:6px 0">Ni zunanjih številk.</div>'}
+      <div class="grp">Povezava</div>
+      <button class="row" id="ed-turn">${ic('wifi')}<span class="grow"><div class="t">TURN strežnik</div><div class="s">${TURN.length ? 'Nastavljen (' + TURN.length + ')' : 'Ni nastavljen – klici med različnimi omrežji morda ne bodo delovali'}</div></span>${ic('chevR')}</button>
       <button class="btn ghost block" style="margin-top:14px" id="ed-x">Zapri</button>`;
+    ov.querySelector('#ed-turn').onclick = () => editTurn(draw);
     ov.querySelector('#ed-new').onclick = () => editLine(null, draw);
     ov.querySelector('#ed-x').onclick = () => ov.close();
     ov.querySelectorAll('[data-e]').forEach(b => b.onclick = () => editLine(b.dataset.e, draw));
@@ -715,6 +739,23 @@ function openEditor() {
     });
   };
   draw();
+}
+function editTurn(after) {
+  const ov = openModal(`<h3>${ic('wifi')}TURN strežnik</h3>
+    <div class="muted" style="margin:6px 0 10px">Brez TURN strežnika se klic poveže samo, kadar sta napravi na istem ali »prijaznem« omrežju. Za zanesljive klice (npr. mobilni podatki ↔ Wi-Fi) ustvari brezplačen račun na <b>metered.ca</b> (Open Relay, 20 GB/mesec), v nadzorni plošči izberi <b>TURN Server › Add Credential › Show ICE Servers Array</b> in sem prilepi ta seznam.</div>
+    <textarea id="tu-t" class="inp" style="min-height:170px;font-family:monospace;font-size:13px" placeholder='[{"urls":"turn:standard.relay.metered.ca:80","username":"…","credential":"…"}]'></textarea>
+    <div class="err" id="tu-e"></div>
+    <div class="rowbtns"><button class="btn ghost" id="tu-x">Prekliči</button>${TURN.length ? `<button class="btn red" id="tu-d">${ic('trash')}</button>` : ''}<button class="btn green" id="tu-ok">${ic('check')}Shrani</button></div>`);
+  const t = ov.querySelector('#tu-t'); t.value = TURN.length ? JSON.stringify(TURN, null, 2) : '';
+  ov.querySelector('#tu-x').onclick = () => ov.close();
+  const d = ov.querySelector('#tu-d'); if (d) d.onclick = () => db.ref(F + '/config/iceServers').remove().then(() => { ov.close(); toast('TURN strežnik odstranjen.'); if (after) setTimeout(after, 50); });
+  ov.querySelector('#tu-ok').onclick = () => {
+    let v; try { v = JSON.parse(t.value.trim().replace(/;\s*$/, '')); } catch (e) { ov.querySelector('#tu-e').textContent = 'To ni veljaven seznam (JSON). Prilepi celoten »ICE Servers Array«.'; return; }
+    if (!Array.isArray(v)) v = (v && v.iceServers) || [v];
+    v = v.filter(x => x && x.urls).map(x => ({ urls: x.urls, username: x.username || null, credential: x.credential || null }));
+    if (!v.length) { ov.querySelector('#tu-e').textContent = 'V seznamu ni nobenega strežnika (manjka »urls«).'; return; }
+    db.ref(F + '/config/iceServers').set(v).then(() => { ov.close(); toast('TURN strežnik shranjen.', 'ok'); if (after) setTimeout(after, 50); });
+  };
 }
 function editLine(num, after) {
   if (!S.admin) return;
